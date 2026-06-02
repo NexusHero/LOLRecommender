@@ -1,0 +1,48 @@
+name: Docs
+
+on:
+  push:
+    branches: [master, main]
+
+jobs:
+  typedoc:
+    name: Generate TypeDoc
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: bridge/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: bridge
+
+      - name: Generate TypeDoc
+        run: npm run docs
+        working-directory: bridge
+
+      - name: Upload TypeDoc artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: typedoc
+          path: bridge/docs/
+          retention-days: 30
+
+  asyncapi:
+    name: Validate AsyncAPI spec
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate asyncapi.yml
+        uses: asyncapi/github-action-for-cli@v4
+        with:
+          command: validate
+          filepath: bridge/asyncapi.yml
