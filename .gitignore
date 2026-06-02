@@ -13,3 +13,6 @@ flutter_app/.packages
 # General
 .DS_Store
 *.log
+
+# Claude Code local session data
+.claude/
