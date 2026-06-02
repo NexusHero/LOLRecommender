@@ -67,7 +67,7 @@ export function getHeuristicRecommendations(
     recommended.push({
       id,
       name: ITEM_NAMES[id] ?? "Grievous Wounds Item",
-      reason: `${profile.healScore} Heiler im gegnerischen Team`,
+      reason: `${profile.healScore} healers on the enemy team`,
       priority: "core",
     });
   }
@@ -76,7 +76,7 @@ export function getHeuristicRecommendations(
     recommended.push({
       id: 3102,
       name: "Banshee's Veil",
-      reason: `${Math.round(profile.apRatio * 100)}% AP-lastige Comp`,
+      reason: `${Math.round(profile.apRatio * 100)}% AP-heavy composition`,
       priority: "core",
     });
   }
@@ -85,7 +85,7 @@ export function getHeuristicRecommendations(
     recommended.push({
       id: 3140,
       name: "Quicksilver Sash",
-      reason: `Hoher CC-Score (${profile.ccScore} CC-Champions)`,
+      reason: `High CC score (${profile.ccScore} CC champions)`,
       priority: "situational",
     });
   }
@@ -94,7 +94,7 @@ export function getHeuristicRecommendations(
     recommended.push({
       id: 3143,
       name: "Randuin's Omen",
-      reason: "Gegner sind hauptsächlich AD",
+      reason: "Enemies are primarily AD",
       priority: "situational",
     });
   }
@@ -109,12 +109,12 @@ export function getHeuristicRecommendations(
 function formatReasoning(profile: CompProfile): string {
   const parts: string[] = [];
 
-  if (profile.apRatio >= 0.6) parts.push(`AP-lastig (${Math.round(profile.apRatio * 100)}%)`);
-  else if (profile.adRatio >= 0.6) parts.push(`AD-lastig (${Math.round(profile.adRatio * 100)}%)`);
-  else parts.push("Mixed Damage");
+  if (profile.apRatio >= 0.6) parts.push(`AP-heavy (${Math.round(profile.apRatio * 100)}%)`);
+  else if (profile.adRatio >= 0.6) parts.push(`AD-heavy (${Math.round(profile.adRatio * 100)}%)`);
+  else parts.push("Mixed damage");
 
   if (profile.ccScore >= 2) parts.push(`${profile.ccScore}x CC`);
-  if (profile.healScore >= 1) parts.push(`${profile.healScore}x Healing`);
+  if (profile.healScore >= 1) parts.push(`${profile.healScore}x healing`);
 
-  return `Gegner: ${parts.join(", ")}`;
+  return `Enemy comp: ${parts.join(", ")}`;
 }

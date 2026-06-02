@@ -56,7 +56,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
           ),
           const SizedBox(height: 4),
           const Text(
-            'Bridge-Server verbinden',
+            'Connect to bridge server',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF7A7A7A), fontSize: 12),
           ),
@@ -64,8 +64,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
           TextField(
             controller: _hostCtrl,
             decoration: const InputDecoration(
-              labelText: 'Server-IP',
-              hintText: 'z.B. 192.168.1.100',
+              labelText: 'Server IP',
+              hintText: 'e.g. 192.168.1.100',
               prefixIcon: Icon(Icons.computer_outlined, color: Color(0xFF7A7A7A)),
             ),
             keyboardType: TextInputType.url,
@@ -105,7 +105,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             child: const Text(
-              'VERBINDEN',
+              'CONNECT',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 letterSpacing: 2,
@@ -115,7 +115,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
           ),
           const SizedBox(height: 20),
           const Text(
-            'Bridge-Server (Node.js) muss im gleichen\nNetzwerk auf Port 8765 laufen.',
+            'The bridge server (Node.js) must be running\non port 8765 in the same network.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF4A4A4A), fontSize: 11),
           ),

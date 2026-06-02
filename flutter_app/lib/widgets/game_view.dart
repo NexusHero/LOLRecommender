@@ -212,7 +212,7 @@ class _RecommendationPanel extends StatelessWidget {
                 size: 15, color: Color(0xFFC89B3C)),
             const SizedBox(width: 6),
             const Text(
-              'EMPFEHLUNGEN',
+              'RECOMMENDATIONS',
               style: TextStyle(
                 color: Color(0xFFC89B3C),
                 fontSize: 11,
@@ -234,7 +234,7 @@ class _RecommendationPanel extends StatelessWidget {
           const SizedBox(height: 10),
           if (recommendation.items.isEmpty)
             const Text(
-              'Keine spezifischen Counter-Items nötig.',
+              'No specific counter items needed.',
               style: TextStyle(color: Color(0xFF7A7A7A), fontSize: 13),
             )
           else
@@ -300,7 +300,7 @@ class _RecItemTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 _Badge(
-                  item.isCore ? 'CORE' : 'SITUATIV',
+                  item.isCore ? 'CORE' : 'SITUATIONAL',
                   bg: item.isCore
                       ? const Color(0xFF1A1200)
                       : const Color(0xFF0A1020),
@@ -380,14 +380,14 @@ class _ScoreboardSectionState extends State<_ScoreboardSection> {
         if (_expanded) ...[
           const Divider(color: Color(0xFF1E3A5F), height: 1),
           _TeamBlock(
-            label: 'VERBÜNDETE',
+            label: 'ALLIES',
             players: [widget.localPlayer, ...widget.allies],
             accentColor: const Color(0xFF005A82),
             highlightName: widget.localPlayer.summonerName,
           ),
           const Divider(color: Color(0xFF1E3A5F), height: 1),
           _TeamBlock(
-            label: 'GEGNER',
+            label: 'ENEMIES',
             players: widget.enemies,
             accentColor: const Color(0xFF6B1B1B),
             highlightName: null,

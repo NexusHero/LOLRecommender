@@ -1,10 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ParsedGameState, ItemRecommendation } from "./types.js";
 
-const SYSTEM_PROMPT = `Du bist ein erfahrener League of Legends Coach.
-Analysiere die gegnerische Teamzusammensetzung und erkläre kurz (2-3 Sätze),
-warum die vorgeschlagenen Items sinnvoll sind. Sei konkret und prägnant.
-Antworte auf Deutsch. Verwende keine Markdown-Formatierung.`;
+const SYSTEM_PROMPT = `You are an experienced League of Legends coach.
+Analyze the enemy team composition and briefly explain (2-3 sentences)
+why the suggested items are a good choice. Be specific and concise.
+Do not use Markdown formatting.`;
 
 export class LlmExplainer {
   constructor(private readonly client: Anthropic) {}
@@ -24,19 +24,19 @@ export class LlmExplainer {
           {
             type: "text",
             text: SYSTEM_PROMPT,
-            // Prompt Caching: System-Prompt wird nach erstem Call gecacht
+            // Prompt caching: system prompt is cached after the first call
             cache_control: { type: "ephemeral" },
           },
         ],
         messages: [
           {
             role: "user",
-            content: `Mein Champion: ${state.localPlayer.championName}
-Gegner: ${enemyChamps}
-Vorgeschlagene Items: ${itemNames}
-Spielzeit: ${Math.floor(state.gameTime / 60)}:${String(Math.floor(state.gameTime % 60)).padStart(2, "0")}
+            content: `My champion: ${state.localPlayer.championName}
+Enemies: ${enemyChamps}
+Suggested items: ${itemNames}
+Game time: ${Math.floor(state.gameTime / 60)}:${String(Math.floor(state.gameTime % 60)).padStart(2, "0")}
 
-Erkläre kurz warum diese Items gegen diese Comp sinnvoll sind.`,
+Briefly explain why these items are effective against this composition.`,
           },
         ],
       });
@@ -46,12 +46,12 @@ Erkläre kurz warum diese Items gegen diese Comp sinnvoll sind.`,
       if (text.type !== "text") return heuristicRec.reasoning;
 
       console.log(
-        `[LLM] Input: ${response.usage.input_tokens} Tokens (Cache-Hit: ${(response.usage as unknown as Record<string, unknown>).cache_read_input_tokens ?? 0}), Output: ${response.usage.output_tokens}`
+        `[LLM] Input tokens: ${response.usage.input_tokens} (cache hit: ${(response.usage as unknown as Record<string, unknown>).cache_read_input_tokens ?? 0}), output tokens: ${response.usage.output_tokens}`
       );
 
       return text.text;
     } catch (err) {
-      console.error("[LLM] Fehler:", err);
+      console.error("[LLM] Error:", err);
       return heuristicRec.reasoning;
     }
   }

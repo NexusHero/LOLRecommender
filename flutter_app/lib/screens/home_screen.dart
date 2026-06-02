@@ -22,7 +22,7 @@ class HomeScreen extends StatelessWidget {
               if (ws.status != ConnectionStatus.disconnected)
                 IconButton(
                   icon: const Icon(Icons.link_off),
-                  tooltip: 'Trennen',
+                  tooltip: 'Disconnect',
                   onPressed: ws.disconnect,
                 ),
             ],
@@ -50,7 +50,7 @@ class HomeScreen extends StatelessWidget {
               CircularProgressIndicator(
                   color: Theme.of(context).colorScheme.primary),
               const SizedBox(height: 16),
-              const Text('Verbinde...',
+              const Text('Connecting...',
                   style: TextStyle(color: Color(0xFF7A7A7A), fontSize: 14)),
             ],
           ),
@@ -100,12 +100,12 @@ class _WaitingView extends StatelessWidget {
               size: 64, color: Colors.grey.shade700),
           const SizedBox(height: 16),
           const Text(
-            'Warte auf Spielstart...',
+            'Waiting for game start...',
             style: TextStyle(color: Color(0xFF7A7A7A), fontSize: 16),
           ),
           const SizedBox(height: 8),
           const Text(
-            'Starte eine League of Legends Partie',
+            'Start a League of Legends match',
             style: TextStyle(color: Color(0xFF4A4A4A), fontSize: 12),
           ),
         ],

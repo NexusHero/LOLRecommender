@@ -11,7 +11,7 @@ import type { AllGameData, ParsedGameState } from "./types.js";
 
 const LOCAL_SUMMONER = process.env.SUMMONER_NAME ?? "";
 if (!LOCAL_SUMMONER) {
-  console.warn("[Main] SUMMONER_NAME nicht gesetzt — Fallback auf ersten Spieler.");
+  console.warn("[Main] SUMMONER_NAME not set — falling back to first player.");
 }
 
 const WS_PORT = parseInt(process.env.WS_PORT ?? "8765");
@@ -90,7 +90,7 @@ const poller = new LiveClientPoller(
 poller.start();
 
 process.on("SIGINT", () => {
-  console.log("\n[Main] Bridge wird beendet...");
+  console.log("\n[Main] Shutting down bridge...");
   poller.stop();
   wsServer.close();
   process.exit(0);

@@ -11,7 +11,7 @@ export function parseGameState(
   if (!localPlayer) {
     // Fallback: ersten Spieler nehmen (passiert bei Spectate oder falschem Namen)
     console.warn(
-      `[Parser] Lokaler Spieler '${localSummonerName}' nicht gefunden, nehme ersten Spieler.`
+      `[Parser] Local player '${localSummonerName}' not found — falling back to first player.`
     );
   }
 

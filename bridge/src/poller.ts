@@ -44,7 +44,7 @@ export class LiveClientPoller {
   ) {}
 
   start() {
-    console.log("[Poller] Gestartet — warte auf aktives Spiel...");
+    console.log("[Poller] Started — waiting for active game...");
     this.poll();
     this.intervalId = setInterval(() => this.poll(), POLL_INTERVAL_MS);
   }
@@ -62,13 +62,13 @@ export class LiveClientPoller {
       const parsed = AllGameDataSchema.safeParse(raw);
 
       if (!parsed.success) {
-        console.warn("[Poller] Unbekanntes Datenformat:", parsed.error.issues[0]);
+        console.warn("[Poller] Unexpected data format:", parsed.error.issues[0]);
         return;
       }
 
       if (!this.gameActive) {
         this.gameActive = true;
-        console.log("[Poller] Spiel erkannt — Daten fliessen.");
+        console.log("[Poller] Game detected — data flowing.");
         this.onStatusChange(true);
       }
 
@@ -76,7 +76,7 @@ export class LiveClientPoller {
     } catch {
       if (this.gameActive) {
         this.gameActive = false;
-        console.log("[Poller] Kein Spiel aktiv — Warte...");
+        console.log("[Poller] No active game — waiting...");
         this.onStatusChange(false);
       }
     }

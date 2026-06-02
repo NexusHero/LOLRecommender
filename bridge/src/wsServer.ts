@@ -13,21 +13,21 @@ export class BridgeWsServer {
     this.wss.on("listening", () => {
       const addr = this.wss.address();
       const port = typeof addr === "object" && addr ? addr.port : "?";
-      console.log(`[WS] Server läuft auf ws://0.0.0.0:${port}`);
+      console.log(`[WS] Server listening on ws://0.0.0.0:${port}`);
     });
 
     this.wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
       const ip = req.socket.remoteAddress ?? "unbekannt";
-      console.log(`[WS] Client verbunden: ${ip} (${this.clients.size + 1} gesamt)`);
+      console.log(`[WS] Client connected: ${ip} (${this.clients.size + 1} total)`);
       this.clients.add(ws);
 
       ws.on("close", () => {
         this.clients.delete(ws);
-        console.log(`[WS] Client getrennt: ${ip} (${this.clients.size} verbleibend)`);
+        console.log(`[WS] Client disconnected: ${ip} (${this.clients.size} remaining)`);
       });
 
       ws.on("error", (err: Error) => {
-        console.error(`[WS] Client-Fehler (${ip}):`, err.message);
+        console.error(`[WS] Client error (${ip}):`, err.message);
         this.clients.delete(ws);
       });
 
@@ -35,7 +35,7 @@ export class BridgeWsServer {
     });
 
     this.wss.on("error", (err: Error) => {
-      console.error("[WS] Server-Fehler:", err);
+      console.error("[WS] Server error:", err);
     });
   }
 
