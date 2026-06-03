@@ -1,0 +1,6 @@
+include: package:very_good_analysis/analysis_options.yaml
+
+linter:
+  rules:
+    # Optional: Eigene Ausnahmen von den strengen Regeln hier eintragen
+    public_member_api_docs: false # Für ein Hobby-Projekt sind Doc-Comments überall vielleicht zu strikt
