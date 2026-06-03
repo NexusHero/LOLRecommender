@@ -33,18 +33,21 @@ void main() {
     // Check title and AI badge
     expect(find.text('RECOMMENDATIONS'), findsOneWidget);
     expect(find.text('AI'), findsOneWidget);
-    
+
     // Check item details
     expect(find.text("Banshee's Veil"), findsOneWidget);
     expect(find.text('CORE'), findsOneWidget);
     expect(find.text('Blocks initial burst combo'), findsOneWidget);
-    
+
     // Check reasoning
-    expect(find.text('Claude says this is a good item against high AP burst.'),
-        findsOneWidget);
+    expect(
+      find.text('Claude says this is a good item against high AP burst.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('RecommendationPanel renders correctly for empty heuristic source',
+  testWidgets(
+      'RecommendationPanel renders correctly for empty heuristic source',
       (WidgetTester tester) async {
     const recommendation = ItemRecommendation(
       source: RecommendationSource.heuristic,
@@ -62,6 +65,8 @@ void main() {
 
     expect(find.text('AUTO'), findsOneWidget);
     expect(find.text('No specific counter items needed.'), findsOneWidget);
-    expect(find.text('Enemy comp is balanced. No specific counter items needed.'), findsOneWidget);
+    expect(
+        find.text('Enemy comp is balanced. No specific counter items needed.'),
+        findsOneWidget);
   });
 }

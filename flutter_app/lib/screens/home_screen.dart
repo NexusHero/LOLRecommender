@@ -1,9 +1,9 @@
-import 'package:lol_coach/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:lol_coach/services/ws_service.dart';
+import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/widgets/connection_form.dart';
+import 'package:lol_coach/widgets/game_view.dart';
 import 'package:provider/provider.dart';
-import '../services/ws_service.dart';
-import '../widgets/connection_form.dart';
-import '../widgets/game_view.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -14,11 +14,13 @@ class HomeScreen extends StatelessWidget {
       builder: (context, ws, _) {
         return Scaffold(
           appBar: AppBar(
-            title: Row(children: [
-              const Text('LoL Coach'),
-              const SizedBox(width: 8),
-              _StatusDot(status: ws.status),
-            ]),
+            title: Row(
+              children: [
+                const Text('LoL Coach'),
+                const SizedBox(width: 8),
+                _StatusDot(status: ws.status),
+              ],
+            ),
             actions: [
               if (ws.status != ConnectionStatus.disconnected)
                 IconButton(
@@ -57,8 +59,8 @@ class HomeScreen extends StatelessWidget {
 }
 
 class _StatusDot extends StatelessWidget {
-  final ConnectionStatus status;
   const _StatusDot({required this.status});
+  final ConnectionStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -85,8 +87,11 @@ class _WaitingView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.sports_esports_outlined,
-              size: 64, color: Colors.grey.shade700),
+          Icon(
+            Icons.sports_esports_outlined,
+            size: 64,
+            color: Colors.grey.shade700,
+          ),
           const SizedBox(height: 16),
           const Text(
             'Waiting for game start...',

@@ -1,11 +1,7 @@
-import 'recommendation_source.dart';
-import 'recommended_item.dart';
+import 'package:lol_coach/models/recommendation_source.dart';
+import 'package:lol_coach/models/recommended_item.dart';
 
 class ItemRecommendation {
-  final List<RecommendedItem> items;
-  final String reasoning;
-  final RecommendationSource source;
-
   const ItemRecommendation({
     required this.items,
     required this.reasoning,
@@ -20,6 +16,9 @@ class ItemRecommendation {
         reasoning: json['reasoning'] as String,
         source: RecommendationSource.values.byName(json['source'] as String),
       );
+  final List<RecommendedItem> items;
+  final String reasoning;
+  final RecommendationSource source;
 
   bool get isLlm => source == RecommendationSource.llm;
 }

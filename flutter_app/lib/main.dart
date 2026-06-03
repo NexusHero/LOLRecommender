@@ -1,8 +1,8 @@
-import 'package:lol_coach/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:lol_coach/screens/home_screen.dart';
+import 'package:lol_coach/services/ws_service.dart';
+import 'package:lol_coach/theme/app_colors.dart';
 import 'package:provider/provider.dart';
-import 'services/ws_service.dart';
-import 'screens/home_screen.dart';
 
 void main() {
   runApp(
@@ -22,7 +22,7 @@ class LolCoachApp extends StatelessWidget {
       title: 'LoL Coach',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const AppColors.bgDark,
+        scaffoldBackgroundColor: AppColors.bgDark,
         colorScheme: const ColorScheme.dark(
           primary: AppColors.primaryGold,
           secondary: AppColors.secondaryCyan,
@@ -43,8 +43,8 @@ class LolCoachApp extends StatelessWidget {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const AppColors.primaryGold,
-            foregroundColor: const AppColors.bgDark,
+            backgroundColor: AppColors.primaryGold,
+            foregroundColor: AppColors.bgDark,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4),
             ),
@@ -52,7 +52,7 @@ class LolCoachApp extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const AppColors.surfaceDark,
+          fillColor: AppColors.surfaceDark,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
             borderSide: const BorderSide(color: AppColors.borderDark),

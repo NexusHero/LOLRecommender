@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
+import 'package:lol_coach/models/game_state.dart';
+import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/models/ws_message.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../models/ws_message.dart';
-import '../models/game_state.dart';
-import '../models/recommendation.dart';
 
 typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri);
 
@@ -14,6 +15,8 @@ WebSocketChannel _defaultChannelFactory(Uri uri) =>
 enum ConnectionStatus { disconnected, connecting, connected, error }
 
 class WsService extends ChangeNotifier {
+  WsService({WebSocketChannelFactory? channelFactory})
+      : _channelFactory = channelFactory ?? _defaultChannelFactory;
   final WebSocketChannelFactory _channelFactory;
 
   WebSocketChannel? _channel;
@@ -26,9 +29,6 @@ class WsService extends ChangeNotifier {
   String _lastEvent = '';
   bool _gameActive = false;
 
-  WsService({WebSocketChannelFactory? channelFactory})
-      : _channelFactory = channelFactory ?? _defaultChannelFactory;
-
   ConnectionStatus get status => _status;
   String? get lastError => _lastError;
   ParsedGameState? get gameState => _gameState;
@@ -39,7 +39,9 @@ class WsService extends ChangeNotifier {
 
   void connect(String host, {int port = 8765}) {
     if (_status == ConnectionStatus.connected ||
-        _status == ConnectionStatus.connecting) return;
+        _status == ConnectionStatus.connecting) {
+      return;
+    }
 
     _status = ConnectionStatus.connecting;
     _lastError = null;

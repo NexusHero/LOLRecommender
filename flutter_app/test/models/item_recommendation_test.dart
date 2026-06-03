@@ -38,13 +38,13 @@ void main() {
             'id': 3033,
             'name': 'Mortal Reminder',
             'reason': 'vs healers',
-            'priority': 'core'
+            'priority': 'core',
           },
           {
             'id': 3140,
             'name': 'Quicksilver Sash',
             'reason': 'vs CC',
-            'priority': 'situational'
+            'priority': 'situational',
           },
         ],
         'reasoning': 'test reasoning',

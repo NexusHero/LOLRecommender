@@ -1,17 +1,7 @@
-import 'item.dart';
-import 'player_scores.dart';
+import 'package:lol_coach/models/item.dart';
+import 'package:lol_coach/models/player_scores.dart';
 
 class Player {
-  final String championName;
-  final bool isBot;
-  final bool isDead;
-  final List<Item> items;
-  final int level;
-  final String position;
-  final PlayerScores scores;
-  final String summonerName;
-  final String team;
-
   const Player({
     required this.championName,
     required this.isBot,
@@ -37,4 +27,13 @@ class Player {
         summonerName: json['summonerName'] as String? ?? '',
         team: json['team'] as String? ?? 'ORDER',
       );
+  final String championName;
+  final bool isBot;
+  final bool isDead;
+  final List<Item> items;
+  final int level;
+  final String position;
+  final PlayerScores scores;
+  final String summonerName;
+  final String team;
 }
