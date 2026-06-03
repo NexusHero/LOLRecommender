@@ -1,3 +1,4 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/models/recommendation.dart';
@@ -84,8 +85,11 @@ class GameTopBar extends StatelessWidget {
           ),
           Row(
             children: [
-              const Icon(Icons.timer_outlined,
-                  size: 14, color: AppColors.textMuted),
+              const Icon(
+                Icons.timer_outlined,
+                size: 14,
+                color: AppColors.textMuted,
+              ),
               const SizedBox(width: 4),
               Text(
                 _fmt(gameState.gameTime),

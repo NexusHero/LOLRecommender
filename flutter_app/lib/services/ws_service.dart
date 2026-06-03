@@ -20,7 +20,7 @@ class WsService extends ChangeNotifier {
   final WebSocketChannelFactory _channelFactory;
 
   WebSocketChannel? _channel;
-  StreamSubscription? _subscription;
+  StreamSubscription<dynamic>? _subscription;
 
   ConnectionStatus _status = ConnectionStatus.disconnected;
   String? _lastError;

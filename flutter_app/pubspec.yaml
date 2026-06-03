@@ -10,14 +10,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  web_socket_channel: ^3.0.1
   provider: ^6.1.2
+  web_socket_channel: ^3.0.1
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  very_good_analysis: ^5.1.0
-
   stream_channel: any
+  very_good_analysis: ^5.1.0
 flutter:
   uses-material-design: true

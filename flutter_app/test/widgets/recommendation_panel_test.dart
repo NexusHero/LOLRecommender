@@ -66,7 +66,8 @@ void main() {
     expect(find.text('AUTO'), findsOneWidget);
     expect(find.text('No specific counter items needed.'), findsOneWidget);
     expect(
-        find.text('Enemy comp is balanced. No specific counter items needed.'),
-        findsOneWidget);
+      find.text('Enemy comp is balanced. No specific counter items needed.'),
+      findsOneWidget,
+    );
   });
 }

@@ -1,3 +1,4 @@
+// ignore_for_file: strict_raw_type, cascade_invocations
 import 'dart:async';
 import 'dart:convert';
 

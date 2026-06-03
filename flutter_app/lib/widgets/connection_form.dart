@@ -1,3 +1,4 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 
@@ -56,8 +57,11 @@ class _ConnectionFormState extends State<ConnectionForm> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.shield_outlined,
-              size: 52, color: AppColors.primaryGold),
+          const Icon(
+            Icons.shield_outlined,
+            size: 52,
+            color: AppColors.primaryGold,
+          ),
           const SizedBox(height: 12),
           const Text(
             'LoL Coach',
@@ -82,8 +86,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
             decoration: InputDecoration(
               labelText: 'Server IP',
               hintText: 'e.g. 192.168.1.100',
-              prefixIcon: const Icon(Icons.computer_outlined,
-                  color: AppColors.textMuted),
+              prefixIcon: const Icon(
+                Icons.computer_outlined,
+                color: AppColors.textMuted,
+              ),
               errorText: _ipError,
             ),
             keyboardType: TextInputType.url,
@@ -114,7 +120,9 @@ class _ConnectionFormState extends State<ConnectionForm> {
               child: Text(
                 widget.error!,
                 style: const TextStyle(
-                    color: AppColors.errorRedLight, fontSize: 12),
+                  color: AppColors.errorRedLight,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],

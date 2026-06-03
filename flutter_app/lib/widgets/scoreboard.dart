@@ -130,8 +130,11 @@ class TeamBlock extends StatelessWidget {
 }
 
 class PlayerRow extends StatelessWidget {
-  const PlayerRow(
-      {required this.player, required this.isHighlighted, super.key});
+  const PlayerRow({
+    required this.player,
+    required this.isHighlighted,
+    super.key,
+  });
   final Player player;
   final bool isHighlighted;
 
@@ -146,7 +149,10 @@ class PlayerRow extends StatelessWidget {
       child: Row(
         children: [
           ChampAvatar(
-              name: player.championName, isDead: player.isDead, size: 26),
+            name: player.championName,
+            isDead: player.isDead,
+            size: 26,
+          ),
           const SizedBox(width: 8),
           Expanded(
             flex: 3,
