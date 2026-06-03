@@ -1,3 +1,4 @@
+import 'package:lol_coach/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/ws_service.dart';
@@ -21,20 +22,20 @@ class LolCoachApp extends StatelessWidget {
       title: 'LoL Coach',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0A1628),
+        scaffoldBackgroundColor: const AppColors.bgDark,
         colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFC89B3C),
-          secondary: Color(0xFF0BC4E3),
-          surface: Color(0xFF0D1B2E),
-          error: Color(0xFFC3291F),
+          primary: AppColors.primaryGold,
+          secondary: AppColors.secondaryCyan,
+          surface: AppColors.surfaceDark,
+          error: AppColors.errorRed,
         ),
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF091428),
-          foregroundColor: Color(0xFFC89B3C),
+          backgroundColor: AppColors.surfaceMedium,
+          foregroundColor: AppColors.primaryGold,
           elevation: 0,
           centerTitle: false,
           titleTextStyle: TextStyle(
-            color: Color(0xFFC89B3C),
+            color: AppColors.primaryGold,
             fontSize: 18,
             fontWeight: FontWeight.bold,
             letterSpacing: 1,
@@ -42,8 +43,8 @@ class LolCoachApp extends StatelessWidget {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFC89B3C),
-            foregroundColor: const Color(0xFF0A1628),
+            backgroundColor: const AppColors.primaryGold,
+            foregroundColor: const AppColors.bgDark,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(4),
             ),
@@ -51,23 +52,23 @@ class LolCoachApp extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFF0D1B2E),
+          fillColor: const AppColors.surfaceDark,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: Color(0xFF1E3A5F)),
+            borderSide: const BorderSide(color: AppColors.borderDark),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: Color(0xFF1E3A5F)),
+            borderSide: const BorderSide(color: AppColors.borderDark),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(4),
-            borderSide: const BorderSide(color: Color(0xFFC89B3C)),
+            borderSide: const BorderSide(color: AppColors.primaryGold),
           ),
-          labelStyle: const TextStyle(color: Color(0xFF7A7A7A)),
-          hintStyle: const TextStyle(color: Color(0xFF3A3A3A)),
+          labelStyle: const TextStyle(color: AppColors.textMuted),
+          hintStyle: const TextStyle(color: AppColors.textDarker),
         ),
-        dividerTheme: const DividerThemeData(color: Color(0xFF1E3A5F)),
+        dividerTheme: const DividerThemeData(color: AppColors.borderDark),
       ),
       home: const HomeScreen(),
     );
