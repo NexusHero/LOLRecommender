@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:lol_coach/services/ws_service.dart';
 
@@ -21,10 +22,13 @@ class _FakeSink implements WebSocketSink {
   void addError(Object error, [StackTrace? stackTrace]) {}
 
   @override
+  Future<void> addStream(Stream<dynamic> stream) async {}
+
+  @override
   Future get done async {}
 }
 
-class FakeWebSocketChannel implements WebSocketChannel {
+class FakeWebSocketChannel with StreamChannelMixin implements WebSocketChannel {
   final _controller = StreamController<dynamic>.broadcast();
   final _sink = _FakeSink();
 
