@@ -1,3 +1,4 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart' hide Badge;
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/theme/app_colors.dart';
