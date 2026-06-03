@@ -28,7 +28,7 @@ jobs:
         working-directory: bridge
 
       - name: Upload TypeDoc artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: typedoc
           path: bridge/docs/
@@ -39,10 +39,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Validate asyncapi.yml
-        uses: asyncapi/cli@v2
+        uses: asyncapi/cli@latest
         with:
           command: validate
           filepath: bridge/asyncapi.yml
