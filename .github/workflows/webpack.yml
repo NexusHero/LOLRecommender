@@ -30,7 +30,7 @@ jobs:
         working-directory: bridge
 
       - name: Upload bundle artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bridge-bundle
           path: bridge/dist/bundle.js
