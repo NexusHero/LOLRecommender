@@ -18,6 +18,6 @@ class PlayerScores {
         creepScore: (json['creepScore'] as num).toInt(),
         deaths: (json['deaths'] as num).toInt(),
         kills: (json['kills'] as num).toInt(),
-        wardScore: (json['wardScore'] as num).toDouble(),
+        wardScore: (json['wardScore'] as num?)?.toDouble() ?? 0.0,
       );
 }

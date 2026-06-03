@@ -33,18 +33,18 @@ export const PlayerSchema = z.object({
   isDead: z.boolean(),
   items: z.array(ItemSchema),
   level: z.number(),
-  position: z.string(),
+  position: z.string().catch(""),
   rawChampionName: z.string(),
   scores: z.object({
     assists: z.number(),
     creepScore: z.number(),
     deaths: z.number(),
     kills: z.number(),
-    wardScore: z.number(),
+    wardScore: z.number().catch(0),
   }),
   skinID: z.number(),
   summonerName: z.string(),
-  team: z.enum(["ORDER", "CHAOS"]),
+  team: z.enum(["ORDER", "CHAOS"]).catch("ORDER" as any),
 });
 
 export const GameDataSchema = z.object({
@@ -52,7 +52,7 @@ export const GameDataSchema = z.object({
   gameTime: z.number(),
   mapName: z.string(),
   mapNumber: z.number(),
-  mapTerrain: z.string(),
+  mapTerrain: z.string().catch(""),
 });
 
 export const AllGameDataSchema = z.object({

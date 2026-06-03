@@ -32,9 +32,9 @@ class Player {
             .map((e) => Item.fromJson(e as Map<String, dynamic>))
             .toList(),
         level: (json['level'] as num).toInt(),
-        position: json['position'] as String,
+        position: json['position'] as String? ?? '',
         scores: PlayerScores.fromJson(json['scores'] as Map<String, dynamic>),
-        summonerName: json['summonerName'] as String,
-        team: json['team'] as String,
+        summonerName: json['summonerName'] as String? ?? '',
+        team: json['team'] as String? ?? 'ORDER',
       );
 }
