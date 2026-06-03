@@ -1,11 +1,4 @@
 class ActivePlayerStats {
-  final double abilityPower;
-  final double armor;
-  final double attackDamage;
-  final double critChance;
-  final double healthMax;
-  final double magicResist;
-
   const ActivePlayerStats({
     required this.abilityPower,
     required this.armor,
@@ -24,4 +17,10 @@ class ActivePlayerStats {
         healthMax: (json['healthMax'] as num).toDouble(),
         magicResist: (json['magicResist'] as num).toDouble(),
       );
+  final double abilityPower;
+  final double armor;
+  final double attackDamage;
+  final double critChance;
+  final double healthMax;
+  final double magicResist;
 }

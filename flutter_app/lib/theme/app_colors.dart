@@ -15,7 +15,7 @@ class AppColors {
   static const Color textDarker = Color(0xFF3A3A3A);
   static const Color textGrey = Color(0xFF666666);
   static const Color textLightGrey = Color(0xFFCDC8C2);
-  
+
   // Status Colors
   static const Color errorRed = Color(0xFFC3291F);
   static const Color errorRedLight = Color(0xFFFF6B6B);
@@ -29,16 +29,16 @@ class AppColors {
   static const Color blueDeep = Color(0xFF0A2040);
   static const Color blueBorder = Color(0xFF2A4A6A);
   static const Color blueGrey = Color(0xFF5A7A9A);
-  
+
   static const Color redDark = Color(0xFF6B1B1B);
   static const Color redDeep = Color(0xFF1A0808);
-  
+
   static const Color greenDark = Color(0xFF1A2A0A);
   static const Color greenLight = Color(0xFF7EC850);
-  
+
   static const Color purpleDark = Color(0xFF2A1A3A);
   static const Color purpleLight = Color(0xFF7B68EE);
-  
+
   static const Color blackGrey = Color(0xFF2A2A2A);
   static const Color blackGreyDark = Color(0xFF444444);
   static const Color blackDeep = Color(0xFF0A1020);

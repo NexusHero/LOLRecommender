@@ -18,5 +18,6 @@ dev_dependencies:
     sdk: flutter
   very_good_analysis: ^5.1.0
 
+  stream_channel: any
 flutter:
   uses-material-design: true

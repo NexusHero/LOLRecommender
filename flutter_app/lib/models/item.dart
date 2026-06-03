@@ -1,12 +1,4 @@
 class Item {
-  final bool canUse;
-  final bool consumable;
-  final int count;
-  final String displayName;
-  final int itemID;
-  final int price;
-  final int slot;
-
   const Item({
     required this.canUse,
     required this.consumable,
@@ -26,4 +18,11 @@ class Item {
         price: (json['price'] as num).toInt(),
         slot: (json['slot'] as num).toInt(),
       );
+  final bool canUse;
+  final bool consumable;
+  final int count;
+  final String displayName;
+  final int itemID;
+  final int price;
+  final int slot;
 }

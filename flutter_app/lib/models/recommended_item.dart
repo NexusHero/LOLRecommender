@@ -1,11 +1,6 @@
-import 'item_priority.dart';
+import 'package:lol_coach/models/item_priority.dart';
 
 class RecommendedItem {
-  final int id;
-  final String name;
-  final String reason;
-  final ItemPriority priority;
-
   const RecommendedItem({
     required this.id,
     required this.name,
@@ -20,6 +15,10 @@ class RecommendedItem {
         reason: json['reason'] as String,
         priority: ItemPriority.values.byName(json['priority'] as String),
       );
+  final int id;
+  final String name;
+  final String reason;
+  final ItemPriority priority;
 
   bool get isCore => priority == ItemPriority.core;
 }

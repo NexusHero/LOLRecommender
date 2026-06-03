@@ -1,10 +1,4 @@
 class PlayerScores {
-  final int assists;
-  final int creepScore;
-  final int deaths;
-  final int kills;
-  final double wardScore;
-
   const PlayerScores({
     required this.assists,
     required this.creepScore,
@@ -20,4 +14,9 @@ class PlayerScores {
         kills: (json['kills'] as num).toInt(),
         wardScore: (json['wardScore'] as num?)?.toDouble() ?? 0.0,
       );
+  final int assists;
+  final int creepScore;
+  final int deaths;
+  final int kills;
+  final double wardScore;
 }

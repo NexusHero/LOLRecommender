@@ -1,17 +1,16 @@
-import 'package:lol_coach/theme/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:lol_coach/theme/app_colors.dart';
 
 class ConnectionForm extends StatefulWidget {
-  final void Function(String host, int port) onConnect;
-  final String? error;
-  final bool isConnecting;
-
   const ConnectionForm({
-    super.key,
     required this.onConnect,
+    super.key,
     this.error,
     this.isConnecting = false,
   });
+  final void Function(String host, int port) onConnect;
+  final String? error;
+  final bool isConnecting;
 
   @override
   State<ConnectionForm> createState() => _ConnectionFormState();
@@ -33,7 +32,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
 
   void _connect() {
     if (widget.isConnecting) return;
-    
+
     final host = _hostCtrl.text.trim();
     if (host.isEmpty) return;
 
@@ -57,7 +56,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Icon(Icons.shield_outlined, size: 52, color: AppColors.primaryGold),
+          const Icon(Icons.shield_outlined,
+              size: 52, color: AppColors.primaryGold),
           const SizedBox(height: 12),
           const Text(
             'LoL Coach',
@@ -82,7 +82,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
             decoration: InputDecoration(
               labelText: 'Server IP',
               hintText: 'e.g. 192.168.1.100',
-              prefixIcon: const Icon(Icons.computer_outlined, color: AppColors.textMuted),
+              prefixIcon: const Icon(Icons.computer_outlined,
+                  color: AppColors.textMuted),
               errorText: _ipError,
             ),
             keyboardType: TextInputType.url,
@@ -106,13 +107,14 @@ class _ConnectionFormState extends State<ConnectionForm> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const AppColors.redDeep,
+                color: AppColors.redDeep,
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: const AppColors.errorRed),
+                border: Border.all(color: AppColors.errorRed),
               ),
               child: Text(
                 widget.error!,
-                style: const TextStyle(color: AppColors.errorRedLight, fontSize: 12),
+                style: const TextStyle(
+                    color: AppColors.errorRedLight, fontSize: 12),
               ),
             ),
           ],

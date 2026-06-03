@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:lol_coach/models/recommended_item.dart';
 import 'package:lol_coach/models/item_priority.dart';
+import 'package:lol_coach/models/recommended_item.dart';
 
 void main() {
   group('RecommendedItem', () {

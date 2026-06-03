@@ -1,14 +1,7 @@
-import 'active_player.dart';
-import 'player.dart';
+import 'package:lol_coach/models/active_player.dart';
+import 'package:lol_coach/models/player.dart';
 
 class ParsedGameState {
-  final double gameTime;
-  final String gameMode;
-  final Player localPlayer;
-  final List<Player> allies;
-  final List<Player> enemies;
-  final ActivePlayer activePlayer;
-
   const ParsedGameState({
     required this.gameTime,
     required this.gameMode,
@@ -33,4 +26,10 @@ class ParsedGameState {
         activePlayer:
             ActivePlayer.fromJson(json['activePlayer'] as Map<String, dynamic>),
       );
+  final double gameTime;
+  final String gameMode;
+  final Player localPlayer;
+  final List<Player> allies;
+  final List<Player> enemies;
+  final ActivePlayer activePlayer;
 }

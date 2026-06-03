@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lol_coach/services/ws_service.dart';
 import 'package:stream_channel/stream_channel.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:lol_coach/services/ws_service.dart';
 
 // --- Fake WebSocket infrastructure ---
 
@@ -155,7 +156,7 @@ void main() {
     });
 
     test('notifyListeners is called on status change', () async {
-      int notifyCount = 0;
+      var notifyCount = 0;
       service.addListener(() => notifyCount++);
 
       service.connect('localhost');
