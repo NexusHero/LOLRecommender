@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:lol_coach/theme/app_colors.dart';
+import 'package:flutter/material.dart' hide Badge;
 import '../models/recommendation.dart';
 import 'shared_widgets.dart';
 
@@ -10,18 +11,18 @@ class RecommendationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return GameCard(
       borderColor:
-          recommendation.isLlm ? const Color(0xFF7B68EE) : const Color(0xFF1E3A5F),
+          recommendation.isLlm ? const AppColors.purpleLight : const AppColors.borderDark,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
             const Icon(Icons.lightbulb_outline,
-                size: 15, color: Color(0xFFC89B3C)),
+                size: 15, color: AppColors.primaryGold),
             const SizedBox(width: 6),
             const Text(
               'RECOMMENDATIONS',
               style: TextStyle(
-                color: Color(0xFFC89B3C),
+                color: AppColors.primaryGold,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.5,
@@ -31,25 +32,25 @@ class RecommendationPanel extends StatelessWidget {
             Badge(
               recommendation.isLlm ? 'AI' : 'AUTO',
               bg: recommendation.isLlm
-                  ? const Color(0xFF2A1A3A)
-                  : const Color(0xFF0D2040),
+                  ? const AppColors.purpleDark
+                  : const AppColors.blueDarker,
               fg: recommendation.isLlm
-                  ? const Color(0xFF9B59B6)
-                  : const Color(0xFF0BC4E3),
+                  ? const AppColors.magicPurple
+                  : const AppColors.secondaryCyan,
             ),
           ]),
           const SizedBox(height: 10),
           if (recommendation.items.isEmpty)
             const Text(
               'No specific counter items needed.',
-              style: TextStyle(color: Color(0xFF7A7A7A), fontSize: 13),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
             )
           else
             ...recommendation.items.map((item) => _RecItemTile(item: item)),
-          const Divider(color: Color(0xFF1E3A5F), height: 16),
+          const Divider(color: AppColors.borderDark, height: 16),
           Text(
             recommendation.reasoning,
-            style: const TextStyle(color: Color(0xFF7A7A7A), fontSize: 12),
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
           ),
         ],
       ),
@@ -70,12 +71,12 @@ class _RecItemTile extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: const Color(0xFF091428),
+            color: const AppColors.surfaceMedium,
             borderRadius: BorderRadius.circular(4),
             border: Border.all(
               color: item.isCore
-                  ? const Color(0xFFC89B3C)
-                  : const Color(0xFF2A4A6A),
+                  ? const AppColors.primaryGold
+                  : const AppColors.blueBorder,
               width: 1.5,
             ),
           ),
@@ -83,7 +84,7 @@ class _RecItemTile extends StatelessWidget {
             child: Text(
               '${item.id % 1000}',
               style: const TextStyle(
-                  color: Color(0xFFC89B3C),
+                  color: AppColors.primaryGold,
                   fontSize: 9,
                   fontWeight: FontWeight.bold),
             ),
@@ -99,7 +100,7 @@ class _RecItemTile extends StatelessWidget {
                   child: Text(
                     item.name,
                     style: const TextStyle(
-                      color: Color(0xFFCDC8C2),
+                      color: AppColors.textLightGrey,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
@@ -109,16 +110,16 @@ class _RecItemTile extends StatelessWidget {
                 Badge(
                   item.isCore ? 'CORE' : 'SITUATIONAL',
                   bg: item.isCore
-                      ? const Color(0xFF1A1200)
-                      : const Color(0xFF0A1020),
+                      ? const AppColors.goldDark
+                      : const AppColors.blackDeep,
                   fg: item.isCore
-                      ? const Color(0xFFC89B3C)
-                      : const Color(0xFF5A7A9A),
+                      ? const AppColors.primaryGold
+                      : const AppColors.blueGrey,
                 ),
               ]),
               Text(item.reason,
                   style: const TextStyle(
-                      color: Color(0xFF7A7A7A), fontSize: 11)),
+                      color: AppColors.textMuted, fontSize: 11)),
             ],
           ),
         ),

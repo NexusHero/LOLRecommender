@@ -1,4 +1,5 @@
-import 'package:flutter/material.dart';
+import 'package:lol_coach/theme/app_colors.dart';
+import 'package:flutter/material.dart' hide Badge;
 import '../models/game_state.dart';
 import '../models/recommendation.dart';
 
@@ -11,7 +12,7 @@ class GameCard extends StatelessWidget {
   const GameCard({
     super.key,
     required this.child,
-    this.borderColor = const Color(0xFF1E3A5F),
+    this.borderColor = const AppColors.borderDark,
   });
 
   @override
@@ -20,7 +21,7 @@ class GameCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF0D1B2E),
+        color: const AppColors.surfaceDark,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: borderColor),
       ),
@@ -51,11 +52,11 @@ class ChampAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDead ? const Color(0xFF2A2A2A) : _color(name),
+        color: isDead ? const AppColors.blackGrey : _color(name),
         borderRadius: BorderRadius.circular(4),
         border: Border.all(
           color:
-              isDead ? const Color(0xFF444444) : const Color(0xFFC89B3C),
+              isDead ? const AppColors.blackGreyDark : const AppColors.primaryGold,
           width: 1,
         ),
       ),
@@ -64,8 +65,8 @@ class ChampAvatar extends StatelessWidget {
           name.isNotEmpty ? name[0].toUpperCase() : '?',
           style: TextStyle(
             color: isDead
-                ? const Color(0xFF666666)
-                : const Color(0xFFCDC8C2),
+                ? const AppColors.textGrey
+                : const AppColors.textLightGrey,
             fontSize: size * 0.42,
             fontWeight: FontWeight.bold,
           ),
@@ -94,10 +95,10 @@ class ItemRow extends StatelessWidget {
                   width: 30,
                   height: 30,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF091428),
+                    color: const AppColors.surfaceMedium,
                     borderRadius: BorderRadius.circular(3),
                     border: Border.all(
-                        color: const Color(0xFF2A4A6A), width: 1),
+                        color: const AppColors.blueBorder, width: 1),
                   ),
                   child: Center(
                     child: Text(
@@ -105,7 +106,7 @@ class ItemRow extends StatelessWidget {
                           ? item.displayName[0]
                           : '?',
                       style: const TextStyle(
-                          color: Color(0xFFC89B3C),
+                          color: AppColors.primaryGold,
                           fontSize: 11,
                           fontWeight: FontWeight.bold),
                     ),
@@ -163,7 +164,7 @@ class KdaSep extends StatelessWidget {
   Widget build(BuildContext context) => const Padding(
         padding: EdgeInsets.symmetric(horizontal: 3),
         child: Text('/',
-            style: TextStyle(color: Color(0xFF444444), fontSize: 14)),
+            style: TextStyle(color: AppColors.blackGreyDark, fontSize: 14)),
       );
 }
 
@@ -179,7 +180,7 @@ class StatChip extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
         Text(label,
             style: const TextStyle(
-                color: Color(0xFF7A7A7A),
+                color: AppColors.textMuted,
                 fontSize: 9,
                 letterSpacing: 0.5)),
         const SizedBox(height: 2),
