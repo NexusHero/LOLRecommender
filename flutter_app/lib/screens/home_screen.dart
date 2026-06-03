@@ -1,3 +1,4 @@
+import 'package:lol_coach/theme/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ws_service.dart';
@@ -37,23 +38,11 @@ class HomeScreen extends StatelessWidget {
     switch (ws.status) {
       case ConnectionStatus.disconnected:
       case ConnectionStatus.error:
+      case ConnectionStatus.connecting:
         return ConnectionForm(
           error: ws.status == ConnectionStatus.error ? ws.lastError : null,
+          isConnecting: ws.status == ConnectionStatus.connecting,
           onConnect: (host, port) => ws.connect(host, port: port),
-        );
-
-      case ConnectionStatus.connecting:
-        return Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(
-                  color: Theme.of(context).colorScheme.primary),
-              const SizedBox(height: 16),
-              const Text('Connecting...',
-                  style: TextStyle(color: Color(0xFF7A7A7A), fontSize: 14)),
-            ],
-          ),
         );
 
       case ConnectionStatus.connected:
@@ -101,12 +90,12 @@ class _WaitingView extends StatelessWidget {
           const SizedBox(height: 16),
           const Text(
             'Waiting for game start...',
-            style: TextStyle(color: Color(0xFF7A7A7A), fontSize: 16),
+            style: TextStyle(color: AppColors.textMuted, fontSize: 16),
           ),
           const SizedBox(height: 8),
           const Text(
             'Start a League of Legends match',
-            style: TextStyle(color: Color(0xFF4A4A4A), fontSize: 12),
+            style: TextStyle(color: AppColors.textDark, fontSize: 12),
           ),
         ],
       ),
