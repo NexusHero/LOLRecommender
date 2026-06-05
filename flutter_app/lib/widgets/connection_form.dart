@@ -166,6 +166,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
             ),
             child: Column(
               children: [
+                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('None (Heuristic only)', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'none',
@@ -175,6 +176,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
+                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('Claude', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'claude',
@@ -184,6 +186,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
+                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('OpenAI', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'openai',
@@ -193,6 +196,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
+                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('Gemini', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'gemini',
@@ -218,8 +222,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
                       decoration: InputDecoration(
                         labelText: '$_providerType API Key',
                         hintText: 'Enter your API key',
-                        prefixIcon: const Icon(Icons.vpn_key_outlined,
-                            color: AppColors.textMuted),
+                        prefixIcon: const Icon(
+                          Icons.vpn_key_outlined,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                       keyboardType: TextInputType.text,
                       textInputAction: TextInputAction.done,

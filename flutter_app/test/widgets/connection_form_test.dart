@@ -8,7 +8,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('ConnectionForm displays radio buttons and API key field when LLM provider is selected', (WidgetTester tester) async {
+  testWidgets(
+    'ConnectionForm displays radio buttons and API key field when LLM provider is selected',
+    (WidgetTester tester) async {
     String? capturedProvider;
     String? capturedApiKey;
 
@@ -43,7 +45,10 @@ void main() {
     expect(find.text('claude API Key'), findsOneWidget);
 
     // Enter API key
-    await tester.enterText(find.widgetWithText(TextField, 'claude API Key'), 'test-claude-key');
+    await tester.enterText(
+      find.widgetWithText(TextField, 'claude API Key'),
+      'test-claude-key',
+    );
     
     // Tap connect
     await tester.ensureVisible(find.text('CONNECT'));
@@ -54,7 +59,9 @@ void main() {
     expect(capturedApiKey, 'test-claude-key');
   });
   
-  testWidgets('ConnectionForm works with none provider', (WidgetTester tester) async {
+  testWidgets(
+    'ConnectionForm works with none provider',
+    (WidgetTester tester) async {
     String? capturedProvider;
     String? capturedApiKey;
 
