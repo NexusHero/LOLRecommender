@@ -1,4 +1,4 @@
-// ignore_for_file: lines_longer_than_80_chars
+// ignore_for_file: lines_longer_than_80_chars, deprecated_member_use
 import 'package:flutter/material.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -166,7 +166,6 @@ class _ConnectionFormState extends State<ConnectionForm> {
             ),
             child: Column(
               children: [
-                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('None (Heuristic only)', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'none',
@@ -176,7 +175,6 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
-                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('Claude', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'claude',
@@ -186,7 +184,6 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
-                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('OpenAI', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'openai',
@@ -196,7 +193,6 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   contentPadding: EdgeInsets.zero,
                   dense: true,
                 ),
-                // ignore: deprecated_member_use
                 RadioListTile<String>(
                   title: const Text('Gemini', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
                   value: 'gemini',

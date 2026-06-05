@@ -9,21 +9,23 @@ void main() {
   });
 
   testWidgets(
-    'ConnectionForm displays radio buttons and API key field when LLM provider is selected',
+    'ConnectionForm shows API key field when LLM provider selected',
     (WidgetTester tester) async {
     String? capturedProvider;
     String? capturedApiKey;
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: ConnectionForm(
-          onConnect: (host, port, summonerName, providerType, apiKey) {
-            capturedProvider = providerType;
-            capturedApiKey = apiKey;
-          },
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ConnectionForm(
+            onConnect: (host, port, summonerName, providerType, apiKey) {
+              capturedProvider = providerType;
+              capturedApiKey = apiKey;
+            },
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     // Verify radio buttons exist
@@ -65,16 +67,18 @@ void main() {
     String? capturedProvider;
     String? capturedApiKey;
 
-    await tester.pumpWidget(MaterialApp(
-      home: Scaffold(
-        body: ConnectionForm(
-          onConnect: (host, port, summonerName, providerType, apiKey) {
-            capturedProvider = providerType;
-            capturedApiKey = apiKey;
-          },
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ConnectionForm(
+            onConnect: (host, port, summonerName, providerType, apiKey) {
+              capturedProvider = providerType;
+              capturedApiKey = apiKey;
+            },
+          ),
         ),
       ),
-    ));
+    );
 
     // Tap connect directly
     await tester.ensureVisible(find.text('CONNECT'));

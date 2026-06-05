@@ -20,15 +20,13 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     // Listen to changes in connection status to show error snackbars
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ws = context.read<WsService>();
-      ws.addListener(_onWsChanged);
+      context.read<WsService>().addListener(_onWsChanged);
     });
   }
 
   @override
   void dispose() {
-    final ws = context.read<WsService>();
-    ws.removeListener(_onWsChanged);
+    context.read<WsService>().removeListener(_onWsChanged);
     super.dispose();
   }
 
@@ -99,7 +97,13 @@ class _MainScreenState extends State<MainScreen> {
         error: ws.status == ConnectionStatus.error ? ws.lastError : null,
         isConnecting: ws.status == ConnectionStatus.connecting,
         onConnect: (host, port, summonerName, providerType, apiKey) {
-          ws.connect(host, port: port, summonerName: summonerName, providerType: providerType, apiKey: apiKey);
+          ws.connect(
+            host,
+            port: port,
+            summonerName: summonerName,
+            providerType: providerType,
+            apiKey: apiKey,
+          );
           // Auto-switch to Coach tab immediately
           setState(() {
             _currentIndex = 0;

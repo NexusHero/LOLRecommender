@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:lol_coach/theme/app_colors.dart';
-import 'package:lol_coach/widgets/connection_form.dart';
 import 'package:lol_coach/widgets/game_view.dart';
 import 'package:provider/provider.dart';
 
@@ -48,7 +47,10 @@ class HomeScreen extends StatelessWidget {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text('Connecting to bridge...', style: TextStyle(color: AppColors.primaryGold)),
+              Text(
+                'Connecting to bridge...',
+                style: TextStyle(color: AppColors.primaryGold),
+              ),
             ],
           ),
         );
@@ -76,7 +78,11 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 16),
           const Text(
             'Not Connected',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 18, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.textMuted,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
