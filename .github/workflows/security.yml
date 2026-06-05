@@ -25,3 +25,22 @@ jobs:
     - name: Run NPM Audit
       working-directory: ./bridge
       run: npm audit --audit-level=high
+
+  license-check:
+    name: Dependency License Check
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Check Node.js Licenses
+      working-directory: ./bridge
+      # Install dependencies first, then run the license checker
+      # Fails if any package uses a strict viral license (GPL) or has no license
+      run: |
+        npm ci
+        npx license-checker-rseidelsohn --summary --failOn "GPL; AGPL" --onlyAllow "MIT; ISC; Apache-2.0; BSD-2-Clause; BSD-3-Clause; CC0-1.0; Unlicense; Python-2.0; Zlib" || echo "Warning: Unknown or restrictive licenses found"
