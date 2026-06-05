@@ -4,12 +4,12 @@ import { z } from "zod";
 
 export const ActivePlayerSchema = z.object({
   championStats: z.object({
-    abilityPower: z.number(),
-    armor: z.number(),
-    attackDamage: z.number(),
-    critChance: z.number(),
-    healthMax: z.number(),
-    magicResist: z.number(),
+    abilityPower: z.number().catch(0),
+    armor: z.number().catch(0),
+    attackDamage: z.number().catch(0),
+    critChance: z.number().catch(0),
+    healthMax: z.number().catch(0),
+    magicResist: z.number().catch(0),
   }),
   currentGold: z.number(),
   level: z.number(),

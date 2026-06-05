@@ -5,7 +5,10 @@ import type { WsMessage } from "./types.js";
 export class BridgeWsServer {
   private clients = new Set<WebSocket>();
 
-  constructor(private readonly wss: WebSocketServer) {
+  constructor(
+    private readonly wss: WebSocketServer,
+    private readonly onMessage?: (ws: WebSocket, message: any) => void
+  ) {
     this.setupHandlers();
   }
 
@@ -20,6 +23,17 @@ export class BridgeWsServer {
       const ip = req.socket.remoteAddress ?? "unbekannt";
       console.log(`[WS] Client connected: ${ip} (${this.clients.size + 1} total)`);
       this.clients.add(ws);
+
+      ws.on("message", (data: Buffer) => {
+        try {
+          const parsed = JSON.parse(data.toString());
+          if (this.onMessage) {
+            this.onMessage(ws, parsed);
+          }
+        } catch (err) {
+          console.warn(`[WS] Failed to parse message from ${ip}`, err);
+        }
+      });
 
       ws.on("close", () => {
         this.clients.delete(ws);

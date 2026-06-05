@@ -1,26 +1,28 @@
 import { parseGameState } from "./parser.js";
 import { EventDetector } from "./eventDetector.js";
 import { buildCompProfile, getHeuristicRecommendations } from "./heuristic.js";
-import { LlmExplainer } from "./llmExplainer.js";
 import { BridgeWsServer } from "./wsServer.js";
+import type { LlmProvider } from "./llmProvider.js";
 import type { AllGameData, ParsedGameState } from "./types.js";
 
 export interface OrchestratorConfig {
   summonerName: string;
   llmCooldownMs: number;
-  hasApiKey: boolean;
 }
 
 export class BridgeOrchestrator {
   private lastLlmCallAt = 0;
+  private llmProvider: LlmProvider | null;
 
   constructor(
     private readonly wsServer: BridgeWsServer,
     private readonly eventDetector: EventDetector,
-    private readonly llmExplainer: LlmExplainer,
+    llmProvider: LlmProvider | null,
     private readonly config: OrchestratorConfig,
     private readonly clock: () => number = Date.now,
-  ) {}
+  ) {
+    this.llmProvider = llmProvider;
+  }
 
   async handleGameData(raw: AllGameData): Promise<void> {
     const state = parseGameState(raw, this.config.summonerName);
@@ -54,7 +56,7 @@ export class BridgeOrchestrator {
 
     const now = this.clock();
     const useLlm =
-      this.config.hasApiKey &&
+      this.llmProvider !== null &&
       now - this.lastLlmCallAt > this.config.llmCooldownMs &&
       this.wsServer.clientCount > 0;
 
@@ -62,7 +64,7 @@ export class BridgeOrchestrator {
 
     if (useLlm) {
       this.lastLlmCallAt = now;
-      const llmReasoning = await this.llmExplainer.getExplanation(
+      const llmReasoning = await this.llmProvider!.getExplanation(
         state,
         heuristicRec,
       );
@@ -83,5 +85,22 @@ export class BridgeOrchestrator {
 
   resetDetector(): void {
     this.eventDetector.reset();
+  }
+
+  setSummonerName(name: string): void {
+    if (this.config.summonerName !== name) {
+      console.log(`[Orchestrator] Changing summoner name to '${name}'`);
+      this.config.summonerName = name;
+      this.resetDetector();
+    }
+  }
+
+  setLlmProvider(provider: LlmProvider | null): void {
+    const oldName = this.llmProvider?.name ?? "none";
+    const newName = provider?.name ?? "none";
+    if (oldName !== newName) {
+      console.log(`[Orchestrator] LLM provider changed: ${oldName} → ${newName}`);
+    }
+    this.llmProvider = provider;
   }
 }
