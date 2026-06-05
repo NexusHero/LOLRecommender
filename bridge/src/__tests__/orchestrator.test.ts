@@ -164,10 +164,16 @@ describe("BridgeOrchestrator", () => {
       // Trigger ITEM_PURCHASED 10 seconds later — within cooldown
       now = 110_000;
       const enemy = makePlayer({ summonerName: "E", team: "CHAOS" });
-      orchestrator.resetDetector();
-      await orchestrator.handleGameData(makeRawGameData([makePlayer(), enemy]));
-      // After reset, GAME_STARTED fires again
-      const rec2 = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      // Don't reset detector, so we fire ITEM_PURCHASED and not GAME_STARTED
+      // because ITEM_PURCHASED doesn't trigger LLM at all anymore!
+      // Actually wait, ITEM_PURCHASED just triggers heuristic.
+      // We want to test PLAYER_DIED within cooldown.
+      const raw2 = makeRawGameData([makePlayer({ isDead: true }), enemy]);
+      raw2.activePlayer.currentGold = 1500; // meets gold threshold, but fails cooldown
+      await orchestrator.handleGameData(raw2);
+
+      // find the latest recommendation
+      const rec2 = broadcasts.reverse().find((b) => b.event === "RECOMMENDATION");
       expect(rec2?.recommendation?.source).toBe("heuristic");
     });
 

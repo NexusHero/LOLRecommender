@@ -42,6 +42,17 @@ export class EventDetector {
       events.push({ type: "GAME_TICK", state: current });
     }
 
+    if (!prev.localPlayer.isDead && current.localPlayer.isDead) {
+      events.push({ type: "PLAYER_DIED", state: current });
+    }
+
+    if (
+      prev.activePlayer.currentGold < 1000 &&
+      current.activePlayer.currentGold >= 1000
+    ) {
+      events.push({ type: "HIGH_GOLD_REACHED", state: current });
+    }
+
     this.lastState = current;
     return events;
   }

@@ -1,7 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { Anthropic } from "@anthropic-ai/sdk";
 import type { LlmProvider } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
+import { minifyGameState } from "../stateMinifier.js";
 
 export class ClaudeProvider implements LlmProvider {
   readonly name = "claude";

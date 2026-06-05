@@ -1,9 +1,10 @@
 import type { ParsedGameState, ItemRecommendation } from "./types.js";
+import { minifyGameState } from "./stateMinifier.js";
 
 export const SYSTEM_PROMPT = `You are an experienced League of Legends coach.
-Analyze the enemy team composition and briefly explain (2-3 sentences)
-why the suggested items are a good choice. Be specific and concise.
-Do not use Markdown formatting.`;
+Analyze the game state and briefly explain (2-3 sentences)
+why the suggested items are a good choice. Consider KDA and gold advantages.
+Be specific and concise. Do not use Markdown formatting.`;
 
 /**
  * Common interface for all LLM providers.
@@ -24,17 +25,14 @@ export function buildUserPrompt(
   state: ParsedGameState,
   heuristicRec: ItemRecommendation,
 ): string {
-  const enemyChamps = state.enemies.map((e) => e.championName).join(", ");
   const itemNames = heuristicRec.items.map((i) => i.name).join(", ");
-  const minutes = Math.floor(state.gameTime / 60);
-  const seconds = String(Math.floor(state.gameTime % 60)).padStart(2, "0");
 
-  return `My champion: ${state.localPlayer.championName}
-Enemies: ${enemyChamps}
+  return `Current Game State:
+${minifyGameState(state)}
+
 Suggested items: ${itemNames}
-Game time: ${minutes}:${seconds}
 
-Briefly explain why these items are effective against this composition.`;
+Briefly explain why these items are effective right now.`;
 }
 
 /**

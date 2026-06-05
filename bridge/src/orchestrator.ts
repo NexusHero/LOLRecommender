@@ -33,10 +33,12 @@ export class BridgeOrchestrator {
 
       const shouldRecommend =
         event.type === "GAME_STARTED" ||
-        event.type === "ITEM_PURCHASED";
+        event.type === "ITEM_PURCHASED" ||
+        event.type === "PLAYER_DIED" ||
+        event.type === "HIGH_GOLD_REACHED";
 
       if (shouldRecommend) {
-        await this.sendRecommendation(event.state);
+        await this.sendRecommendation(event.state, event.type);
       }
 
       this.wsServer.broadcast({
@@ -47,7 +49,7 @@ export class BridgeOrchestrator {
     }
   }
 
-  private async sendRecommendation(state: ParsedGameState): Promise<void> {
+  private async sendRecommendation(state: ParsedGameState, eventType: string): Promise<void> {
     const profile = buildCompProfile(state.enemies);
     const heuristicRec = getHeuristicRecommendations(
       profile,
@@ -55,20 +57,32 @@ export class BridgeOrchestrator {
     );
 
     const now = this.clock();
-    const useLlm =
-      this.llmProvider !== null &&
-      now - this.lastLlmCallAt > this.config.llmCooldownMs &&
-      this.wsServer.clientCount > 0;
+    let useLlm = false;
+
+    if (this.llmProvider !== null && this.wsServer.clientCount > 0) {
+      if (eventType === "GAME_STARTED") {
+        useLlm = true; // Always trigger LLM on game start
+      } else if (eventType === "PLAYER_DIED") {
+        // Trigger LLM if high gold and cooldown passed
+        if (state.activePlayer.currentGold >= 1000 && now - this.lastLlmCallAt > this.config.llmCooldownMs) {
+          useLlm = true;
+        }
+      }
+    }
 
     let finalRec = heuristicRec;
 
     if (useLlm) {
       this.lastLlmCallAt = now;
-      const llmReasoning = await this.llmProvider!.getExplanation(
-        state,
-        heuristicRec,
-      );
-      finalRec = { ...heuristicRec, reasoning: llmReasoning, source: "llm" };
+      try {
+        const llmReasoning = await this.llmProvider!.getExplanation(
+          state,
+          heuristicRec,
+        );
+        finalRec = { ...heuristicRec, reasoning: llmReasoning, source: "llm" };
+      } catch (err) {
+        console.error(`[Orchestrator] LLM failed for ${eventType}:`, err);
+      }
     }
 
     this.wsServer.broadcast({
@@ -79,7 +93,7 @@ export class BridgeOrchestrator {
     });
 
     console.log(
-      `[Rec] ${finalRec.source}: ${finalRec.items.map((i) => i.name).join(", ")}`,
+      `[Rec] ${finalRec.source} (Trigger: ${eventType}): ${finalRec.items.map((i) => i.name).join(", ")}`,
     );
   }
 
