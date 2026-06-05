@@ -1,5 +1,8 @@
 import type { ParsedGameState, ItemRecommendation } from "./types.js";
 import { minifyGameState } from "./stateMinifier.js";
+import { ClaudeProvider } from "./providers/claudeProvider.js";
+import { OpenAiProvider } from "./providers/openaiProvider.js";
+import { GeminiProvider } from "./providers/geminiProvider.js";
 
 export const SYSTEM_PROMPT = `You are an experienced League of Legends coach.
 Analyze the game state and briefly explain (2-3 sentences)
@@ -37,25 +40,19 @@ Briefly explain why these items are effective right now.`;
 
 /**
  * Factory function — creates the correct LlmProvider from a type string + API key.
- * Imports are dynamic so unused SDKs don't block startup.
+ * Imports are now static so Webpack and pkg bundle them correctly for the .exe.
  */
 export async function createLlmProvider(
   type: ProviderType,
   apiKey: string,
 ): Promise<LlmProvider> {
   switch (type) {
-    case "claude": {
-      const { ClaudeProvider } = await import("./providers/claudeProvider.js");
+    case "claude":
       return new ClaudeProvider(apiKey);
-    }
-    case "openai": {
-      const { OpenAiProvider } = await import("./providers/openaiProvider.js");
+    case "openai":
       return new OpenAiProvider(apiKey);
-    }
-    case "gemini": {
-      const { GeminiProvider } = await import("./providers/geminiProvider.js");
+    case "gemini":
       return new GeminiProvider(apiKey);
-    }
     default:
       throw new Error(`Unknown LLM provider: ${type}`);
   }
