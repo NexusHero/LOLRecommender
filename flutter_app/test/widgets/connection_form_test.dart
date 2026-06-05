@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/widgets/connection_form.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('ConnectionForm displays radio buttons and API key field when LLM provider is selected', (WidgetTester tester) async {
     String? capturedProvider;
     String? capturedApiKey;
@@ -17,6 +22,7 @@ void main() {
         ),
       ),
     ));
+    await tester.pumpAndSettle();
 
     // Verify radio buttons exist
     expect(find.text('None (Heuristic only)'), findsOneWidget);

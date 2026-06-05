@@ -1,6 +1,7 @@
 // ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
 import 'package:lol_coach/theme/app_colors.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ConnectionForm extends StatefulWidget {
   const ConnectionForm({
@@ -28,6 +29,23 @@ class _ConnectionFormState extends State<ConnectionForm> {
   String _providerType = 'none';
 
   @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _hostCtrl.text = prefs.getString('host') ?? '127.0.0.1';
+      _portCtrl.text = prefs.getString('port') ?? '$_defaultPort';
+      _summonerCtrl.text = prefs.getString('summonerName') ?? '';
+      _providerType = prefs.getString('providerType') ?? 'none';
+      _apiKeyCtrl.text = prefs.getString('apiKey') ?? '';
+    });
+  }
+
+  @override
   void dispose() {
     _hostCtrl.dispose();
     _portCtrl.dispose();
@@ -36,7 +54,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
     super.dispose();
   }
 
-  void _connect() {
+  Future<void> _connect() async {
     if (widget.isConnecting) return;
 
     final host = _hostCtrl.text.trim();
@@ -50,10 +68,18 @@ class _ConnectionFormState extends State<ConnectionForm> {
       setState(() => _ipError = null);
     }
 
-    final port = int.tryParse(_portCtrl.text.trim()) ?? _defaultPort;
+    final portString = _portCtrl.text.trim();
+    final port = int.tryParse(portString) ?? _defaultPort;
     final summonerName = _summonerCtrl.text.trim();
     final apiKey = _apiKeyCtrl.text.trim();
     
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('host', host);
+    await prefs.setString('port', portString);
+    await prefs.setString('summonerName', summonerName);
+    await prefs.setString('providerType', _providerType);
+    await prefs.setString('apiKey', apiKey);
+
     widget.onConnect(host, port, summonerName, _providerType, apiKey);
   }
 
