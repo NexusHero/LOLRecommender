@@ -1,12 +1,12 @@
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
-import { LlmExplainer } from "../llmExplainer";
 import { BridgeWsServer } from "../wsServer";
 import { makeRawGameData, makePlayer, makeItem } from "./fixtures";
 import type { WsMessage } from "../types";
+import type { LlmProvider } from "../llmProvider";
 
 function setup(overrides: {
-  hasApiKey?: boolean;
+  hasLlm?: boolean;
   clientCount?: number;
   llmResult?: string;
   clock?: () => number;
@@ -18,23 +18,23 @@ function setup(overrides: {
     close: jest.fn(),
   } as unknown as BridgeWsServer;
 
-  const llmExplainer = {
+  const llmProvider = {
+    name: "mock",
     getExplanation: jest.fn().mockResolvedValue(overrides.llmResult ?? "LLM says buy this"),
-  } as unknown as LlmExplainer;
+  } as unknown as LlmProvider;
 
   const orchestrator = new BridgeOrchestrator(
     wsServer,
     new EventDetector(),
-    llmExplainer,
+    overrides.hasLlm === false ? null : llmProvider,
     {
       summonerName: "TestPlayer",
       llmCooldownMs: 60_000,
-      hasApiKey: overrides.hasApiKey ?? false,
-      },
+    },
     overrides.clock ?? (() => 1000),
   );
 
-  return { orchestrator, wsServer, llmExplainer, broadcasts };
+  return { orchestrator, wsServer, llmProvider, broadcasts };
 }
 
 describe("BridgeOrchestrator", () => {
@@ -124,8 +124,8 @@ describe("BridgeOrchestrator", () => {
   });
 
   describe("LLM cooldown", () => {
-    it("uses heuristic source when no API key", async () => {
-      const { orchestrator, broadcasts } = setup({ hasApiKey: false });
+    it("uses heuristic source when no LLM provider", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: false });
 
       await orchestrator.handleGameData(makeRawGameData());
 
@@ -133,9 +133,9 @@ describe("BridgeOrchestrator", () => {
       expect(rec?.recommendation?.source).toBe("heuristic");
     });
 
-    it("uses LLM source when API key is set and cooldown passed", async () => {
+    it("uses LLM source when provider is set and cooldown passed", async () => {
       const { orchestrator, broadcasts } = setup({
-        hasApiKey: true,
+        hasLlm: true,
         clientCount: 1,
         clock: () => 100_000,
       });
@@ -149,7 +149,7 @@ describe("BridgeOrchestrator", () => {
     it("uses heuristic when within LLM cooldown", async () => {
       let now = 100_000;
       const { orchestrator, broadcasts } = setup({
-        hasApiKey: true,
+        hasLlm: true,
         clientCount: 1,
         clock: () => now,
       });
@@ -172,8 +172,8 @@ describe("BridgeOrchestrator", () => {
     });
 
     it("skips LLM when no clients are connected", async () => {
-      const { orchestrator, broadcasts, llmExplainer } = setup({
-        hasApiKey: true,
+      const { orchestrator, broadcasts, llmProvider } = setup({
+        hasLlm: true,
         clientCount: 0,
         clock: () => 100_000,
       });
@@ -182,7 +182,7 @@ describe("BridgeOrchestrator", () => {
 
       const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       expect(rec?.recommendation?.source).toBe("heuristic");
-      expect(llmExplainer.getExplanation).not.toHaveBeenCalled();
+      expect(llmProvider.getExplanation).not.toHaveBeenCalled();
     });
   });
 
@@ -198,6 +198,56 @@ describe("BridgeOrchestrator", () => {
 
       const events = broadcasts.map((b) => b.event);
       expect(events).toContain("GAME_STARTED");
+    });
+  });
+
+  describe("setSummonerName", () => {
+    it("updates the summoner used for parsing game data", async () => {
+      const player1 = makePlayer({ summonerName: "Player1", team: "ORDER" });
+      const player2 = makePlayer({ summonerName: "Player2", team: "ORDER", championName: "Garen" });
+      const enemy = makePlayer({ summonerName: "Enemy1", team: "CHAOS" });
+      const { orchestrator, broadcasts } = setup();
+
+      // Before setSummonerName — default "TestPlayer" not found, falls back to first
+      await orchestrator.handleGameData(makeRawGameData([player1, player2, enemy]));
+      const rec1 = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec1?.gameState?.localPlayer.summonerName).toBe("Player1");
+
+      broadcasts.length = 0;
+      orchestrator.setSummonerName("Player2");
+
+      await orchestrator.handleGameData(makeRawGameData([player1, player2, enemy]));
+      const rec2 = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec2?.gameState?.localPlayer.summonerName).toBe("Player2");
+      expect(rec2?.gameState?.localPlayer.championName).toBe("Garen");
+    });
+
+    it("resets the detector so GAME_STARTED fires again", async () => {
+      const { orchestrator, broadcasts } = setup();
+
+      await orchestrator.handleGameData(makeRawGameData());
+      broadcasts.length = 0;
+
+      orchestrator.setSummonerName("NewPlayer");
+
+      await orchestrator.handleGameData(makeRawGameData());
+      const events = broadcasts.map((b) => b.event);
+      expect(events).toContain("GAME_STARTED");
+    });
+
+    it("does not reset detector if name is unchanged", async () => {
+      const { orchestrator, broadcasts } = setup();
+
+      await orchestrator.handleGameData(makeRawGameData());
+      broadcasts.length = 0;
+
+      // "TestPlayer" is the default name from setup()
+      orchestrator.setSummonerName("TestPlayer");
+
+      await orchestrator.handleGameData(makeRawGameData());
+      const events = broadcasts.map((b) => b.event);
+      // No GAME_STARTED because detector was not reset
+      expect(events).not.toContain("GAME_STARTED");
     });
   });
 });
