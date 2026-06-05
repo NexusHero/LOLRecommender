@@ -205,22 +205,29 @@ class _ConnectionFormState extends State<ConnectionForm> {
               ],
             ),
           ),
-          if (_providerType != 'none') ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _apiKeyCtrl,
-              enabled: !widget.isConnecting,
-              obscureText: true,
-              decoration: InputDecoration(
-                labelText: '$_providerType API Key',
-                hintText: 'Enter your API key',
-                prefixIcon: const Icon(Icons.vpn_key_outlined, color: AppColors.textMuted),
-              ),
-              keyboardType: TextInputType.text,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _connect(),
-            ),
-          ],
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _providerType != 'none'
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: TextField(
+                      controller: _apiKeyCtrl,
+                      enabled: !widget.isConnecting,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: '$_providerType API Key',
+                        hintText: 'Enter your API key',
+                        prefixIcon: const Icon(Icons.vpn_key_outlined,
+                            color: AppColors.textMuted),
+                      ),
+                      keyboardType: TextInputType.text,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _connect(),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
           if (widget.error != null && !widget.isConnecting) ...[
             const SizedBox(height: 14),
             Container(
