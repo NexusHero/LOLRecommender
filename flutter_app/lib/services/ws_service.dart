@@ -37,7 +37,7 @@ class WsService extends ChangeNotifier {
   bool get gameActive => _gameActive;
   bool get isConnected => _status == ConnectionStatus.connected;
 
-  void connect(String host, {int port = 8765}) {
+  void connect(String host, {int port = 8765, String? summonerName, String? providerType, String? apiKey}) {
     if (_status == ConnectionStatus.connected ||
         _status == ConnectionStatus.connecting) {
       return;
@@ -50,6 +50,26 @@ class WsService extends ChangeNotifier {
     final uri = Uri.parse('ws://$host:$port');
     try {
       _channel = _channelFactory(uri);
+      
+      if (summonerName != null && summonerName.isNotEmpty) {
+        _channel!.sink.add(jsonEncode({
+          'event': 'SET_SUMMONER',
+          'summonerName': summonerName,
+        }));
+      }
+
+      if (providerType != null && apiKey != null && apiKey.isNotEmpty) {
+        _channel!.sink.add(jsonEncode({
+          'event': 'SET_LLM_PROVIDER',
+          'provider': providerType,
+          'apiKey': apiKey,
+        }));
+      } else if (providerType == 'none') {
+        _channel!.sink.add(jsonEncode({
+          'event': 'SET_LLM_PROVIDER',
+        }));
+      }
+
       _subscription = _channel!.stream.listen(
         _onData,
         onError: _onError,

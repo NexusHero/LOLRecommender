@@ -44,7 +44,8 @@ class HomeScreen extends StatelessWidget {
         return ConnectionForm(
           error: ws.status == ConnectionStatus.error ? ws.lastError : null,
           isConnecting: ws.status == ConnectionStatus.connecting,
-          onConnect: (host, port) => ws.connect(host, port: port),
+          onConnect: (host, port, summonerName, providerType, apiKey) => 
+              ws.connect(host, port: port, summonerName: summonerName, providerType: providerType, apiKey: apiKey),
         );
 
       case ConnectionStatus.connected:
