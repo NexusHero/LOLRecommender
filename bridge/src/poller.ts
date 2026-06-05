@@ -30,8 +30,8 @@ function createDefaultFetcher(): DataFetcher {
     });
 }
 
-type PollCallback = (data: AllGameData) => void;
-type StatusCallback = (active: boolean) => void;
+export type PollCallback = (data: AllGameData) => void;
+export type StatusCallback = (active: boolean) => void;
 
 export class LiveClientPoller {
   private intervalId: NodeJS.Timeout | null = null;
