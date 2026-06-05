@@ -8,10 +8,12 @@ import 'package:provider/provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Auto-start bridge.exe on Windows if it exists
-  if (Platform.isWindows) {
+  // Auto-start bridge on Desktop platforms if it exists
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     final exeDir = File(Platform.resolvedExecutable).parent.path;
-    final bridgePath = '$exeDir\\bridge.exe';
+    final bridgeName = Platform.isWindows ? 'bridge.exe' : 'bridge';
+    final bridgePath = '$exeDir${Platform.pathSeparator}$bridgeName';
+    
     if (File(bridgePath).existsSync()) {
       try {
         await Process.start(bridgePath, ['--parent-pid=$pid']);

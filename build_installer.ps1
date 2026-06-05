@@ -6,7 +6,7 @@ Write-Host "Building LoL Coach Installer..." -ForegroundColor Cyan
 Write-Host "`n--- Step 1: Building Bridge (.exe) ---" -ForegroundColor Yellow
 Set-Location .\bridge
 # We assume 'npm install' was already run at some point
-npm run build:exe
+npm run build:exe:windows
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to build the Bridge." -ForegroundColor Red
     exit $LASTEXITCODE
