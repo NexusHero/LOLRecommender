@@ -40,12 +40,17 @@ class HomeScreen extends StatelessWidget {
     switch (ws.status) {
       case ConnectionStatus.disconnected:
       case ConnectionStatus.error:
+        return _buildNotConnectedView();
       case ConnectionStatus.connecting:
-        return ConnectionForm(
-          error: ws.status == ConnectionStatus.error ? ws.lastError : null,
-          isConnecting: ws.status == ConnectionStatus.connecting,
-          onConnect: (host, port, summonerName, providerType, apiKey) => 
-              ws.connect(host, port: port, summonerName: summonerName, providerType: providerType, apiKey: apiKey),
+        return const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Connecting to bridge...', style: TextStyle(color: AppColors.primaryGold)),
+            ],
+          ),
         );
 
       case ConnectionStatus.connected:
@@ -56,6 +61,31 @@ class HomeScreen extends StatelessWidget {
           lastEvent: ws.lastEvent,
         );
     }
+  }
+
+  Widget _buildNotConnectedView() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.link_off,
+            size: 64,
+            color: Colors.grey.shade700,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Not Connected',
+            style: TextStyle(color: AppColors.textMuted, fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Go to Settings to connect to the Bridge.',
+            style: TextStyle(color: AppColors.textDark, fontSize: 14),
+          ),
+        ],
+      ),
+    );
   }
 }
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lol_coach/screens/home_screen.dart';
+import 'package:lol_coach/screens/main_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:provider/provider.dart';
@@ -70,7 +70,7 @@ class LolCoachApp extends StatelessWidget {
         ),
         dividerTheme: const DividerThemeData(color: AppColors.borderDark),
       ),
-      home: const HomeScreen(),
+      home: const MainScreen(),
     );
   }
 }
