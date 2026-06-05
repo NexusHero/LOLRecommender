@@ -1,16 +1,19 @@
-name: Build and Release Windows Installer
+name: Build and Release Multi-Platform Installers
 
 on:
   push:
     tags:
       - 'v*' # Trigger this workflow only when a version tag is pushed (e.g. v1.0.0)
-  workflow_dispatch: # Allows you to manually trigger the build from the Actions tab
+  workflow_dispatch:
 
 jobs:
   build-and-release:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     permissions:
-      contents: write # Needed to upload the release asset
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -24,24 +27,60 @@ jobs:
       - name: Install Bridge Dependencies
         run: |
           cd bridge
-          npm install
+          npm ci
+
+      - name: Install Linux Dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
 
-      - name: Enable Flutter Windows Desktop
-        run: flutter config --enable-windows-desktop
+      - name: Enable Flutter Desktop
+        run: |
+          flutter config --enable-windows-desktop
+          flutter config --enable-macos-desktop
+          flutter config --enable-linux-desktop
 
-      - name: Run Build Script (Bridge + Flutter + Inno Setup)
+      - name: Build Windows
+        if: matrix.os == 'windows-latest'
         run: .\build_installer.ps1
         shell: powershell
 
-      - name: Upload Installer to GitHub Releases
+      - name: Build Unix (Mac/Linux)
+        if: matrix.os != 'windows-latest'
+        run: |
+          chmod +x ./build_unix.sh
+          ./build_unix.sh
+        shell: bash
+
+      - name: Upload Windows Asset
+        if: matrix.os == 'windows-latest'
         uses: softprops/action-gh-release@v1
         with:
           files: dist/LoLCoach-Setup.exe
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload macOS Asset
+        if: matrix.os == 'macos-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/LoLCoach-Mac.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux Asset
+        if: matrix.os == 'ubuntu-latest'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/LoLCoach-Linux.tar.gz
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
