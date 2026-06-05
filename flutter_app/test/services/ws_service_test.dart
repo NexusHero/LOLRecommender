@@ -11,6 +11,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 class _FakeSink implements WebSocketSink {
   bool closed = false;
+  final List<dynamic> sentData = [];
 
   @override
   Future<void> close([int? closeCode, String? closeReason]) async {
@@ -18,7 +19,9 @@ class _FakeSink implements WebSocketSink {
   }
 
   @override
-  void add(dynamic data) {}
+  void add(dynamic data) {
+    sentData.add(data);
+  }
 
   @override
   void addError(Object error, [StackTrace? stackTrace]) {}
@@ -39,6 +42,8 @@ class FakeWebSocketChannel with StreamChannelMixin implements WebSocketChannel {
 
   @override
   WebSocketSink get sink => _sink;
+
+  List<dynamic> get sentData => _sink.sentData;
 
   @override
   String? get protocol => null;
@@ -166,6 +171,39 @@ void main() {
       fakeChannel.push(_encode(_connectedMsg));
       await Future.microtask(() {});
       expect(notifyCount, 2); // connected
+    });
+
+    group('summonerName', () {
+      test('sends SET_SUMMONER message when summonerName is provided', () {
+        service.connect('localhost', summonerName: 'MySummoner');
+
+        expect(fakeChannel.sentData, hasLength(1));
+        final sent = jsonDecode(fakeChannel.sentData.first as String)
+            as Map<String, dynamic>;
+        expect(sent['event'], 'SET_SUMMONER');
+        expect(sent['summonerName'], 'MySummoner');
+      });
+
+      test('does not send SET_SUMMONER when summonerName is null', () {
+        service.connect('localhost');
+
+        expect(fakeChannel.sentData, isEmpty);
+      });
+
+      test('does not send SET_SUMMONER when summonerName is empty', () {
+        service.connect('localhost', summonerName: '');
+
+        expect(fakeChannel.sentData, isEmpty);
+      });
+
+      test('sends SET_SUMMONER before stream subscription starts', () {
+        // Verify the message is sent before listening to the stream,
+        // so the server receives it as early as possible.
+        service.connect('localhost', summonerName: 'EarlyBird');
+
+        expect(fakeChannel.sentData, hasLength(1));
+        expect(service.status, ConnectionStatus.connecting);
+      });
     });
   });
 }
