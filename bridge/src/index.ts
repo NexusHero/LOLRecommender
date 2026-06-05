@@ -14,6 +14,24 @@ if (!LOCAL_SUMMONER) {
 
 const WS_PORT = parseInt(process.env.WS_PORT ?? "8765");
 
+// --- Parent Process Watchdog ---
+const args = process.argv.slice(2);
+const parentPidArg = args.find(a => a.startsWith('--parent-pid='));
+if (parentPidArg) {
+  const parentPid = parseInt(parentPidArg.split('=')[1]);
+  if (!isNaN(parentPid)) {
+    console.log(`[Main] Watching parent PID: ${parentPid}`);
+    setInterval(() => {
+      try {
+        process.kill(parentPid, 0); // Throws if PID doesn't exist
+      } catch (e) {
+        console.log(`[Main] Parent process ${parentPid} died. Exiting bridge...`);
+        process.exit(0);
+      }
+    }, 2000);
+  }
+}
+
 // --- Wire-up: wsServer → orchestrator reference is resolved via closure ---
 
 let orchestrator: BridgeOrchestrator;

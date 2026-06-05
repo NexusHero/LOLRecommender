@@ -1,10 +1,26 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:lol_coach/screens/main_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:provider/provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Auto-start bridge.exe on Windows if it exists
+  if (Platform.isWindows) {
+    final exeDir = File(Platform.resolvedExecutable).parent.path;
+    final bridgePath = '$exeDir\\bridge.exe';
+    if (File(bridgePath).existsSync()) {
+      try {
+        await Process.start(bridgePath, ['--parent-pid=$pid']);
+      } catch (e) {
+        debugPrint('Failed to start bridge: $e');
+      }
+    }
+  }
+
   runApp(
     ChangeNotifierProvider(
       create: (_) => WsService(),
