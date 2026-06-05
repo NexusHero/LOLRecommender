@@ -82,7 +82,9 @@ export type GameEvent =
   | { type: "GAME_STARTED"; state: ParsedGameState }
   | { type: "ITEM_PURCHASED"; player: Player; state: ParsedGameState }
   | { type: "LEVEL_UP"; player: Player; newLevel: number; state: ParsedGameState }
-  | { type: "GAME_TICK"; state: ParsedGameState };
+  | { type: "GAME_TICK"; state: ParsedGameState }
+  | { type: "PLAYER_DIED"; state: ParsedGameState }
+  | { type: "HIGH_GOLD_REACHED"; state: ParsedGameState };
 
 // --- WebSocket Message Schema (an Flutter gesendet) ---
 

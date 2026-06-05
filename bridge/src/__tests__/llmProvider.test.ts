@@ -39,9 +39,9 @@ describe("buildUserPrompt", () => {
 
     const prompt = buildUserPrompt(state, baseRec);
     
-    expect(prompt).toContain("My champion: Lux");
+    expect(prompt).toContain("Me: Lux");
     expect(prompt).toContain("Enemies: Soraka");
     expect(prompt).toContain("Suggested items: Mortal Reminder");
-    expect(prompt).toContain("Game time: 2:05");
+    expect(prompt).toContain("Time: 2:05");
   });
 });

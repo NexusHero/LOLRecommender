@@ -51,7 +51,7 @@ orchestrator = new BridgeOrchestrator(
   null, // LLM provider starts disabled; set via WS or env below
   {
     summonerName: LOCAL_SUMMONER,
-    llmCooldownMs: 60_000,
+    llmCooldownMs: 7 * 60 * 1000,
   },
 );
 

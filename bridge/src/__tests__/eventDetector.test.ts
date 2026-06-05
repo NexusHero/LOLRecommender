@@ -1,5 +1,5 @@
 import { EventDetector } from "../eventDetector";
-import { makeGameState, makePlayer, makeItem } from "./fixtures";
+import { makeGameState, makePlayer, makeItem, makeActivePlayer } from "./fixtures";
 
 describe("EventDetector", () => {
   let detector: EventDetector;
@@ -73,6 +73,41 @@ describe("EventDetector", () => {
       const events = detector.detect(makeGameState({ gameTime: 15 }));
 
       expect(events.every((e) => e.type !== "GAME_TICK")).toBe(true);
+    });
+
+    it("fires PLAYER_DIED when localPlayer.isDead transitions from false to true", () => {
+      detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: false }) }));
+
+      const events = detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
+
+      expect(events.some((e) => e.type === "PLAYER_DIED")).toBe(true);
+    });
+
+    it("does not fire PLAYER_DIED if localPlayer remains dead", () => {
+      detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
+      // flush GAME_STARTED
+      detector.reset();
+      detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
+
+      const events = detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
+
+      expect(events.every((e) => e.type !== "PLAYER_DIED")).toBe(true);
+    });
+
+    it("fires HIGH_GOLD_REACHED when activePlayer crosses 1000g", () => {
+      detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 900 }) }));
+
+      const events = detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1050 }) }));
+
+      expect(events.some((e) => e.type === "HIGH_GOLD_REACHED")).toBe(true);
+    });
+
+    it("does not fire HIGH_GOLD_REACHED if gold was already above 1000g", () => {
+      detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1100 }) }));
+
+      const events = detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1500 }) }));
+
+      expect(events.every((e) => e.type !== "HIGH_GOLD_REACHED")).toBe(true);
     });
   });
 
