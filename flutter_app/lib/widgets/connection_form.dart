@@ -9,7 +9,7 @@ class ConnectionForm extends StatefulWidget {
     this.error,
     this.isConnecting = false,
   });
-  final void Function(String host, int port) onConnect;
+  final void Function(String host, int port, String summonerName, String providerType, String apiKey) onConnect;
   final String? error;
   final bool isConnecting;
 
@@ -20,14 +20,19 @@ class ConnectionForm extends StatefulWidget {
 const _defaultPort = 8765;
 
 class _ConnectionFormState extends State<ConnectionForm> {
-  final _hostCtrl = TextEditingController(text: '192.168.1.100');
+  final _hostCtrl = TextEditingController(text: '127.0.0.1');
   final _portCtrl = TextEditingController(text: '$_defaultPort');
+  final _summonerCtrl = TextEditingController();
+  final _apiKeyCtrl = TextEditingController();
   String? _ipError;
+  String _providerType = 'none';
 
   @override
   void dispose() {
     _hostCtrl.dispose();
     _portCtrl.dispose();
+    _summonerCtrl.dispose();
+    _apiKeyCtrl.dispose();
     super.dispose();
   }
 
@@ -46,7 +51,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
     }
 
     final port = int.tryParse(_portCtrl.text.trim()) ?? _defaultPort;
-    widget.onConnect(host, port);
+    final summonerName = _summonerCtrl.text.trim();
+    final apiKey = _apiKeyCtrl.text.trim();
+    
+    widget.onConnect(host, port, summonerName, _providerType, apiKey);
   }
 
   @override
@@ -105,9 +113,88 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   Icon(Icons.settings_ethernet, color: AppColors.textMuted),
             ),
             keyboardType: TextInputType.number,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _connect(),
+            textInputAction: TextInputAction.next,
           ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _summonerCtrl,
+            enabled: !widget.isConnecting,
+            decoration: const InputDecoration(
+              labelText: 'Summoner Name (Optional)',
+              hintText: 'Your in-game name',
+              prefixIcon:
+                  Icon(Icons.person_outline, color: AppColors.textMuted),
+            ),
+            keyboardType: TextInputType.text,
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'LLM Provider (Optional)',
+            style: TextStyle(color: AppColors.primaryGold, fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Theme(
+            data: Theme.of(context).copyWith(
+              unselectedWidgetColor: AppColors.textMuted,
+            ),
+            child: Column(
+              children: [
+                RadioListTile<String>(
+                  title: const Text('None (Heuristic only)', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
+                  value: 'none',
+                  groupValue: _providerType,
+                  onChanged: widget.isConnecting ? null : (val) => setState(() => _providerType = val!),
+                  activeColor: AppColors.primaryGold,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+                RadioListTile<String>(
+                  title: const Text('Claude', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
+                  value: 'claude',
+                  groupValue: _providerType,
+                  onChanged: widget.isConnecting ? null : (val) => setState(() => _providerType = val!),
+                  activeColor: AppColors.primaryGold,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+                RadioListTile<String>(
+                  title: const Text('OpenAI', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
+                  value: 'openai',
+                  groupValue: _providerType,
+                  onChanged: widget.isConnecting ? null : (val) => setState(() => _providerType = val!),
+                  activeColor: AppColors.primaryGold,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+                RadioListTile<String>(
+                  title: const Text('Gemini', style: TextStyle(color: AppColors.textLightGrey, fontSize: 13)),
+                  value: 'gemini',
+                  groupValue: _providerType,
+                  onChanged: widget.isConnecting ? null : (val) => setState(() => _providerType = val!),
+                  activeColor: AppColors.primaryGold,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ],
+            ),
+          ),
+          if (_providerType != 'none') ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _apiKeyCtrl,
+              enabled: !widget.isConnecting,
+              obscureText: true,
+              decoration: InputDecoration(
+                labelText: '$_providerType API Key',
+                hintText: 'Enter your API key',
+                prefixIcon: const Icon(Icons.vpn_key_outlined, color: AppColors.textMuted),
+              ),
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _connect(),
+            ),
+          ],
           if (widget.error != null && !widget.isConnecting) ...[
             const SizedBox(height: 14),
             Container(
