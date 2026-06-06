@@ -1,8 +1,9 @@
 import type { ParsedGameState, Player } from "./types.js";
 
 export function minifyGameState(state: ParsedGameState): string {
-  const timeMins = Math.floor(state.gameTime / 60);
-  const timeSecs = Math.floor(state.gameTime % 60).toString().padStart(2, "0");
+  const gameTimeSec = Math.max(0, state.gameTime);
+  const timeMins = Math.floor(gameTimeSec / 60);
+  const timeSecs = Math.floor(gameTimeSec % 60).toString().padStart(2, "0");
 
   const me = formatPlayer(state.localPlayer, state.activePlayer.currentGold);
   

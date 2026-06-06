@@ -125,8 +125,8 @@ describe("stateMinifier", () => {
       activePlayer: makeActivePlayer({ currentGold: -500 })
     });
     const result = minifyGameState(state);
-    // Math.floor(-15.5 / 60) = -1. Math.floor(-15.5 % 60) = -16
-    expect(result).toContain("Time: -1:-16"); 
+    // Negative game time (loading screen / pre-game) is clamped to 0:00
+    expect(result).toContain("Time: 0:00");
     expect(result).toContain("Me: Zilean (Lvl 30, Gold: -500, KDA: 999/999/999)");
   });
 });
