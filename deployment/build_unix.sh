@@ -1,6 +1,8 @@
 #!/bin/bash
 set -e
 
+cd "$(dirname "$0")/.."
+
 echo "Building LoL Coach for Unix ($OSTYPE)..."
 
 OS_NAME=""

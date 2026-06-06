@@ -99,8 +99,8 @@ The app uses `shared_preferences` to persist these settings locally. Once connec
 ## Project structure
 
 ```
-lolclient/
-├── bridge/
+LOLRecommender/
+├── bridge/                   # Backend (Node.js/TypeScript)
 │   ├── src/
 │   │   ├── types.ts          # Zod schemas + TypeScript types
 │   │   ├── poller.ts         # Live Client API polling
@@ -113,13 +113,17 @@ lolclient/
 │   │   └── index.ts          # Entry point / DI wiring
 │   └── src/__tests__/        # Jest unit tests + Integration tests
 │
-└── flutter_app/
-    ├── lib/
-    │   ├── models/           # Data models
-    │   ├── services/         # WsService (ChangeNotifier)
-    │   ├── screens/          # MainScreen, HomeScreen (Coach Tab)
-    │   └── widgets/          # ConnectionForm, GameView
-    └── test/                 # Flutter UI and Unit tests
+├── flutter_app/              # UI (Flutter Desktop)
+│   ├── lib/
+│   │   ├── models/           # Data models
+│   │   ├── services/         # WsService (ChangeNotifier)
+│   │   ├── screens/          # MainScreen, HomeScreen (Coach Tab)
+│   │   └── widgets/          # ConnectionForm, GameView
+│   └── test/                 # Flutter UI and Unit tests
+│
+└── deployment/               # Build & packaging scripts
+    ├── build_unix.sh         # macOS + Linux build script
+    └── build_installer.ps1   # Windows MSIX build script
 ```
 
 ---

@@ -51,14 +51,14 @@ jobs:
 
       - name: Build Windows
         if: matrix.os == 'windows-latest'
-        run: .\build_installer.ps1
+        run: .\deployment\build_installer.ps1
         shell: powershell
 
       - name: Build Unix (Mac/Linux)
         if: matrix.os != 'windows-latest'
         run: |
-          chmod +x ./build_unix.sh
-          ./build_unix.sh
+          chmod +x ./deployment/build_unix.sh
+          ./deployment/build_unix.sh
         shell: bash
 
       - name: Upload Windows Asset

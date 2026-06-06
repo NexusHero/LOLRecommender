@@ -1,5 +1,7 @@
 # LoL Coach - Build Installer Script
 
+Set-Location (Join-Path $PSScriptRoot "..")
+
 Write-Host "Building LoL Coach Installer..." -ForegroundColor Cyan
 
 # 1. Build the Node.js Bridge
