@@ -13,6 +13,7 @@ if (!LOCAL_SUMMONER) {
 }
 
 const WS_PORT = parseInt(process.env.WS_PORT ?? "8765");
+const DEFAULT_LLM_COOLDOWN_MS = 7 * 60 * 1000; // 7 minutes between LLM calls
 
 // --- Parent Process Watchdog ---
 const args = process.argv.slice(2);
@@ -23,7 +24,11 @@ if (parentPidArg) {
     console.log(`[Main] Watching parent PID: ${parentPid}`);
     setInterval(() => {
       try {
-        process.kill(parentPid, 0); // Throws if PID doesn't exist
+        // signal 0 = existence check only (no actual signal sent)
+        // NOTE: On Windows, process.kill(pid, 0) may throw EPERM when the parent
+        // has a different integrity level, even if the parent is still alive.
+        // This can cause a premature bridge exit in elevated-privilege scenarios.
+        process.kill(parentPid, 0);
       } catch (e) {
         console.log(`[Main] Parent process ${parentPid} died. Exiting bridge...`);
         process.exit(0);
@@ -69,7 +74,7 @@ orchestrator = new BridgeOrchestrator(
   null, // LLM provider starts disabled; set via WS or env below
   {
     summonerName: LOCAL_SUMMONER,
-    llmCooldownMs: 7 * 60 * 1000,
+    llmCooldownMs: DEFAULT_LLM_COOLDOWN_MS,
   },
 );
 

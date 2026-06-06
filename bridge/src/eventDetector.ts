@@ -1,6 +1,7 @@
 import type { ParsedGameState, GameEvent, Player } from "./types.js";
 
 const TICK_INTERVAL_SEC = 30;
+export const HIGH_GOLD_THRESHOLD = 1000;
 
 export class EventDetector {
   private lastState: ParsedGameState | null = null;
@@ -47,8 +48,8 @@ export class EventDetector {
     }
 
     if (
-      prev.activePlayer.currentGold < 1000 &&
-      current.activePlayer.currentGold >= 1000
+      prev.activePlayer.currentGold < HIGH_GOLD_THRESHOLD &&
+      current.activePlayer.currentGold >= HIGH_GOLD_THRESHOLD
     ) {
       events.push({ type: "HIGH_GOLD_REACHED", state: current });
     }

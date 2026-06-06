@@ -1,5 +1,5 @@
 import { parseGameState } from "./parser.js";
-import { EventDetector } from "./eventDetector.js";
+import { EventDetector, HIGH_GOLD_THRESHOLD } from "./eventDetector.js";
 import { buildCompProfile, getHeuristicRecommendations } from "./heuristic.js";
 import { BridgeWsServer } from "./wsServer.js";
 import type { LlmProvider } from "./llmProvider.js";
@@ -64,7 +64,7 @@ export class BridgeOrchestrator {
         useLlm = true; // Always trigger LLM on game start
       } else if (eventType === "PLAYER_DIED") {
         // Trigger LLM if high gold and cooldown passed
-        if (state.activePlayer.currentGold >= 1000 && now - this.lastLlmCallAt > this.config.llmCooldownMs) {
+        if (state.activePlayer.currentGold >= HIGH_GOLD_THRESHOLD && now - this.lastLlmCallAt > this.config.llmCooldownMs) {
           useLlm = true;
         }
       }
