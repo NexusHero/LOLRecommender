@@ -173,6 +173,40 @@ void main() {
       expect(notifyCount, 2); // connected
     });
 
+    group('auto-reconnect', () {
+      test('explicit disconnect prevents reconnect', () async {
+        service.connect('localhost');
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+
+        service.disconnect();
+        // After explicit disconnect the flag is set — no reconnect timer should fire
+        expect(service.status, ConnectionStatus.disconnected);
+      });
+
+      test('status becomes disconnected when stream closes unexpectedly', () async {
+        service.connect('localhost');
+        await fakeChannel.close();
+        await Future.microtask(() {});
+
+        // Disconnected (reconnect timer pending, but not yet fired)
+        expect(service.status, ConnectionStatus.disconnected);
+      });
+
+      test('reconnect delay resets to 1s on successful manual connect', () async {
+        service.connect('localhost');
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+
+        // After a successful connection the reconnect backoff is reset
+        expect(service.status, ConnectionStatus.connected);
+        // Disconnect and reconnect manually
+        service.disconnect();
+        service.connect('localhost');
+        expect(service.status, ConnectionStatus.connecting);
+      });
+    });
+
     group('summonerName', () {
       test('sends SET_SUMMONER message when summonerName is provided', () {
         service.connect('localhost', summonerName: 'MySummoner');

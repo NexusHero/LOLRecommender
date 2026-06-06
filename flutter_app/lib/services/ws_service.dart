@@ -17,10 +17,12 @@ enum ConnectionStatus { disconnected, connecting, connected, error }
 class WsService extends ChangeNotifier {
   WsService({WebSocketChannelFactory? channelFactory})
       : _channelFactory = channelFactory ?? _defaultChannelFactory;
+
   final WebSocketChannelFactory _channelFactory;
 
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _subscription;
+  Timer? _reconnectTimer;
 
   ConnectionStatus _status = ConnectionStatus.disconnected;
   String? _lastError;
@@ -28,6 +30,18 @@ class WsService extends ChangeNotifier {
   ItemRecommendation? _recommendation;
   String _lastEvent = '';
   bool _gameActive = false;
+
+  // Reconnect state
+  bool _intentionalDisconnect = false;
+  Duration _reconnectDelay = const Duration(seconds: 1);
+  static const Duration _maxReconnectDelay = Duration(seconds: 30);
+
+  // Last known connection params for auto-reconnect
+  String? _lastHost;
+  int _lastPort = 8765;
+  String? _lastSummonerName;
+  String? _lastProviderType;
+  String? _lastApiKey;
 
   ConnectionStatus get status => _status;
   String? get lastError => _lastError;
@@ -49,6 +63,44 @@ class WsService extends ChangeNotifier {
       return;
     }
 
+    // Persist params and reset reconnect state for a fresh manual connect
+    _lastHost = host;
+    _lastPort = port;
+    _lastSummonerName = summonerName;
+    _lastProviderType = providerType;
+    _lastApiKey = apiKey;
+    _intentionalDisconnect = false;
+    _reconnectDelay = const Duration(seconds: 1);
+
+    _doConnect(host, port: port, summonerName: summonerName, providerType: providerType, apiKey: apiKey);
+  }
+
+  void disconnect() {
+    _intentionalDisconnect = true;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _reconnectDelay = const Duration(seconds: 1);
+
+    _subscription?.cancel();
+    _channel?.sink.close();
+    _channel = null;
+    _subscription = null;
+    _status = ConnectionStatus.disconnected;
+    _gameState = null;
+    _recommendation = null;
+    _gameActive = false;
+    _lastEvent = '';
+    _lastError = null;
+    notifyListeners();
+  }
+
+  void _doConnect(
+    String host, {
+    int port = 8765,
+    String? summonerName,
+    String? providerType,
+    String? apiKey,
+  }) {
     _status = ConnectionStatus.connecting;
     _lastError = null;
     notifyListeners();
@@ -56,7 +108,7 @@ class WsService extends ChangeNotifier {
     final uri = Uri.parse('ws://$host:$port');
     try {
       _channel = _channelFactory(uri);
-      
+
       if (summonerName != null && summonerName.isNotEmpty) {
         _channel!.sink.add(
           jsonEncode({
@@ -92,21 +144,8 @@ class WsService extends ChangeNotifier {
       _status = ConnectionStatus.error;
       _lastError = e.toString();
       notifyListeners();
+      _scheduleReconnect();
     }
-  }
-
-  void disconnect() {
-    _subscription?.cancel();
-    _channel?.sink.close();
-    _channel = null;
-    _subscription = null;
-    _status = ConnectionStatus.disconnected;
-    _gameState = null;
-    _recommendation = null;
-    _gameActive = false;
-    _lastEvent = '';
-    _lastError = null;
-    notifyListeners();
   }
 
   void _onData(dynamic raw) {
@@ -117,6 +156,7 @@ class WsService extends ChangeNotifier {
 
       if (_status != ConnectionStatus.connected) {
         _status = ConnectionStatus.connected;
+        _reconnectDelay = const Duration(seconds: 1); // reset backoff on success
       }
 
       switch (msg.event) {
@@ -144,13 +184,46 @@ class WsService extends ChangeNotifier {
     _status = ConnectionStatus.error;
     _lastError = error.toString();
     notifyListeners();
+    _scheduleReconnect();
   }
 
   void _onDone() {
+    if (_intentionalDisconnect) {
+      if (_status != ConnectionStatus.disconnected) {
+        _status = ConnectionStatus.disconnected;
+        notifyListeners();
+      }
+      return;
+    }
     if (_status != ConnectionStatus.disconnected) {
       _status = ConnectionStatus.disconnected;
       notifyListeners();
     }
+    _scheduleReconnect();
+  }
+
+  void _scheduleReconnect() {
+    if (_intentionalDisconnect || _lastHost == null) return;
+    _reconnectTimer?.cancel();
+
+    debugPrint('[WsService] Reconnecting in ${_reconnectDelay.inSeconds}s...');
+    _reconnectTimer = Timer(_reconnectDelay, () {
+      if (_intentionalDisconnect) return;
+
+      // Exponential backoff, capped at _maxReconnectDelay
+      _reconnectDelay = Duration(
+        seconds: (_reconnectDelay.inSeconds * 2)
+            .clamp(1, _maxReconnectDelay.inSeconds),
+      );
+
+      _doConnect(
+        _lastHost!,
+        port: _lastPort,
+        summonerName: _lastSummonerName,
+        providerType: _lastProviderType,
+        apiKey: _lastApiKey,
+      );
+    });
   }
 
   @override
