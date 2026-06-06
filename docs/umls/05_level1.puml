@@ -1,0 +1,13 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam componentBorderColor #888888
+
+package "LoL Coach System" {
+  component "Bridge\n(Node.js / TypeScript)" as bridge
+  component "Flutter Desktop App\n(Dart)" as app
+}
+
+bridge -right-> app : "WebSocket :8765"
+@enduml

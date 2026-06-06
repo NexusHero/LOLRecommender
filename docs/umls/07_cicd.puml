@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ActivityBorderColor #888888
+skinparam ActivityBackgroundColor #F5F5F5
+
+|GitHub|
+start
+:git push tag v*;
+
+fork
+  |ubuntu-latest|
+  :Bridge Linux Binary;
+  :Flutter Linux Build;
+  :LoLCoach-Linux.tar.gz;
+fork again
+  |macos-latest|
+  :Bridge macOS Binary;
+  :Flutter macOS Build;
+  :LoLCoach-Mac.zip;
+fork again
+  |windows-latest|
+  :Bridge Windows .exe;
+  :Flutter Windows Build;
+  :LoLCoach.msix;
+end fork
+
+|GitHub|
+:GitHub Release\n(softprops/action-gh-release);
+stop
+@enduml

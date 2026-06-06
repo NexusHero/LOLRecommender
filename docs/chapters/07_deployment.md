@@ -2,40 +2,7 @@
 
 ### 7.1 Infrastrukturübersicht
 
-```plantuml
-@startuml
-skinparam backgroundColor #FFFFFF
-skinparam defaultFontName Arial
-skinparam nodeBackgroundColor #F5F5F5
-skinparam nodeBorderColor #AAAAAA
-skinparam ArrowColor #555555
-
-node "Spieler-PC (Desktop)" {
-  node "LoL Coach App-Verzeichnis" {
-    artifact "LoLCoach.exe / lol_coach.app\n(Flutter UI + Dart Runtime)" as flutter_bin
-    artifact "bridge.exe / bridge\n(Node.js Runtime + Bundle via pkg)" as bridge_bin
-  }
-
-  node "League of Legends Client\n:2999 (HTTPS)" as lol
-
-  database "OS-Keychain\n(API-Key-Speicher)" as keychain
-  note right of keychain
-    macOS: Keychain
-    Windows: DPAPI
-    Linux: libsecret
-  end note
-}
-
-cloud "LLM-API (extern)" as llm {
-  [Anthropic / OpenAI / Google]
-}
-
-flutter_bin --> bridge_bin : startet als\nKindprozess
-bridge_bin --> lol : HTTPS :2999
-bridge_bin --> llm : HTTPS (optional)
-flutter_bin --> keychain : API-Key lesen/schreiben
-@enduml
-```
+![Infrastruktur](../umls/07_infrastructure.svg)
 
 ### 7.2 Deployment-Artefakte
 
@@ -47,39 +14,7 @@ flutter_bin --> keychain : API-Key lesen/schreiben
 
 ### 7.3 Build-Pipeline (CI/CD)
 
-```plantuml
-@startuml
-skinparam backgroundColor #FFFFFF
-skinparam defaultFontName Arial
-skinparam ActivityBorderColor #888888
-skinparam ActivityBackgroundColor #F5F5F5
-
-|GitHub|
-start
-:git push tag v*;
-
-fork
-  |ubuntu-latest|
-  :Bridge Linux Binary;
-  :Flutter Linux Build;
-  :LoLCoach-Linux.tar.gz;
-fork again
-  |macos-latest|
-  :Bridge macOS Binary;
-  :Flutter macOS Build;
-  :LoLCoach-Mac.zip;
-fork again
-  |windows-latest|
-  :Bridge Windows .exe;
-  :Flutter Windows Build;
-  :LoLCoach.msix;
-end fork
-
-|GitHub|
-:GitHub Release\n(softprops/action-gh-release);
-stop
-@enduml
-```
+![CI/CD Pipeline](../umls/07_cicd.svg)
 
 **Zusätzliche Workflows:**
 

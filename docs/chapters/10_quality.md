@@ -2,30 +2,7 @@
 
 ### 10.1 Qualitätsbaum
 
-```plantuml
-@startmindmap
-* Qualität
-** Zuverlässigkeit
-*** Offline-Betrieb\n(Heuristik ohne LLM)
-*** Retry bei Polling-Fehlern\n(max. 3 aufeinanderfolgend)
-*** Auto-Reconnect\n(exponentieller Backoff)
-** Leistung
-*** Heuristik-Empfehlung < 5 ms
-*** LLM-Erklärung < 3 s
-*** WebSocket-Latenz < 10 ms (LAN)
-** Sicherheit
-*** API-Keys im OS-Keychain
-*** Keine CVEs\n(npm audit = 0)
-** Wartbarkeit
-*** Champion-/Item-Daten\nohne Code-Deployment
-*** Neuer LLM-Anbieter\n= eine neue Datei
-*** 91 automatisierte Tests
-** Benutzbarkeit
-*** Kein manueller Bridge-Start
-*** Persistente\nVerbindungseinstellungen
-*** Verständliche Fehlermeldungen
-@endmindmap
-```
+![Qualitätsbaum](../umls/10_quality_tree.svg)
 
 ### 10.2 Qualitätsszenarien
 

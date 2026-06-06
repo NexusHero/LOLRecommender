@@ -2,40 +2,23 @@
 /**
  * Preprocessor for docs/main.md:
  *  1. Resolves <!-- @include: path --> directives
- *  2. Encodes ```plantuml blocks as Kroki.io image URLs
+ *  2. Rewrites ../umls/ image paths to /docs/umls/ so md-to-pdf
+ *     can resolve them via --basedir (project root)
  *
  * Usage: node deployment/render_plantuml.js <input.md> [output.md]
  */
 const fs = require('fs');
 const path = require('path');
-const zlib = require('zlib');
-
-function encodeKroki(source) {
-  const compressed = zlib.deflateRawSync(Buffer.from(source, 'utf8'));
-  return Buffer.from(compressed)
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_');
-}
 
 function resolveIncludes(content, baseDir) {
   return content.replace(
     /<!-- @include: ([^\s>]+) -->/g,
-    (_, relPath) => {
-      const absPath = path.resolve(baseDir, relPath);
-      return fs.readFileSync(absPath, 'utf8');
-    }
+    (_, relPath) => fs.readFileSync(path.resolve(baseDir, relPath), 'utf8')
   );
 }
 
-function renderPlantUml(content) {
-  return content.replace(
-    /```plantuml\n([\s\S]*?)\n```/g,
-    (_, src) => {
-      const encoded = encodeKroki(src.trim());
-      return `![](https://kroki.io/plantuml/svg/${encoded})`;
-    }
-  );
+function rewriteImagePaths(content) {
+  return content.replace(/\]\(\.\.\/umls\//g, '](/docs/umls/');
 }
 
 const inputPath = process.argv[2];
@@ -48,7 +31,7 @@ if (!inputPath) {
 
 let content = fs.readFileSync(inputPath, 'utf8');
 content = resolveIncludes(content, path.dirname(path.resolve(inputPath)));
-content = renderPlantUml(content);
+content = rewriteImagePaths(content);
 
 if (outputPath) {
   fs.writeFileSync(outputPath, content, 'utf8');

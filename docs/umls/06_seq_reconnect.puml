@@ -1,0 +1,18 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+
+participant "Flutter App" as app
+participant "WsService" as ws
+
+ws -> ws : stream schließt unerwartet\n_onDone() aufgerufen
+ws --> app : status: disconnected
+ws -> ws : _scheduleReconnect() → Timer(1 s)
+...1 Sekunde Pause...
+ws -> ws : _doConnect() → WebSocket öffnen
+ws --> app : status: connecting
+ws -> ws : CONNECTED-Nachricht empfangen
+ws --> app : status: connected
+@enduml

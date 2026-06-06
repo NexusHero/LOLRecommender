@@ -1,0 +1,19 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+
+participant "Flutter App\n(main.dart)" as app
+participant "Bridge\n(index.ts)" as bridge
+
+app -> bridge : Process.start(bridge,\n['--parent-pid=<PID>'])
+activate bridge
+bridge -> bridge : setInterval alle 2 s:\nkill(parentPid, 0)
+
+note over app : App wird geschlossen
+
+bridge -> bridge : EPERM oder ESRCH
+bridge -> bridge : process.exit(0)
+deactivate bridge
+@enduml

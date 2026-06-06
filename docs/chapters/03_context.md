@@ -2,28 +2,7 @@
 
 ### 3.1 Fachlicher Kontext
 
-```plantuml
-@startuml
-skinparam componentStyle rectangle
-skinparam backgroundColor #FFFFFF
-skinparam defaultFontName Arial
-skinparam ArrowColor #444444
-
-rectangle "Spieler-PC" #F5F5F5 {
-  component "LoL Client\n(Spiel)" as lol
-  component "LoL Coach Bridge\n(Node.js / TypeScript)" as bridge
-  component "Flutter Desktop App\n(Spieler-UI)" as app
-}
-
-cloud "Externe Dienste" #F0F0F0 {
-  component "LLM-APIs\n(Claude / OpenAI / Gemini)" as llm
-}
-
-lol -right-> bridge : "HTTPS :2999\n1s-Polling"
-bridge -right-> app : "WebSocket :8765"
-bridge -down-> llm : "HTTPS (optional)"
-@enduml
-```
+![Systemkontext](../umls/03_system_context.svg)
 
 | Nachbarsystem | Beziehung | Richtung |
 |---------------|-----------|----------|

@@ -1,0 +1,32 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam nodeBackgroundColor #F5F5F5
+skinparam nodeBorderColor #AAAAAA
+skinparam ArrowColor #555555
+
+node "Spieler-PC (Desktop)" {
+  node "LoL Coach App-Verzeichnis" {
+    artifact "LoLCoach.exe / lol_coach.app\n(Flutter UI + Dart Runtime)" as flutter_bin
+    artifact "bridge.exe / bridge\n(Node.js Runtime + Bundle via pkg)" as bridge_bin
+  }
+
+  node "League of Legends Client\n:2999 (HTTPS)" as lol
+
+  database "OS-Keychain\n(API-Key-Speicher)" as keychain
+  note right of keychain
+    macOS: Keychain
+    Windows: DPAPI
+    Linux: libsecret
+  end note
+}
+
+cloud "LLM-API (extern)" as llm {
+  [Anthropic / OpenAI / Google]
+}
+
+flutter_bin --> bridge_bin : startet als\nKindprozess
+bridge_bin --> lol : HTTPS :2999
+bridge_bin --> llm : HTTPS (optional)
+flutter_bin --> keychain : API-Key\nlesen/schreiben
+@enduml

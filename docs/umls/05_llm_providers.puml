@@ -1,0 +1,29 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam classAttributeIconSize 0
+skinparam classBorderColor #888888
+
+interface LlmProvider {
+  +getExplanation(state, rec): Promise<string>
+}
+
+class ClaudeProvider {
+  sdk: @anthropic-ai/sdk
+  model: claude-haiku-4-5-20251001
+}
+
+class OpenAiProvider {
+  sdk: openai
+  model: gpt-4o-mini
+}
+
+class GeminiProvider {
+  sdk: @google/generative-ai
+  model: gemini-2.0-flash
+}
+
+ClaudeProvider ..|> LlmProvider
+OpenAiProvider ..|> LlmProvider
+GeminiProvider ..|> LlmProvider
+@enduml

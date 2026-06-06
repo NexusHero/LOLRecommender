@@ -1,0 +1,23 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+
+participant "Bridge" as bridge
+participant "Riot API" as riot
+participant "Flutter App" as app
+
+bridge -> riot : GET /liveclientdata/allgamedata
+riot --> bridge : 200 JSON
+bridge -> bridge : detect() → ITEM_PURCHASED
+
+note over bridge
+  LLM nur wenn:
+  Gold ≥ 1.000 UND
+  Cooldown abgelaufen
+end note
+
+bridge --> app : ITEM_PURCHASED (gameState)
+bridge --> app : RECOMMENDATION (Heuristik)
+@enduml

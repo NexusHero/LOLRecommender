@@ -1,0 +1,31 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+skinparam sequenceBoxBorderColor #AAAAAA
+
+participant "Flutter App" as app
+participant "WsService" as ws
+participant "Bridge" as bridge
+participant "Riot API" as riot
+participant "LLM API" as llm
+
+app -> ws : connect()
+ws -> bridge : WebSocket öffnen
+bridge --> ws : CONNECTED
+ws --> app : status: connected
+
+bridge -> riot : GET /liveclientdata/allgamedata
+riot --> bridge : 200 JSON
+
+bridge -> bridge : poll() → parse()\ndetect() → GAME_STARTED
+bridge -> bridge : buildCompProfile()\ngetHeuristicRec()\nminifyGameState()
+bridge -> llm : POST (optional)
+llm --> bridge : LLM-Antwort
+
+bridge --> ws : GAME_STARTED (gameState)
+ws --> app : UI aktualisieren
+bridge --> ws : RECOMMENDATION (Heuristik + LLM)
+ws --> app : UI aktualisieren
+@enduml

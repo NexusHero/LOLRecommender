@@ -1,0 +1,14 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ArrowColor #444444
+skinparam stateBorderColor #888888
+
+[*] --> disconnected
+
+disconnected --> connecting : connect()
+connecting --> connected : CONNECTED-Nachricht\nempfangen
+connecting --> disconnected : Fehler / Timeout
+connected --> disconnected : stream done /\nstream error
+disconnected --> connecting : _scheduleReconnect()\n1 s → 2 s → 4 s → max. 30 s
+@enduml
