@@ -1,4 +1,4 @@
-import { LiveClientPoller } from "../poller";
+import { LiveClientPoller, MAX_POLL_FAILURES } from "../poller";
 import { makeRawGameData } from "./fixtures";
 
 afterEach(() => {
@@ -92,7 +92,7 @@ describe("LiveClientPoller", () => {
   });
 
   describe("game inactive transition", () => {
-    it("calls onStatusChange(false) when fetcher throws after game was active", async () => {
+    it(`calls onStatusChange(false) only after ${MAX_POLL_FAILURES} consecutive failures`, async () => {
       const onStatusChange = jest.fn();
       const fetcher = jest.fn()
         .mockResolvedValueOnce(makeRawGameData())
@@ -105,12 +105,44 @@ describe("LiveClientPoller", () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      // Manually trigger second poll
+      // Trigger failures up to (but not including) the threshold — should NOT fire false yet
+      for (let i = 0; i < MAX_POLL_FAILURES - 1; i++) {
+        (poller as any).poll();
+        await Promise.resolve();
+        await Promise.resolve();
+      }
+      expect(onStatusChange).not.toHaveBeenCalledWith(false);
+
+      // Final failure crosses the threshold — now fires
       (poller as any).poll();
       await Promise.resolve();
       await Promise.resolve();
 
       expect(onStatusChange).toHaveBeenCalledWith(false);
+    });
+
+    it("does not call onStatusChange(false) for a single transient failure", async () => {
+      const onStatusChange = jest.fn();
+      const fetcher = jest.fn()
+        .mockResolvedValueOnce(makeRawGameData())
+        .mockRejectedValueOnce(new Error("Transient error"))
+        .mockResolvedValue(makeRawGameData());
+      const poller = new LiveClientPoller(jest.fn(), onStatusChange, fetcher);
+
+      poller.start();
+      poller.stop();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // One failure followed by a success — counter resets, no GAME_INACTIVE fired
+      (poller as any).poll();
+      await Promise.resolve();
+      await Promise.resolve();
+      (poller as any).poll();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(onStatusChange).not.toHaveBeenCalledWith(false);
     });
   });
 });

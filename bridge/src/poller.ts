@@ -4,6 +4,10 @@ import { AllGameDataSchema, type AllGameData } from "./types.js";
 const LIVE_CLIENT_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata";
 const POLL_INTERVAL_MS = 1000;
 
+// Number of consecutive fetch failures before signalling GAME_INACTIVE.
+// Transient network spikes (e.g. brief API hiccup) will not flip the state.
+export const MAX_POLL_FAILURES = 3;
+
 export type DataFetcher = () => Promise<unknown>;
 
 // Self-signed Cert der Live Client API ignorieren
@@ -36,6 +40,7 @@ export type StatusCallback = (active: boolean) => void;
 export class LiveClientPoller {
   private intervalId: NodeJS.Timeout | null = null;
   private gameActive = false;
+  private consecutiveFailures = 0;
 
   constructor(
     private readonly onData: PollCallback,
@@ -66,6 +71,8 @@ export class LiveClientPoller {
         return;
       }
 
+      this.consecutiveFailures = 0;
+
       if (!this.gameActive) {
         this.gameActive = true;
         console.log("[Poller] Game detected — data flowing.");
@@ -74,8 +81,11 @@ export class LiveClientPoller {
 
       this.onData(parsed.data);
     } catch {
-      if (this.gameActive) {
+      this.consecutiveFailures++;
+
+      if (this.gameActive && this.consecutiveFailures >= MAX_POLL_FAILURES) {
         this.gameActive = false;
+        this.consecutiveFailures = 0;
         console.log("[Poller] No active game — waiting...");
         this.onStatusChange(false);
       }
