@@ -39,8 +39,8 @@ if [[ "$OS_NAME" == "macos" ]]; then
     cp bridge/dist/bridge flutter_app/build/macos/Build/Products/Release/lol_coach.app/Contents/MacOS/
     # Zip the .app
     cd flutter_app/build/macos/Build/Products/Release
-    zip -r ../../../../../dist/LoLCoach-Mac.zip lol_coach.app
-    cd ../../../../../
+    zip -r ../../../../../../dist/LoLCoach-Mac.zip lol_coach.app
+    cd ../../../../../../
     echo "Created dist/LoLCoach-Mac.zip"
 elif [[ "$OS_NAME" == "linux" ]]; then
     # Copy bridge into the bundle directory
