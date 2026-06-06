@@ -1,39 +1,20 @@
 import type { Player, CompProfile, ItemRecommendation, RecommendedItem } from "./types.js";
+import championsData from "./data/champions.json";
+import itemsData from "./data/items.json";
 
-// Champions die typischerweise AP spielen (vereinfachte Liste)
-const AP_CHAMPIONS = new Set([
-  "Ahri", "Annie", "Azir", "Brand", "Cassiopeia", "Ekko", "Elise", "Evelynn",
-  "Fiddlesticks", "Fizz", "Heimerdinger", "Karthus", "Kassadin", "Katarina",
-  "Kennen", "LeBlanc", "Lissandra", "Lux", "Malzahar", "Morgana", "Nami",
-  "Nidalee", "Orianna", "Rumble", "Ryze", "Seraphine", "Singed", "Swain",
-  "Syndra", "Taliyah", "Twisted Fate", "Veigar", "Vel'Koz", "Viktor",
-  "Vladimir", "Xerath", "Zoe", "Zyra", "Soraka", "Zilean",
-]);
+const AP_CHAMPIONS = new Set<string>(championsData.ap);
+const CC_CHAMPIONS = new Set<string>(championsData.cc);
+const HEALER_CHAMPIONS = new Set<string>(championsData.healers);
+const ITEM_NAMES: Record<number, string> = Object.fromEntries(
+  Object.entries(itemsData).map(([k, v]) => [Number(k), v]),
+);
 
-const CC_CHAMPIONS = new Set([
-  "Amumu", "Blitzcrank", "Galio", "Leona", "Lissandra", "Malphite",
-  "Nautilus", "Sejuani", "Skarner", "Thresh", "Zac",
-]);
-
-const HEALER_CHAMPIONS = new Set([
-  "Aatrox", "Dr. Mundo", "Fiora", "Nasus", "Olaf", "Soraka", "Swain",
-  "Vladimir", "Warwick", "Yuumi", "Sylas",
-]);
-
-const ITEM_NAMES: Record<number, string> = {
-  3123: "Executioner's Calling",
-  3033: "Mortal Reminder",
-  3076: "Bramble Vest",
-  3165: "Morellonomicon",
-  3156: "Maw of Malmortius",
-  3111: "Mercury's Treads",
-  3140: "Quicksilver Sash",
-  3102: "Banshee's Veil",
-  3036: "Lord Dominik's Regards",
-  3143: "Randuin's Omen",
-  3110: "Frozen Heart",
-  3082: "Warden's Mail",
-};
+const {
+  healScoreForGW,
+  apRatioForBanshee,
+  ccScoreForQSS,
+  adRatioForRanduin,
+} = championsData.thresholds;
 
 export function buildCompProfile(enemies: Player[]): CompProfile {
   let apCount = 0;
@@ -62,7 +43,7 @@ export function getHeuristicRecommendations(
 ): ItemRecommendation {
   const recommended: RecommendedItem[] = [];
 
-  if (profile.healScore >= 2) {
+  if (profile.healScore >= healScoreForGW) {
     const id = myChampion && AP_CHAMPIONS.has(myChampion) ? 3165 : 3033;
     recommended.push({
       id,
@@ -72,7 +53,7 @@ export function getHeuristicRecommendations(
     });
   }
 
-  if (profile.apRatio >= 0.6) {
+  if (profile.apRatio >= apRatioForBanshee) {
     recommended.push({
       id: 3102,
       name: "Banshee's Veil",
@@ -81,7 +62,7 @@ export function getHeuristicRecommendations(
     });
   }
 
-  if (profile.ccScore >= 3) {
+  if (profile.ccScore >= ccScoreForQSS) {
     recommended.push({
       id: 3140,
       name: "Quicksilver Sash",
@@ -90,7 +71,7 @@ export function getHeuristicRecommendations(
     });
   }
 
-  if (profile.adRatio >= 0.7) {
+  if (profile.adRatio >= adRatioForRanduin) {
     recommended.push({
       id: 3143,
       name: "Randuin's Omen",
@@ -109,7 +90,7 @@ export function getHeuristicRecommendations(
 function formatReasoning(profile: CompProfile): string {
   const parts: string[] = [];
 
-  if (profile.apRatio >= 0.6) parts.push(`AP-heavy (${Math.round(profile.apRatio * 100)}%)`);
+  if (profile.apRatio >= apRatioForBanshee) parts.push(`AP-heavy (${Math.round(profile.apRatio * 100)}%)`);
   else if (profile.adRatio >= 0.6) parts.push(`AD-heavy (${Math.round(profile.adRatio * 100)}%)`);
   else parts.push("Mixed damage");
 

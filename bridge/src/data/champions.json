@@ -1,0 +1,24 @@
+{
+  "ap": [
+    "Ahri", "Annie", "Azir", "Brand", "Cassiopeia", "Ekko", "Elise", "Evelynn",
+    "Fiddlesticks", "Fizz", "Heimerdinger", "Karthus", "Kassadin", "Katarina",
+    "Kennen", "LeBlanc", "Lissandra", "Lux", "Malzahar", "Morgana", "Nami",
+    "Nidalee", "Orianna", "Rumble", "Ryze", "Seraphine", "Singed", "Swain",
+    "Syndra", "Taliyah", "Twisted Fate", "Veigar", "Vel'Koz", "Viktor",
+    "Vladimir", "Xerath", "Zoe", "Zyra", "Soraka", "Zilean"
+  ],
+  "cc": [
+    "Amumu", "Blitzcrank", "Galio", "Leona", "Lissandra", "Malphite",
+    "Nautilus", "Sejuani", "Skarner", "Thresh", "Zac"
+  ],
+  "healers": [
+    "Aatrox", "Dr. Mundo", "Fiora", "Nasus", "Olaf", "Soraka", "Swain",
+    "Vladimir", "Warwick", "Yuumi", "Sylas"
+  ],
+  "thresholds": {
+    "healScoreForGW": 2,
+    "apRatioForBanshee": 0.6,
+    "ccScoreForQSS": 3,
+    "adRatioForRanduin": 0.7
+  }
+}
