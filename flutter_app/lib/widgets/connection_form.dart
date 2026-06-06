@@ -1,5 +1,6 @@
 // ignore_for_file: lines_longer_than_80_chars, deprecated_member_use
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -19,6 +20,7 @@ class ConnectionForm extends StatefulWidget {
 }
 
 const _defaultPort = 8765;
+const _secureStorage = FlutterSecureStorage();
 
 class _ConnectionFormState extends State<ConnectionForm> {
   final _hostCtrl = TextEditingController(text: '127.0.0.1');
@@ -36,12 +38,13 @@ class _ConnectionFormState extends State<ConnectionForm> {
 
   Future<void> _loadPrefs() async {
     final prefs = await SharedPreferences.getInstance();
+    final apiKey = await _secureStorage.read(key: 'apiKey') ?? '';
     setState(() {
       _hostCtrl.text = prefs.getString('host') ?? '127.0.0.1';
       _portCtrl.text = prefs.getString('port') ?? '$_defaultPort';
       _summonerCtrl.text = prefs.getString('summonerName') ?? '';
       _providerType = prefs.getString('providerType') ?? 'none';
-      _apiKeyCtrl.text = prefs.getString('apiKey') ?? '';
+      _apiKeyCtrl.text = apiKey;
     });
   }
 
@@ -78,7 +81,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
     await prefs.setString('port', portString);
     await prefs.setString('summonerName', summonerName);
     await prefs.setString('providerType', _providerType);
-    await prefs.setString('apiKey', apiKey);
+    // API key is stored in the OS keychain/secure enclave, not plain SharedPreferences
+    await _secureStorage.write(key: 'apiKey', value: apiKey);
 
     widget.onConnect(host, port, summonerName, _providerType, apiKey);
   }
