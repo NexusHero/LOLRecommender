@@ -23,7 +23,7 @@ export class GeminiProvider implements LlmProvider {
 
       const result = await model.generateContent({
         contents: [
-          { role: "user", parts: [{ text: buildUserPrompt(state, heuristicRec) }] },
+          { role: "user", parts: [{ text: await buildUserPrompt(state, heuristicRec) }] },
         ],
         generationConfig: {
           maxOutputTokens: 400,

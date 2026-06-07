@@ -22,7 +22,7 @@ export class OpenAiProvider implements LlmProvider {
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserPrompt(state, heuristicRec) },
+          { role: "user", content: await buildUserPrompt(state, heuristicRec) },
         ],
       });
 
