@@ -1,22 +1,27 @@
 import { GeminiProvider } from "../providers/geminiProvider";
-import { makeGameState } from "./fixtures";
-import type { ItemRecommendation } from "../types";
+import { makeGameState, makeBaseRec } from "./fixtures";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 jest.mock("@google/generative-ai");
 
-const baseRec: ItemRecommendation = {
-  items: [{ id: 3033, name: "Mortal Reminder", reason: "vs healers", priority: "core" }],
-  reasoning: "heuristic reasoning",
-  source: "heuristic",
-};
+const baseRec = makeBaseRec();
+
+const validJsonResponse = JSON.stringify({
+  itemReasoning: "LLM reasoning text",
+  strategy: {
+    winCondition: "late",
+    summary: "You scale hard — be patient.",
+    immediateAction: "Farm and avoid fights.",
+    lateGamePlan: "Dominate with full build in late game.",
+  },
+});
 
 describe("GeminiProvider", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  function mockGeminiResponse(content: string | null = "LLM reasoning text", throwError = false) {
+  function mockGeminiResponse(content: string | null = validJsonResponse, throwError = false) {
     const mockGenerateContent = jest.fn();
     if (throwError) {
       mockGenerateContent.mockRejectedValue(new Error("API unavailable"));
@@ -30,34 +35,47 @@ describe("GeminiProvider", () => {
     return mockGenerateContent;
   }
 
-  it("getExplanation_ValidApiKey_ReturnsLlmText", async () => {
+  it("getAnalysis_ValidApiKey_ReturnsLlmReasoningAndStrategy", async () => {
     mockGeminiResponse();
     const provider = new GeminiProvider("test-key");
 
-    const result = await provider.getExplanation(makeGameState(), baseRec);
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
 
-    expect(result).toBe("LLM reasoning text");
+    expect(result.reasoning).toBe("LLM reasoning text");
+    expect(result.strategy.winCondition).toBe("late");
   });
 
-  it("getExplanation_ClientThrows_FallsBackToHeuristicReasoning", async () => {
+  it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
     mockGeminiResponse(null, true);
     const provider = new GeminiProvider("test-key");
 
-    const result = await provider.getExplanation(makeGameState(), baseRec);
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
 
-    expect(result).toBe("heuristic reasoning");
+    expect(result.reasoning).toBe("heuristic reasoning");
+    expect(result.strategy).toEqual(baseRec.strategy);
   });
 
-  it("getExplanation_EmptyContent_FallsBackToHeuristicReasoning", async () => {
+  it("getAnalysis_EmptyContent_FallsBackToHeuristicReasoningAndStrategy", async () => {
     mockGeminiResponse("");
     const provider = new GeminiProvider("test-key");
 
-    const result = await provider.getExplanation(makeGameState(), baseRec);
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
 
-    expect(result).toBe("heuristic reasoning");
+    expect(result.reasoning).toBe("heuristic reasoning");
+    expect(result.strategy).toEqual(baseRec.strategy);
   });
 
-  it("getExplanation_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
+  it("getAnalysis_InvalidJson_FallsBackToHeuristicReasoningAndStrategy", async () => {
+    mockGeminiResponse("plain text not json");
+    const provider = new GeminiProvider("test-key");
+
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
+
+    expect(result.reasoning).toBe("heuristic reasoning");
+    expect(result.strategy).toEqual(baseRec.strategy);
+  });
+
+  it("getAnalysis_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
     const mockGenerateContent = mockGeminiResponse();
     const provider = new GeminiProvider("test-key");
     const state = makeGameState({
@@ -65,7 +83,7 @@ describe("GeminiProvider", () => {
       enemies: [{ ...makeGameState().localPlayer, championName: "Soraka", team: "CHAOS" }],
     });
 
-    await provider.getExplanation(state, baseRec);
+    await provider.getAnalysis(state, baseRec);
 
     const callArg = mockGenerateContent.mock.calls[0][0];
     const userContent = callArg.contents[0].parts[0].text as string;

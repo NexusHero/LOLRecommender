@@ -11,7 +11,7 @@ import type { WsMessage } from "../types";
 // Uses injected fetcher and random port — no real network I/O, no process spawning.
 
 jest.mock("../llmProvider", () => ({
-  createLlmProvider: jest.fn().mockResolvedValue({ name: "mock-provider", getExplanation: jest.fn() }),
+  createLlmProvider: jest.fn().mockResolvedValue({ name: "mock-provider", getAnalysis: jest.fn() }),
 }));
 
 function waitForMessage(ws: WebSocket, eventName: string, timeoutMs = 2000): Promise<WsMessage> {

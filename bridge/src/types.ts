@@ -96,10 +96,18 @@ export interface WsMessage {
   error?: string;
 }
 
+export interface Strategy {
+  winCondition: "early" | "mid" | "late";
+  summary: string;
+  immediateAction: string;
+  lateGamePlan: string;
+}
+
 export interface ItemRecommendation {
   items: RecommendedItem[];
   reasoning: string;
   source: "heuristic" | "llm";
+  strategy: Strategy;
 }
 
 export interface RecommendedItem {

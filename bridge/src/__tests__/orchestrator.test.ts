@@ -20,7 +20,15 @@ function setup(overrides: {
 
   const llmProvider = {
     name: "mock",
-    getExplanation: jest.fn().mockResolvedValue(overrides.llmResult ?? "LLM says buy this"),
+    getAnalysis: jest.fn().mockResolvedValue({
+      reasoning: overrides.llmResult ?? "LLM says buy this",
+      strategy: {
+        winCondition: "mid",
+        summary: "Scale into mid-game.",
+        immediateAction: "Farm safely.",
+        lateGamePlan: "Fight with full build.",
+      },
+    }),
   } as unknown as LlmProvider;
 
   const orchestrator = new BridgeOrchestrator(
@@ -128,7 +136,7 @@ describe("BridgeOrchestrator", () => {
       const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
       const enemy = makePlayer({ summonerName: "Enemy1", team: "CHAOS" });
       await orchestrator.handleGameData(makeRawGameData([makePlayer(), enemy]));
-      (llmProvider.getExplanation as jest.Mock).mockClear();
+      (llmProvider.getAnalysis as jest.Mock).mockClear();
       broadcasts.length = 0;
 
       const enemyWithItem = { ...enemy, items: [makeItem({ itemID: 3102 })] };
@@ -136,7 +144,7 @@ describe("BridgeOrchestrator", () => {
 
       const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       expect(rec?.recommendation?.source).toBe("heuristic");
-      expect(llmProvider.getExplanation).not.toHaveBeenCalled();
+      expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
     });
 
     it("sendRecommendation_NoClientsConnected_SkipsLlmUsesHeuristic", async () => {
@@ -146,7 +154,7 @@ describe("BridgeOrchestrator", () => {
 
       const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       expect(rec?.recommendation?.source).toBe("heuristic");
-      expect(llmProvider.getExplanation).not.toHaveBeenCalled();
+      expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
     });
   });
 
@@ -154,7 +162,7 @@ describe("BridgeOrchestrator", () => {
     it("sendRecommendation_PlayerDiedLowGold_StillUsesLlm", async () => {
       const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
       await orchestrator.handleGameData(makeRawGameData());
-      (llmProvider.getExplanation as jest.Mock).mockClear();
+      (llmProvider.getAnalysis as jest.Mock).mockClear();
       broadcasts.length = 0;
 
       const raw2 = makeRawGameData([makePlayer({ isDead: true })]);
@@ -163,7 +171,7 @@ describe("BridgeOrchestrator", () => {
 
       const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       expect(rec?.recommendation?.source).toBe("llm");
-      expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+      expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
     });
 
     it("sendRecommendation_PlayerDiedImmediatelyAfterGameStart_UsesLlmWithoutCooldown", async () => {
@@ -174,7 +182,7 @@ describe("BridgeOrchestrator", () => {
         clock: () => now,
       });
       await orchestrator.handleGameData(makeRawGameData());
-      (llmProvider.getExplanation as jest.Mock).mockClear();
+      (llmProvider.getAnalysis as jest.Mock).mockClear();
       broadcasts.length = 0;
 
       now = 102_000;
@@ -182,7 +190,7 @@ describe("BridgeOrchestrator", () => {
 
       const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       expect(rec?.recommendation?.source).toBe("llm");
-      expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+      expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -208,12 +216,12 @@ describe("BridgeOrchestrator", () => {
     it("triggerManualAnalysis_LlmProviderSet_UsesLlm", async () => {
       const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
       await orchestrator.handleGameData(makeRawGameData());
-      (llmProvider.getExplanation as jest.Mock).mockClear();
+      (llmProvider.getAnalysis as jest.Mock).mockClear();
       broadcasts.length = 0;
 
       await orchestrator.triggerManualAnalysis();
 
-      expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+      expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
       const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       expect(rec?.recommendation?.source).toBe("llm");
     });

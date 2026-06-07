@@ -1,6 +1,7 @@
 // ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart' hide Badge;
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/models/strategy.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/shared_widgets.dart';
@@ -59,8 +60,104 @@ class RecommendationPanel extends StatelessWidget {
             ...recommendation.items.map((item) => _RecItemTile(item: item)),
           const Divider(color: AppColors.border, height: 16),
           Text(recommendation.reasoning, style: AppTextStyles.caption),
+          if (recommendation.strategy != null) ...[
+            const SizedBox(height: 12),
+            _StrategyCard(strategy: recommendation.strategy!),
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _StrategyCard extends StatelessWidget {
+  const _StrategyCard({required this.strategy});
+  final Strategy strategy;
+
+  Color get _conditionColor => switch (strategy.winCondition) {
+        WinCondition.early => AppColors.success,
+        WinCondition.mid => AppColors.gold,
+        WinCondition.late => AppColors.magic,
+      };
+
+  Color get _conditionSubtle => switch (strategy.winCondition) {
+        WinCondition.early => AppColors.successSubtle,
+        WinCondition.mid => AppColors.goldSubtle,
+        WinCondition.late => AppColors.magicSubtle,
+      };
+
+  String get _conditionLabel => switch (strategy.winCondition) {
+        WinCondition.early => 'EARLY WIN',
+        WinCondition.mid => 'MID WIN',
+        WinCondition.late => 'LATE WIN',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return GameCard(
+      borderColor: _conditionColor,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.military_tech_outlined, size: 15, color: AppColors.gold),
+              const SizedBox(width: 6),
+              const Text('GAME PLAN', style: AppTextStyles.label),
+              const Spacer(),
+              Badge(
+                _conditionLabel,
+                bg: _conditionSubtle,
+                fg: _conditionColor,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(strategy.summary, style: AppTextStyles.bodyBold),
+          const SizedBox(height: 8),
+          _StrategyRow(
+            icon: Icons.arrow_forward,
+            iconColor: AppColors.cyan,
+            label: 'NOW',
+            text: strategy.immediateAction,
+          ),
+          const SizedBox(height: 4),
+          _StrategyRow(
+            icon: Icons.flag_outlined,
+            iconColor: _conditionColor,
+            label: 'LATE',
+            text: strategy.lateGamePlan,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StrategyRow extends StatelessWidget {
+  const _StrategyRow({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 13, color: iconColor),
+        const SizedBox(width: 5),
+        Badge(label, bg: AppColors.surfaceDark, fg: AppColors.textSecondary),
+        const SizedBox(width: 6),
+        Expanded(child: Text(text, style: AppTextStyles.caption)),
+      ],
     );
   }
 }

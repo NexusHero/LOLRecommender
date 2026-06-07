@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { LlmProvider } from "../llmProvider.js";
-import { SYSTEM_PROMPT, buildUserPrompt } from "../llmProvider.js";
+import type { LlmProvider, LlmAnalysis } from "../llmProvider.js";
+import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
 export class GeminiProvider implements LlmProvider {
@@ -11,10 +11,10 @@ export class GeminiProvider implements LlmProvider {
     this.client = new GoogleGenerativeAI(apiKey);
   }
 
-  async getExplanation(
+  async getAnalysis(
     state: ParsedGameState,
     heuristicRec: ItemRecommendation,
-  ): Promise<string> {
+  ): Promise<LlmAnalysis> {
     try {
       const model = this.client.getGenerativeModel({
         model: "gemini-2.0-flash",
@@ -25,20 +25,21 @@ export class GeminiProvider implements LlmProvider {
         contents: [
           { role: "user", parts: [{ text: buildUserPrompt(state, heuristicRec) }] },
         ],
-        generationConfig: { maxOutputTokens: 150 },
+        generationConfig: {
+          maxOutputTokens: 400,
+          responseMimeType: "application/json",
+        },
       });
 
       const text = result.response.text();
-      if (!text) return heuristicRec.reasoning;
+      if (!text) return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
 
-      console.log(
-        `[LLM:Gemini] Response received (${text.length} chars)`,
-      );
+      console.log(`[LLM:Gemini] Response received (${text.length} chars)`);
 
-      return text;
+      return parseAnalysisResponse(text, heuristicRec);
     } catch (err) {
       console.error("[LLM:Gemini] Error:", err);
-      return heuristicRec.reasoning;
+      return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
     }
   }
 }
