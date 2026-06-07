@@ -10,6 +10,11 @@
 #   ./test.sh --bridge-only    skip flutter
 #   ./test.sh --flutter-only   skip bridge
 #   ./test.sh --watch          bridge jest --watch (flutter skipped)
+#
+# Verbosity:
+#   -q / --quiet    only the final summary (no test output, no dir/cmd info)
+#   (default)       test results only — console logs from test code are suppressed
+#   -v / --verbose  full output including all console logs from test code
 
 set -euo pipefail
 
@@ -29,6 +34,7 @@ GOLDENS=false
 UPDATE_GOLDENS=false
 WATCH=false
 WITH_MOCK_SERVER=false
+VERBOSITY=1   # 0=quiet  1=default  2=verbose
 
 for arg in "$@"; do
   case "$arg" in
@@ -39,6 +45,8 @@ for arg in "$@"; do
     --bridge-only)    RUN_FLUTTER=false ;;
     --flutter-only)   RUN_BRIDGE=false ;;
     --watch)          WATCH=true; RUN_FLUTTER=false ;;
+    -q|--quiet)       VERBOSITY=0 ;;
+    -v|--verbose)     VERBOSITY=2 ;;
     --help|-h)
       sed -n '/^# Usage:/,/^[^#]/p' "$0" | grep '^#' | sed 's/^# \?//'
       exit 0
@@ -60,10 +68,11 @@ MOCK_PID=""
 MOCK_PORT=29990
 
 # ── helpers ───────────────────────────────────────────────────────────────────
-section() { echo -e "\n${CYAN}${BOLD}▶ $1${RESET}"; }
+section() { [ "$VERBOSITY" -ge 1 ] && echo -e "\n${CYAN}${BOLD}▶ $1${RESET}" || true; }
 ok()      { echo -e "${GREEN}${BOLD}✔ $1${RESET}"; }
 fail()    { echo -e "${RED}${BOLD}✖ $1${RESET}"; }
 warn()    { echo -e "${YELLOW}$1${RESET}"; }
+info()    { [ "$VERBOSITY" -ge 1 ] && echo -e "  $*" || true; }
 
 check_tool() {
   if ! command -v "$1" &>/dev/null; then
@@ -71,6 +80,35 @@ check_tool() {
     return 1
   fi
   return 0
+}
+
+# Run a command with output handling based on VERBOSITY.
+#   VERBOSITY=2 : stream everything
+#   VERBOSITY=1 : buffer; filter out lines matching FILTER (if non-empty), then print
+#   VERBOSITY=0 : buffer; discard all output
+# Sets the named variable to the command's exit code.
+#
+# Usage: run_cmd RESULT_VAR FILTER CMD [ARGS…]
+run_cmd() {
+  local _var=$1 _filter=$2; shift 2
+  local _exit=0 _tmp
+
+  if [ "$VERBOSITY" -ge 2 ]; then
+    if "$@" 2>&1; then _exit=0; else _exit=$?; fi
+  else
+    _tmp=$(mktemp)
+    if "$@" >"$_tmp" 2>&1; then _exit=0; else _exit=$?; fi
+    if [ "$VERBOSITY" -ge 1 ]; then
+      if [ -n "$_filter" ]; then
+        grep -v "$_filter" "$_tmp" || true
+      else
+        cat "$_tmp"
+      fi
+    fi
+    rm -f "$_tmp"
+  fi
+
+  printf -v "$_var" '%d' "$_exit"
 }
 
 # ── mock server lifecycle ─────────────────────────────────────────────────────
@@ -93,9 +131,9 @@ start_mock_server() {
     return
   fi
 
-  echo "  port : $MOCK_PORT"
-  echo "  cmd  : npx tsx src/mock-lol-server.ts"
-  echo ""
+  info "port : $MOCK_PORT"
+  info "cmd  : npx tsx src/mock-lol-server.ts"
+  [ "$VERBOSITY" -ge 1 ] && echo "" || true
 
   MOCK_LOL_PORT=$MOCK_PORT npx --prefix "$BRIDGE_DIR" tsx \
     "$BRIDGE_DIR/src/mock-lol-server.ts" >/tmp/mock-lol.log 2>&1 &
@@ -116,7 +154,7 @@ start_mock_server() {
   if $ready; then
     ok "Mock LoL server ready  (pid $MOCK_PID)"
     export LIVE_CLIENT_URL="http://localhost:$MOCK_PORT/liveclientdata/allgamedata"
-    echo "  LIVE_CLIENT_URL=$LIVE_CLIENT_URL"
+    info "LIVE_CLIENT_URL=$LIVE_CLIENT_URL"
   else
     fail "Mock LoL server did not start within 5s"
     cat /tmp/mock-lol.log 2>/dev/null || true
@@ -143,18 +181,24 @@ run_bridge() {
     jest_args="--coverage"
   fi
 
-  echo "  dir  : $BRIDGE_DIR"
-  echo "  cmd  : npm test -- $jest_args"
-  if [ -n "${LIVE_CLIENT_URL:-}" ]; then
-    echo "  env  : LIVE_CLIENT_URL=$LIVE_CLIENT_URL"
+  # Suppress console.log from test code unless verbose
+  if ! $WATCH && [ "$VERBOSITY" -le 1 ]; then
+    jest_args="$jest_args --silent"
   fi
-  echo ""
+
+  info "dir  : $BRIDGE_DIR"
+  info "cmd  : npm test -- $jest_args"
+  if [ -n "${LIVE_CLIENT_URL:-}" ]; then
+    info "env  : LIVE_CLIENT_URL=$LIVE_CLIENT_URL"
+  fi
+  [ "$VERBOSITY" -ge 1 ] && echo "" || true
 
   # shellcheck disable=SC2086
-  if npm test -- $jest_args 2>&1; then
+  run_cmd BRIDGE_EXIT "" npm test -- $jest_args
+
+  if [ "$BRIDGE_EXIT" -eq 0 ]; then
     ok "Bridge tests passed"
   else
-    BRIDGE_EXIT=$?
     fail "Bridge tests failed (exit $BRIDGE_EXIT)"
   fi
 
@@ -173,15 +217,17 @@ run_flutter() {
 
   cd "$FLUTTER_DIR"
 
-  echo "  dir  : $FLUTTER_DIR"
+  info "dir  : $FLUTTER_DIR"
 
   # Update goldens first if requested
   if $UPDATE_GOLDENS; then
-    echo ""
+    [ "$VERBOSITY" -ge 1 ] && echo "" || true
     warn "  Regenerating golden baselines…"
-    if flutter test \
+    local _golden_exit=0
+    run_cmd _golden_exit "^\[" flutter test \
       --update-goldens \
-      test/widgets/recommendation_panel_golden_test.dart 2>&1; then
+      test/widgets/recommendation_panel_golden_test.dart
+    if [ "$_golden_exit" -eq 0 ]; then
       ok "Goldens updated"
     else
       fail "Golden update failed"
@@ -202,18 +248,20 @@ run_flutter() {
 
   if $GOLDENS; then
     test_dirs+=("test/widgets/recommendation_panel_golden_test.dart")
-    echo "  mode : all tests (including goldens)"
+    info "mode : all tests (including goldens)"
   else
-    echo "  mode : unit + widget (goldens excluded — use --goldens to include)"
+    info "mode : unit + widget (goldens excluded — use --goldens to include)"
   fi
 
-  echo "  cmd  : flutter test ${test_dirs[*]}"
-  echo ""
+  info "cmd  : flutter test ${test_dirs[*]}"
+  [ "$VERBOSITY" -ge 1 ] && echo "" || true
 
-  if flutter test "${test_dirs[@]}" 2>&1; then
+  # Lines starting with [ are console logs from app code (e.g. [WsService] …)
+  run_cmd FLUTTER_EXIT "^\[" flutter test "${test_dirs[@]}"
+
+  if [ "$FLUTTER_EXIT" -eq 0 ]; then
     ok "Flutter tests passed"
   else
-    FLUTTER_EXIT=$?
     fail "Flutter tests failed (exit $FLUTTER_EXIT)"
   fi
 
