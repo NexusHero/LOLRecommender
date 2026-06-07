@@ -5,6 +5,15 @@ import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/game_view.dart';
 import 'package:provider/provider.dart';
 
+String _providerLabel(String type) => switch (type) {
+      'claude' => 'Claude',
+      'openai' => 'GPT-4o',
+      'gemini' => 'Gemini',
+      _ => 'Basic',
+    };
+
+bool _isAiProvider(String type) => type != 'none';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -19,6 +28,10 @@ class HomeScreen extends StatelessWidget {
                 const Text('LoL Coach'),
                 const SizedBox(width: 8),
                 _StatusDot(status: ws.status),
+                if (ws.isConnected) ...[
+                  const SizedBox(width: 10),
+                  _ProviderChip(providerType: ws.activeProviderType),
+                ],
               ],
             ),
             actions: [
@@ -38,21 +51,29 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildFab(WsService ws) {
+    final provider = ws.activeProviderType;
+    final isAi = _isAiProvider(provider);
+    final label = ws.isAnalyzing
+        ? 'Analysing...'
+        : isAi
+            ? 'Analyse with ${_providerLabel(provider)}'
+            : 'Analyse (Basic)';
+
     return FloatingActionButton.extended(
       onPressed: ws.isAnalyzing ? null : ws.triggerAnalysis,
-      backgroundColor: AppColors.gold,
-      foregroundColor: Colors.black,
+      backgroundColor: isAi ? AppColors.magic : AppColors.gold,
+      foregroundColor: Colors.white,
       icon: ws.isAnalyzing
           ? const SizedBox(
               width: 18,
               height: 18,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: Colors.black,
+                color: Colors.white,
               ),
             )
-          : const Icon(Icons.bolt),
-      label: Text(ws.isAnalyzing ? 'Analysing...' : 'Analyse'),
+          : Icon(isAi ? Icons.smart_toy_outlined : Icons.bolt),
+      label: Text(label),
     );
   }
 
@@ -118,6 +139,42 @@ class _StatusDot extends StatelessWidget {
       width: 8,
       height: 8,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+}
+
+class _ProviderChip extends StatelessWidget {
+  const _ProviderChip({required this.providerType});
+  final String providerType;
+
+  @override
+  Widget build(BuildContext context) {
+    final isAi = _isAiProvider(providerType);
+    final color = isAi ? AppColors.magic : AppColors.textSecondary;
+    final bg = isAi ? AppColors.magicSubtle : AppColors.surfaceDark;
+    final icon = isAi ? Icons.smart_toy_outlined : Icons.tune;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color),
+          const SizedBox(width: 4),
+          Text(
+            _providerLabel(providerType),
+            style: AppTextStyles.caption.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

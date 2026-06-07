@@ -49,6 +49,7 @@ class WsService extends ChangeNotifier {
   ConnectionStatus get status => _status;
   String? get lastError => _lastError;
   String? get lastLlmError => _lastLlmError;
+  String get activeProviderType => _lastProviderType ?? 'none';
   ParsedGameState? get gameState => _gameState;
   ItemRecommendation? get recommendation => _recommendation;
   String get lastEvent => _lastEvent;
