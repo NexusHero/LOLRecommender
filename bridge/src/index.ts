@@ -4,8 +4,8 @@ import { LiveClientPoller } from "./poller.js";
 import { EventDetector } from "./eventDetector.js";
 import { BridgeWsServer } from "./wsServer.js";
 import { BridgeOrchestrator } from "./orchestrator.js";
+import { MessageRouter } from "./messageRouter.js";
 import { createLlmProvider } from "./llmProvider.js";
-import type { ProviderType } from "./llmProvider.js";
 
 const LOCAL_SUMMONER = process.env.SUMMONER_NAME ?? "";
 if (!LOCAL_SUMMONER) {
@@ -13,7 +13,7 @@ if (!LOCAL_SUMMONER) {
 }
 
 const WS_PORT = parseInt(process.env.WS_PORT ?? "8765");
-const DEFAULT_LLM_COOLDOWN_MS = 7 * 60 * 1000; // 7 minutes between LLM calls
+const DEFAULT_LLM_COOLDOWN_MS = 7 * 60 * 1000;
 
 // --- Parent Process Watchdog ---
 const args = process.argv.slice(2);
@@ -27,7 +27,6 @@ if (parentPidArg) {
         // signal 0 = existence check only (no actual signal sent)
         // NOTE: On Windows, process.kill(pid, 0) may throw EPERM when the parent
         // has a different integrity level, even if the parent is still alive.
-        // This can cause a premature bridge exit in elevated-privilege scenarios.
         process.kill(parentPid, 0);
       } catch (e) {
         console.log(`[Main] Parent process ${parentPid} died. Exiting bridge...`);
@@ -37,49 +36,26 @@ if (parentPidArg) {
   }
 }
 
-// --- Wire-up: wsServer → orchestrator reference is resolved via closure ---
-
+// Closure trick: wsServer needs orchestrator reference before orchestrator is constructed
 let orchestrator: BridgeOrchestrator;
+let messageRouter: MessageRouter;
 
 const wsServer = new BridgeWsServer(
   new WebSocketServer({ host: "0.0.0.0", port: WS_PORT }),
-  async (_ws, message) => {
-    if (message.event === "SET_SUMMONER" && typeof message.summonerName === "string") {
-      orchestrator.setSummonerName(message.summonerName);
-    }
-    if (message.event === "TRIGGER_ANALYSIS") {
-      orchestrator.triggerManualAnalysis();
-    }
-    if (message.event === "SET_LLM_PROVIDER") {
-      const providerType = message.provider as ProviderType | undefined;
-      const apiKey = message.apiKey as string | undefined;
-
-      if (!providerType || !apiKey) {
-        console.log("[Main] LLM provider disabled.");
-        orchestrator.setLlmProvider(null);
-        return;
-      }
-
-      try {
-        const provider = await createLlmProvider(providerType, apiKey);
-        orchestrator.setLlmProvider(provider);
-      } catch (err) {
-        console.error("[Main] Failed to create LLM provider:", err);
-        orchestrator.setLlmProvider(null);
-      }
-    }
-  },
+  (_ws, message) => messageRouter.handle(_ws, message),
 );
 
 orchestrator = new BridgeOrchestrator(
   wsServer,
   new EventDetector(),
-  null, // LLM provider starts disabled; set via WS or env below
+  null,
   {
     summonerName: LOCAL_SUMMONER,
     llmCooldownMs: DEFAULT_LLM_COOLDOWN_MS,
   },
 );
+
+messageRouter = new MessageRouter(orchestrator);
 
 // Backward compatible: use ANTHROPIC_API_KEY from .env if present
 if (process.env.ANTHROPIC_API_KEY) {
