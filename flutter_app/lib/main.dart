@@ -1,12 +1,16 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:lol_coach/screens/main_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/utils/ddragon.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // DDragon-Version im Hintergrund holen; Fallback greift falls kein Netz
+  unawaited(initDDragonVersion());
 
   // Auto-start bridge on Desktop platforms if it exists
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
