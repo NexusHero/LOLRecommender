@@ -122,7 +122,7 @@ class _SweepPainter extends CustomPainter {
       final opacity = math.pow(segFrac, 0.5).toDouble() * 0.9 + 0.1;
 
       final segPath = _extractWrapped(
-        pm, total, segStart % total, segEnd % total);
+        pm, total, segStart % total, segEnd % total,);
       canvas.drawPath(
         segPath,
         Paint()
