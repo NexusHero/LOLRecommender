@@ -1,7 +1,7 @@
 import https from "https";
 import { AllGameDataSchema, type AllGameData } from "./types.js";
 
-const LIVE_CLIENT_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata";
+const LIVE_CLIENT_URL = process.env.LIVE_CLIENT_URL ?? "https://127.0.0.1:2999/liveclientdata/allgamedata";
 const POLL_INTERVAL_MS = 1000;
 
 // Number of consecutive fetch failures before signalling GAME_INACTIVE.
