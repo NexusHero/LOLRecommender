@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import type { LlmProvider, LlmAnalysis } from "../llmProvider.js";
-import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
+import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse, friendlyApiError } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
 export class OpenAiProvider implements LlmProvider {
@@ -35,8 +35,7 @@ export class OpenAiProvider implements LlmProvider {
 
       return parseAnalysisResponse(text, heuristicRec);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`OpenAI: ${msg}`);
+      throw new Error(`OpenAI: ${friendlyApiError(err)}`);
     }
   }
 }

@@ -1,6 +1,6 @@
 import { Anthropic } from "@anthropic-ai/sdk";
 import type { LlmProvider, LlmAnalysis } from "../llmProvider.js";
-import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
+import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse, friendlyApiError } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
 export class ClaudeProvider implements LlmProvider {
@@ -41,8 +41,7 @@ export class ClaudeProvider implements LlmProvider {
 
       return parseAnalysisResponse(block.text, heuristicRec);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`Claude: ${msg}`);
+      throw new Error(`Claude: ${friendlyApiError(err)}`);
     }
   }
 }
