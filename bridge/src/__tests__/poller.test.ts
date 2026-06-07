@@ -6,77 +6,77 @@ afterEach(() => {
 });
 
 describe("LiveClientPoller", () => {
-  describe("initial poll", () => {
-    it("calls onData with valid parsed data", async () => {
+  describe("start — initial poll", () => {
+    it("start_ValidFetcherResponse_CallsOnDataWithParsedPayload", async () => {
+      jest.useFakeTimers();
       const payload = makeRawGameData();
       const onData = jest.fn();
       const fetcher = jest.fn().mockResolvedValue(payload);
       const poller = new LiveClientPoller(onData, jest.fn(), fetcher);
 
       poller.start();
+      await jest.advanceTimersByTimeAsync(0);
       poller.stop();
-      await Promise.resolve();
-      await Promise.resolve();
 
       expect(onData).toHaveBeenCalledWith(payload);
     });
 
-    it("calls onStatusChange(true) when game becomes active", async () => {
+    it("start_ValidFetcherResponse_CallsOnStatusChangeTrue", async () => {
+      jest.useFakeTimers();
       const onStatusChange = jest.fn();
       const fetcher = jest.fn().mockResolvedValue(makeRawGameData());
       const poller = new LiveClientPoller(jest.fn(), onStatusChange, fetcher);
 
       poller.start();
+      await jest.advanceTimersByTimeAsync(0);
       poller.stop();
-      await Promise.resolve();
-      await Promise.resolve();
 
       expect(onStatusChange).toHaveBeenCalledWith(true);
     });
 
-    it("does not call onData when fetcher returns invalid data", async () => {
+    it("start_InvalidFetcherResponse_DoesNotCallOnData", async () => {
+      jest.useFakeTimers();
       const onData = jest.fn();
       const fetcher = jest.fn().mockResolvedValue({ invalid: true });
       const poller = new LiveClientPoller(onData, jest.fn(), fetcher);
 
       poller.start();
+      await jest.advanceTimersByTimeAsync(0);
       poller.stop();
-      await Promise.resolve();
-      await Promise.resolve();
 
       expect(onData).not.toHaveBeenCalled();
     });
 
-    it("does not call onStatusChange when game was never active and fetcher throws", async () => {
+    it("start_FetcherThrowsWithNoGameActive_DoesNotCallOnStatusChange", async () => {
+      jest.useFakeTimers();
       const onStatusChange = jest.fn();
       const fetcher = jest.fn().mockRejectedValue(new Error("No game"));
       const poller = new LiveClientPoller(jest.fn(), onStatusChange, fetcher);
 
       poller.start();
+      await jest.advanceTimersByTimeAsync(0);
       poller.stop();
-      await Promise.resolve();
-      await Promise.resolve();
 
       expect(onStatusChange).not.toHaveBeenCalled();
     });
   });
 
-  describe("interval polling", () => {
-    it("polls again after the configured interval", () => {
+  describe("start — interval polling", () => {
+    it("start_AfterOneInterval_FetcherCalledAgain", async () => {
       jest.useFakeTimers();
       const fetcher = jest.fn().mockResolvedValue(makeRawGameData());
       const poller = new LiveClientPoller(jest.fn(), jest.fn(), fetcher);
 
       poller.start();
-      expect(fetcher).toHaveBeenCalledTimes(1); // initial call
+      expect(fetcher).toHaveBeenCalledTimes(1);
 
-      jest.advanceTimersByTime(1000);
-      expect(fetcher).toHaveBeenCalledTimes(2); // after 1 interval
+      await jest.advanceTimersByTimeAsync(1000);
+      expect(fetcher).toHaveBeenCalledTimes(2);
 
       poller.stop();
     });
 
-    it("stop prevents further polling", () => {
+    it("stop_Called_PreventsFurtherFetches", async () => {
       jest.useFakeTimers();
       const fetcher = jest.fn().mockResolvedValue(makeRawGameData());
       const poller = new LiveClientPoller(jest.fn(), jest.fn(), fetcher);
@@ -85,14 +85,15 @@ describe("LiveClientPoller", () => {
       poller.stop();
       const callsAtStop = fetcher.mock.calls.length;
 
-      jest.advanceTimersByTime(5000);
+      await jest.advanceTimersByTimeAsync(5000);
 
       expect(fetcher.mock.calls.length).toBe(callsAtStop);
     });
   });
 
   describe("game inactive transition", () => {
-    it(`calls onStatusChange(false) only after ${MAX_POLL_FAILURES} consecutive failures`, async () => {
+    it("poll_MaxConsecutiveFailures_CallsOnStatusChangeFalse", async () => {
+      jest.useFakeTimers();
       const onStatusChange = jest.fn();
       const fetcher = jest.fn()
         .mockResolvedValueOnce(makeRawGameData())
@@ -100,28 +101,39 @@ describe("LiveClientPoller", () => {
       const poller = new LiveClientPoller(jest.fn(), onStatusChange, fetcher);
 
       poller.start();
-      poller.stop();
-      // Let first poll complete (activates game)
-      await Promise.resolve();
-      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(0); // flush initial poll — game becomes active
 
-      // Trigger failures up to (but not including) the threshold — should NOT fire false yet
-      for (let i = 0; i < MAX_POLL_FAILURES - 1; i++) {
-        (poller as any).poll();
-        await Promise.resolve();
-        await Promise.resolve();
+      // Advance through exactly MAX_POLL_FAILURES intervals
+      for (let i = 0; i < MAX_POLL_FAILURES; i++) {
+        await jest.advanceTimersByTimeAsync(1000);
       }
-      expect(onStatusChange).not.toHaveBeenCalledWith(false);
-
-      // Final failure crosses the threshold — now fires
-      (poller as any).poll();
-      await Promise.resolve();
-      await Promise.resolve();
 
       expect(onStatusChange).toHaveBeenCalledWith(false);
+      poller.stop();
     });
 
-    it("does not call onStatusChange(false) for a single transient failure", async () => {
+    it("poll_FewerThanMaxConsecutiveFailures_DoesNotCallOnStatusChangeFalse", async () => {
+      jest.useFakeTimers();
+      const onStatusChange = jest.fn();
+      const fetcher = jest.fn()
+        .mockResolvedValueOnce(makeRawGameData())
+        .mockRejectedValue(new Error("Connection refused"));
+      const poller = new LiveClientPoller(jest.fn(), onStatusChange, fetcher);
+
+      poller.start();
+      await jest.advanceTimersByTimeAsync(0);
+
+      // One fewer than the threshold — should NOT flip to inactive
+      for (let i = 0; i < MAX_POLL_FAILURES - 1; i++) {
+        await jest.advanceTimersByTimeAsync(1000);
+      }
+
+      expect(onStatusChange).not.toHaveBeenCalledWith(false);
+      poller.stop();
+    });
+
+    it("poll_SingleTransientFailure_DoesNotCallOnStatusChangeFalse", async () => {
+      jest.useFakeTimers();
       const onStatusChange = jest.fn();
       const fetcher = jest.fn()
         .mockResolvedValueOnce(makeRawGameData())
@@ -130,19 +142,12 @@ describe("LiveClientPoller", () => {
       const poller = new LiveClientPoller(jest.fn(), onStatusChange, fetcher);
 
       poller.start();
-      poller.stop();
-      await Promise.resolve();
-      await Promise.resolve();
-
-      // One failure followed by a success — counter resets, no GAME_INACTIVE fired
-      (poller as any).poll();
-      await Promise.resolve();
-      await Promise.resolve();
-      (poller as any).poll();
-      await Promise.resolve();
-      await Promise.resolve();
+      await jest.advanceTimersByTimeAsync(0); // initial success
+      await jest.advanceTimersByTimeAsync(1000); // failure
+      await jest.advanceTimersByTimeAsync(1000); // recovery — counter resets
 
       expect(onStatusChange).not.toHaveBeenCalledWith(false);
+      poller.stop();
     });
   });
 });
