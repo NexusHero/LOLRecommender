@@ -49,7 +49,7 @@ class RecommendationPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final timeAgo = _timeAgo();
 
-    return GameCard(
+    final card = GameCard(
       borderColor: recommendation.isLlm ? AppColors.magic : AppColors.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,11 +80,11 @@ class RecommendationPanel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Row(
+          const Row(
             children: [
-              const Icon(Icons.lightbulb_outline, size: 15, color: AppColors.cyan),
-              const SizedBox(width: 6),
-              const Text('RECOMMENDATIONS', style: AppTextStyles.label),
+              Icon(Icons.lightbulb_outline, size: 15, color: AppColors.cyan),
+              SizedBox(width: 6),
+              Text('RECOMMENDATIONS', style: AppTextStyles.label),
             ],
           ),
           const SizedBox(height: 10),
@@ -103,6 +103,15 @@ class RecommendationPanel extends StatelessWidget {
           ],
         ],
       ),
+    );
+
+    if (!recommendation.isLlm) return card;
+
+    return AiSweepingBorder(
+      strokeWidth: 2.5,
+      sweepFraction: 0.32,
+      duration: const Duration(milliseconds: 1600),
+      child: card,
     );
   }
 }
