@@ -41,8 +41,8 @@ export class ClaudeProvider implements LlmProvider {
 
       return parseAnalysisResponse(block.text, heuristicRec);
     } catch (err) {
-      console.error("[LLM:Claude] Error:", err);
-      return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Claude: ${msg}`);
     }
   }
 }
