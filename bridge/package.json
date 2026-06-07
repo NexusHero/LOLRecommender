@@ -13,7 +13,8 @@
     "docs": "typedoc",
     "start": "node dist/index.js",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "mock-lol": "tsx src/mock-lol-server.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.101.0",
