@@ -200,4 +200,72 @@ describe("Integration Tests: Match Progressions", () => {
     await orchestrator.handleGameData(rawLate);
     expect(getLatestLlmCallArg(llmProvider).localPlayer.scores.kills).toBe(15);
   });
+
+  it("Case 6: Mehrere aufeinanderfolgende Tode — jeder Tod triggert LLM ohne Cooldown", async () => {
+    const { orchestrator, llmProvider } = setup();
+
+    // GAME_STARTED → LLM call #1
+    await orchestrator.handleGameData(makeRawGameData([
+      makePlayer({ championName: "Yasuo", isDead: false }),
+    ]));
+    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+
+    // Erster Tod → LLM call #2 (kein Cooldown nötig)
+    await orchestrator.handleGameData(makeRawGameData([
+      makePlayer({ championName: "Yasuo", isDead: true }),
+    ]));
+    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(2);
+
+    // Respawn — kein Event, kein LLM-Aufruf
+    await orchestrator.handleGameData(makeRawGameData([
+      makePlayer({ championName: "Yasuo", isDead: false }),
+    ]));
+    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(2);
+
+    // Zweiter Tod direkt danach → LLM call #3
+    await orchestrator.handleGameData(makeRawGameData([
+      makePlayer({ championName: "Yasuo", isDead: true }),
+    ]));
+    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(3);
+
+    // Dritter Tod nach weiterem Respawn → LLM call #4
+    await orchestrator.handleGameData(makeRawGameData([
+      makePlayer({ championName: "Yasuo", isDead: false }),
+    ]));
+    await orchestrator.handleGameData(makeRawGameData([
+      makePlayer({ championName: "Yasuo", isDead: true }),
+    ]));
+    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(4);
+  });
+
+  it("Case 7: Manuelle Analyse im laufenden Spiel sendet Empfehlung mit aktuellem Spielzustand", async () => {
+    const { orchestrator, broadcasts, llmProvider } = setup();
+
+    // Spielstart
+    await orchestrator.handleGameData(makeRawGameData([
+      makePlayer({ championName: "Jinx", level: 10, scores: { kills: 5, deaths: 1, assists: 3, creepScore: 150, wardScore: 0 } }),
+      makeEnemy("Malphite", 1, 3, 10),
+    ]));
+    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+    (llmProvider.getExplanation as jest.Mock).mockClear();
+    broadcasts.length = 0;
+
+    // Manuelle Analyse
+    await orchestrator.triggerManualAnalysis();
+
+    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+    const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+    expect(rec).toBeDefined();
+    expect(rec?.recommendation?.source).toBe("llm");
+    expect(rec?.gameState?.localPlayer.championName).toBe("Jinx");
+  });
+
+  it("Case 8: Manuelle Analyse vor Spielstart sendet nichts", async () => {
+    const { orchestrator, broadcasts, llmProvider } = setup();
+
+    await orchestrator.triggerManualAnalysis();
+
+    expect(llmProvider.getExplanation).not.toHaveBeenCalled();
+    expect(broadcasts).toHaveLength(0);
+  });
 });

@@ -207,6 +207,37 @@ void main() {
       });
     });
 
+    group('triggerAnalysis', () {
+      test('sends TRIGGER_ANALYSIS message when connected', () async {
+        service.connect('localhost');
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+
+        service.triggerAnalysis();
+
+        expect(fakeChannel.sentData, hasLength(1));
+        final sent = jsonDecode(fakeChannel.sentData.first as String)
+            as Map<String, dynamic>;
+        expect(sent['event'], 'TRIGGER_ANALYSIS');
+      });
+
+      test('does nothing when status is disconnected', () {
+        service.triggerAnalysis();
+
+        expect(fakeChannel.sentData, isEmpty);
+      });
+
+      test('does nothing when status is connecting (no CONNECTED msg yet)', () {
+        service.connect('localhost');
+        // still in connecting state — no CONNECTED received
+        final sentBefore = fakeChannel.sentData.length;
+
+        service.triggerAnalysis();
+
+        expect(fakeChannel.sentData.length, sentBefore);
+      });
+    });
+
     group('summonerName', () {
       test('sends SET_SUMMONER message when summonerName is provided', () {
         service.connect('localhost', summonerName: 'MySummoner');

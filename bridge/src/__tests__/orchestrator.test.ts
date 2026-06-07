@@ -1,7 +1,7 @@
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
 import { BridgeWsServer } from "../wsServer";
-import { makeRawGameData, makePlayer, makeItem } from "./fixtures";
+import { makeRawGameData, makePlayer, makeItem, makeActivePlayer } from "./fixtures";
 import type { WsMessage } from "../types";
 import type { LlmProvider } from "../llmProvider";
 
@@ -146,35 +146,27 @@ describe("BridgeOrchestrator", () => {
       expect(rec?.recommendation?.source).toBe("llm");
     });
 
-    it("uses heuristic when within LLM cooldown", async () => {
-      let now = 100_000;
-      const { orchestrator, broadcasts } = setup({
+    it("ITEM_PURCHASED always uses heuristic (LLM is not triggered for item events)", async () => {
+      const { orchestrator, broadcasts, llmProvider } = setup({
         hasLlm: true,
         clientCount: 1,
-        clock: () => now,
+        clock: () => 100_000,
       });
 
-      // First call — LLM fires
-      await orchestrator.handleGameData(makeRawGameData());
-      const rec1 = broadcasts.find((b) => b.event === "RECOMMENDATION");
-      expect(rec1?.recommendation?.source).toBe("llm");
+      const enemy = makePlayer({ summonerName: "Enemy1", team: "CHAOS" });
 
+      // First call — GAME_STARTED
+      await orchestrator.handleGameData(makeRawGameData([makePlayer(), enemy]));
+      (llmProvider.getExplanation as jest.Mock).mockClear();
       broadcasts.length = 0;
 
-      // Trigger ITEM_PURCHASED 10 seconds later — within cooldown
-      now = 110_000;
-      const enemy = makePlayer({ summonerName: "E", team: "CHAOS" });
-      // Don't reset detector, so we fire ITEM_PURCHASED and not GAME_STARTED
-      // because ITEM_PURCHASED doesn't trigger LLM at all anymore!
-      // Actually wait, ITEM_PURCHASED just triggers heuristic.
-      // We want to test PLAYER_DIED within cooldown.
-      const raw2 = makeRawGameData([makePlayer({ isDead: true }), enemy]);
-      raw2.activePlayer.currentGold = 1500; // meets gold threshold, but fails cooldown
-      await orchestrator.handleGameData(raw2);
+      // Enemy buys item — ITEM_PURCHASED, LLM must NOT be called
+      const enemyWithItem = { ...enemy, items: [makeItem({ itemID: 3102 })] };
+      await orchestrator.handleGameData(makeRawGameData([makePlayer(), enemyWithItem]));
 
-      // find the latest recommendation
-      const rec2 = broadcasts.reverse().find((b) => b.event === "RECOMMENDATION");
-      expect(rec2?.recommendation?.source).toBe("heuristic");
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec?.recommendation?.source).toBe("heuristic");
+      expect(llmProvider.getExplanation).not.toHaveBeenCalled();
     });
 
     it("skips LLM when no clients are connected", async () => {
@@ -189,6 +181,114 @@ describe("BridgeOrchestrator", () => {
       const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       expect(rec?.recommendation?.source).toBe("heuristic");
       expect(llmProvider.getExplanation).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("PLAYER_DIED trigger", () => {
+    it("always uses LLM regardless of current gold", async () => {
+      const { orchestrator, broadcasts, llmProvider } = setup({
+        hasLlm: true,
+        clientCount: 1,
+        clock: () => 100_000,
+      });
+
+      await orchestrator.handleGameData(makeRawGameData());
+      (llmProvider.getExplanation as jest.Mock).mockClear();
+      broadcasts.length = 0;
+
+      // Player dies with very low gold — old code would have skipped LLM
+      const raw2 = makeRawGameData([makePlayer({ isDead: true })]);
+      raw2.activePlayer = makeActivePlayer({ currentGold: 50 });
+      await orchestrator.handleGameData(raw2);
+
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec?.recommendation?.source).toBe("llm");
+      expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+    });
+
+    it("always uses LLM even when called immediately after GAME_STARTED (no cooldown)", async () => {
+      let now = 100_000;
+      const { orchestrator, broadcasts, llmProvider } = setup({
+        hasLlm: true,
+        clientCount: 1,
+        clock: () => now,
+      });
+
+      await orchestrator.handleGameData(makeRawGameData());
+      (llmProvider.getExplanation as jest.Mock).mockClear();
+      broadcasts.length = 0;
+
+      // Death only 2 seconds after game start — well within any cooldown window
+      now = 102_000;
+      await orchestrator.handleGameData(makeRawGameData([makePlayer({ isDead: true })]));
+
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec?.recommendation?.source).toBe("llm");
+      expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("triggerManualAnalysis", () => {
+    it("does nothing and emits no broadcasts when no game state has been received", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
+
+      await orchestrator.triggerManualAnalysis();
+
+      expect(broadcasts).toHaveLength(0);
+    });
+
+    it("broadcasts a RECOMMENDATION using the last known state", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: false, clientCount: 1 });
+
+      await orchestrator.handleGameData(makeRawGameData());
+      broadcasts.length = 0;
+
+      await orchestrator.triggerManualAnalysis();
+
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec).toBeDefined();
+      expect(rec?.gameState).toBeDefined();
+    });
+
+    it("uses LLM when a provider is set", async () => {
+      const { orchestrator, broadcasts, llmProvider } = setup({
+        hasLlm: true,
+        clientCount: 1,
+      });
+
+      await orchestrator.handleGameData(makeRawGameData());
+      (llmProvider.getExplanation as jest.Mock).mockClear();
+      broadcasts.length = 0;
+
+      await orchestrator.triggerManualAnalysis();
+
+      expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec?.recommendation?.source).toBe("llm");
+    });
+
+    it("falls back to heuristic when no LLM provider is configured", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: false, clientCount: 1 });
+
+      await orchestrator.handleGameData(makeRawGameData());
+      broadcasts.length = 0;
+
+      await orchestrator.triggerManualAnalysis();
+
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      expect(rec?.recommendation?.source).toBe("heuristic");
+    });
+
+    it("does nothing after resetDetector clears the last state", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
+
+      await orchestrator.handleGameData(makeRawGameData());
+      orchestrator.resetDetector();
+      broadcasts.length = 0;
+
+      await orchestrator.triggerManualAnalysis();
+
+      expect(broadcasts).toHaveLength(0);
     });
   });
 
