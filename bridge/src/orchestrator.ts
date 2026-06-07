@@ -11,7 +11,6 @@ export interface OrchestratorConfig {
 }
 
 export class BridgeOrchestrator {
-  private lastLlmCallAt = 0;
   private llmProvider: LlmProvider | null;
   private lastState: ParsedGameState | null = null;
 
@@ -58,19 +57,14 @@ export class BridgeOrchestrator {
       state.localPlayer.championName,
     );
 
-    const now = this.clock();
-    let useLlm = false;
-
-    if (this.llmProvider !== null && this.wsServer.clientCount > 0) {
-      if (eventType === "GAME_STARTED" || eventType === "PLAYER_DIED" || eventType === "MANUAL") {
-        useLlm = true;
-      }
-    }
+    const useLlm =
+      this.llmProvider !== null &&
+      this.wsServer.clientCount > 0 &&
+      (eventType === "GAME_STARTED" || eventType === "PLAYER_DIED" || eventType === "MANUAL");
 
     let finalRec = heuristicRec;
 
     if (useLlm) {
-      this.lastLlmCallAt = now;
       try {
         const llmReasoning = await this.llmProvider!.getExplanation(
           state,
