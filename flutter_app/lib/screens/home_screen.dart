@@ -65,7 +65,7 @@ class HomeScreen extends StatelessWidget {
         );
 
       case ConnectionStatus.connected:
-        if (!ws.gameActive) return const _WaitingView();
+        if (!ws.gameActive || ws.gameState == null) return const _WaitingView();
         return GameView(
           gameState: ws.gameState!,
           recommendation: ws.recommendation,
