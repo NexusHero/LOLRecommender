@@ -3,6 +3,7 @@ import 'package:lol_coach/services/ws_service.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/game_view.dart';
+import 'package:lol_coach/widgets/shared_widgets.dart';
 import 'package:provider/provider.dart';
 
 String _providerLabel(String type) => switch (type) {
@@ -32,6 +33,7 @@ class HomeScreen extends StatelessWidget {
                   const SizedBox(width: 10),
                   _ProviderChip(providerType: ws.activeProviderType),
                 ],
+
               ],
             ),
             actions: [
@@ -154,12 +156,12 @@ class _ProviderChip extends StatelessWidget {
     final bg = isAi ? AppColors.magicSubtle : AppColors.surfaceDark;
     final icon = isAi ? Icons.smart_toy_outlined : Icons.tune;
 
-    return Container(
+    final chip = Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -175,6 +177,16 @@ class _ProviderChip extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (!isAi) return chip;
+
+    return AiSweepingBorder(
+      borderRadius: 20,
+      strokeWidth: 1.5,
+      sweepFraction: 0.35,
+      duration: const Duration(milliseconds: 2400),
+      child: chip,
     );
   }
 }
