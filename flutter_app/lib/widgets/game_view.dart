@@ -53,5 +53,3 @@ class GameView extends StatelessWidget {
     );
   }
 }
-
-
