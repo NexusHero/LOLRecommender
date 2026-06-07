@@ -15,6 +15,7 @@ export function makeBaseRec(partial: Partial<ItemRecommendation> = {}): ItemReco
     items: [{ id: 3033, name: "Mortal Reminder", reason: "vs healers", priority: "core" }],
     reasoning: "heuristic reasoning",
     source: "heuristic",
+    provider: "heuristic",
     strategy: makeStrategy(),
     ...partial,
   };

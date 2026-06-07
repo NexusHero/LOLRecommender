@@ -24,6 +24,27 @@ class RecommendationPanel extends StatelessWidget {
     return '${diff.inHours}h ago';
   }
 
+  String get _providerLabel {
+    return switch (recommendation.provider) {
+      'claude' => 'Claude',
+      'openai' => 'GPT-4o',
+      'gemini' => 'Gemini',
+      _ => 'Basic Rules',
+    };
+  }
+
+  Color get _providerColor {
+    return recommendation.isLlm ? AppColors.magic : AppColors.textSecondary;
+  }
+
+  Color get _providerBg {
+    return recommendation.isLlm ? AppColors.magicSubtle : AppColors.surfaceDark;
+  }
+
+  IconData get _providerIcon {
+    return recommendation.isLlm ? Icons.smart_toy_outlined : Icons.tune;
+  }
+
   @override
   Widget build(BuildContext context) {
     final timeAgo = _timeAgo();
@@ -33,21 +54,37 @@ class RecommendationPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Provider source banner — clearly shows who answered
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _providerBg,
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: _providerColor.withValues(alpha: 0.35),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(_providerIcon, size: 14, color: _providerColor),
+                const SizedBox(width: 6),
+                Text(
+                  'Answered by $_providerLabel',
+                  style: AppTextStyles.captionBold.copyWith(color: _providerColor),
+                ),
+                const Spacer(),
+                if (timeAgo.isNotEmpty)
+                  Text(timeAgo, style: AppTextStyles.caption),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
           Row(
             children: [
               const Icon(Icons.lightbulb_outline, size: 15, color: AppColors.cyan),
               const SizedBox(width: 6),
               const Text('RECOMMENDATIONS', style: AppTextStyles.label),
-              const Spacer(),
-              if (timeAgo.isNotEmpty) ...[
-                Text(timeAgo, style: AppTextStyles.caption),
-                const SizedBox(width: 8),
-              ],
-              Badge(
-                recommendation.isLlm ? 'AI' : 'AUTO',
-                bg: recommendation.isLlm ? AppColors.magicSubtle : AppColors.allySubtle,
-                fg: recommendation.isLlm ? AppColors.magic : AppColors.cyan,
-              ),
             ],
           ),
           const SizedBox(height: 10),

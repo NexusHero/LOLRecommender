@@ -76,9 +76,17 @@ export class BridgeOrchestrator {
           reasoning: llmAnalysis.reasoning,
           strategy: llmAnalysis.strategy,
           source: "llm",
+          provider: this.llmProvider!.name,
         };
       } catch (err) {
-        console.error(`[Orchestrator] LLM failed for ${eventType}:`, err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[Orchestrator] LLM failed for ${eventType}:`, msg);
+        this.wsServer.broadcast({
+          event: "LLM_ERROR",
+          timestamp: this.clock(),
+          error: msg,
+        });
+        // finalRec stays as heuristicRec — source remains "heuristic"
       }
     }
 
