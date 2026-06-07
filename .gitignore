@@ -3,6 +3,9 @@ bridge/node_modules/
 bridge/dist/
 bridge/.env
 
+# DDragon cache (wird beim ersten Start automatisch geladen, nicht committen)
+bridge/.cache/
+
 # Flutter
 flutter_app/.dart_tool/
 flutter_app/build/
