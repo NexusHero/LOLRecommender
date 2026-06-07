@@ -56,5 +56,5 @@ jobs:
         working-directory: flutter_app
 
       - name: Run tests
-        run: flutter test
+        run: flutter test --exclude-tags=golden
         working-directory: flutter_app

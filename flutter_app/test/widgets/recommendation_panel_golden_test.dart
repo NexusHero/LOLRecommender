@@ -5,6 +5,12 @@
 //
 // On subsequent runs the snapshots are compared pixel-by-pixel.
 // Golden files are committed under test/goldens/ and reviewed in PRs.
+//
+// These tests are tagged 'golden' and excluded from CI (platform rendering
+// differs between macOS and Linux). Run locally before visual changes.
+@Tags(['golden'])
+library;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/models/recommendation.dart';
