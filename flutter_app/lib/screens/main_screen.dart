@@ -42,12 +42,31 @@ class _MainScreenState extends State<MainScreen> {
   void _onWsChanged() {
     if (!mounted) return;
     final ws = context.read<WsService>();
+
     if (ws.status == ConnectionStatus.error && ws.lastError != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Connection Error: ${ws.lastError}'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    if (ws.lastLlmError != null) {
+      ws.clearLlmError();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+              const SizedBox(width: 10),
+              Expanded(child: Text('AI error: ${ws.lastLlmError}')),
+            ],
+          ),
+          backgroundColor: AppColors.warning,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
         ),
       );
     }

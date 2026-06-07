@@ -44,16 +44,13 @@ describe("ClaudeProvider", () => {
     expect(result.strategy.immediateAction).toBe("Farm safely.");
   });
 
-  it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
+  it("getAnalysis_ClientThrows_PropagatesErrorWithProviderPrefix", async () => {
     (Anthropic as unknown as jest.Mock).mockImplementation(() => ({
       messages: { create: jest.fn().mockRejectedValue(new Error("API unavailable")) },
     }));
     const provider = new ClaudeProvider("test-key");
 
-    const result = await provider.getAnalysis(makeGameState(), baseRec);
-
-    expect(result.reasoning).toBe("heuristic reasoning");
-    expect(result.strategy).toEqual(baseRec.strategy);
+    await expect(provider.getAnalysis(makeGameState(), baseRec)).rejects.toThrow("Claude: API unavailable");
   });
 
   it("getAnalysis_EmptyContentArray_FallsBackToHeuristicReasoningAndStrategy", async () => {

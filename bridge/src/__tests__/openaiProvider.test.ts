@@ -47,14 +47,11 @@ describe("OpenAiProvider", () => {
     expect(result.strategy.winCondition).toBe("early");
   });
 
-  it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
+  it("getAnalysis_ClientThrows_PropagatesErrorWithProviderPrefix", async () => {
     mockOpenAIResponse(null, true);
     const provider = new OpenAiProvider("test-key");
 
-    const result = await provider.getAnalysis(makeGameState(), baseRec);
-
-    expect(result.reasoning).toBe("heuristic reasoning");
-    expect(result.strategy).toEqual(baseRec.strategy);
+    await expect(provider.getAnalysis(makeGameState(), baseRec)).rejects.toThrow("OpenAI: API unavailable");
   });
 
   it("getAnalysis_NullContent_FallsBackToHeuristicReasoningAndStrategy", async () => {

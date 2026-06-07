@@ -45,14 +45,11 @@ describe("GeminiProvider", () => {
     expect(result.strategy.winCondition).toBe("late");
   });
 
-  it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
+  it("getAnalysis_ClientThrows_PropagatesErrorWithProviderPrefix", async () => {
     mockGeminiResponse(null, true);
     const provider = new GeminiProvider("test-key");
 
-    const result = await provider.getAnalysis(makeGameState(), baseRec);
-
-    expect(result.reasoning).toBe("heuristic reasoning");
-    expect(result.strategy).toEqual(baseRec.strategy);
+    await expect(provider.getAnalysis(makeGameState(), baseRec)).rejects.toThrow("Gemini: API unavailable");
   });
 
   it("getAnalysis_EmptyContent_FallsBackToHeuristicReasoningAndStrategy", async () => {

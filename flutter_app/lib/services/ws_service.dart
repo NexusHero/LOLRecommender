@@ -26,6 +26,7 @@ class WsService extends ChangeNotifier {
 
   ConnectionStatus _status = ConnectionStatus.disconnected;
   String? _lastError;
+  String? _lastLlmError;
   ParsedGameState? _gameState;
   ItemRecommendation? _recommendation;
   String _lastEvent = '';
@@ -47,6 +48,7 @@ class WsService extends ChangeNotifier {
 
   ConnectionStatus get status => _status;
   String? get lastError => _lastError;
+  String? get lastLlmError => _lastLlmError;
   ParsedGameState? get gameState => _gameState;
   ItemRecommendation? get recommendation => _recommendation;
   String get lastEvent => _lastEvent;
@@ -101,6 +103,7 @@ class WsService extends ChangeNotifier {
     _gameActive = false;
     _lastEvent = '';
     _lastError = null;
+    _lastLlmError = null;
     _isAnalyzing = false;
     _recommendationTime = null;
     notifyListeners();
@@ -163,8 +166,15 @@ class WsService extends ChangeNotifier {
   void triggerAnalysis() {
     if (_channel == null || _status != ConnectionStatus.connected) return;
     _isAnalyzing = true;
+    _lastLlmError = null;
     notifyListeners();
     _channel!.sink.add(jsonEncode({'event': 'TRIGGER_ANALYSIS'}));
+  }
+
+  void clearLlmError() {
+    if (_lastLlmError == null) return;
+    _lastLlmError = null;
+    notifyListeners();
   }
 
   void _onData(dynamic raw) {
@@ -191,12 +201,14 @@ class WsService extends ChangeNotifier {
           _gameActive = true;
           _isAnalyzing = false;
           _recommendationTime = DateTime.now();
+        case 'LLM_ERROR':
+          _lastLlmError = msg.error;
+          _isAnalyzing = false;
         default:
           if (msg.gameState != null) {
             _gameState = msg.gameState;
             _gameActive = true;
           }
-          // Any incoming data while analyzing means bridge is responsive
           _isAnalyzing = false;
       }
     } catch (e) {

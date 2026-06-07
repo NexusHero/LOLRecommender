@@ -38,8 +38,8 @@ export class GeminiProvider implements LlmProvider {
 
       return parseAnalysisResponse(text, heuristicRec);
     } catch (err) {
-      console.error("[LLM:Gemini] Error:", err);
-      return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new Error(`Gemini: ${msg}`);
     }
   }
 }
