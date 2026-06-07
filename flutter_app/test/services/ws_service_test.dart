@@ -101,7 +101,9 @@ void main() {
         expect(service.status, ConnectionStatus.connecting);
       });
 
-      test('connect_AfterFirstMessageReceived_StatusBecomesConnected', () async {
+      test(
+        'connect_AfterFirstMessageReceived_StatusBecomesConnected',
+        () async {
         service.connect('localhost');
         fakeChannel.push(_encode(_connectedMsg));
         await Future.microtask(() {});
@@ -214,7 +216,9 @@ void main() {
     });
 
     group('triggerAnalysis', () {
-      test('triggerAnalysis_StatusConnected_SendsTriggerAnalysisEvent', () async {
+      test(
+        'triggerAnalysis_StatusConnected_SendsTriggerAnalysisEvent',
+        () async {
         service.connect('localhost');
         fakeChannel.push(_encode(_connectedMsg));
         await Future.microtask(() {});

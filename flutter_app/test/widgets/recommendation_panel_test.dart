@@ -46,7 +46,8 @@ void main() {
       (WidgetTester tester) async {
         const recommendation = ItemRecommendation(
           source: RecommendationSource.heuristic,
-          reasoning: 'Enemy comp is balanced. No specific counter items needed.',
+          reasoning:
+              'Enemy comp is balanced. No specific counter items needed.',
           items: [],
         );
 
@@ -61,7 +62,9 @@ void main() {
         expect(find.text('AUTO'), findsOneWidget);
         expect(find.text('No specific counter items needed.'), findsOneWidget);
         expect(
-          find.text('Enemy comp is balanced. No specific counter items needed.'),
+          find.text(
+            'Enemy comp is balanced. No specific counter items needed.',
+          ),
           findsOneWidget,
         );
       },

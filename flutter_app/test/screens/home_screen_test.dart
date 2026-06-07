@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lol_coach/models/game_state.dart';
+import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/screens/home_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:provider/provider.dart';
@@ -19,10 +21,10 @@ class FakeWsService extends ChangeNotifier implements WsService {
   bool get isConnected => _status == ConnectionStatus.connected;
 
   @override
-  dynamic get gameState => null;
+  ParsedGameState? get gameState => null;
 
   @override
-  dynamic get recommendation => null;
+  ItemRecommendation? get recommendation => null;
 
   @override
   String get lastEvent => '';
@@ -34,7 +36,13 @@ class FakeWsService extends ChangeNotifier implements WsService {
   void triggerAnalysis() => triggerAnalysisCalled = true;
 
   @override
-  void connect(String host, {int port = 8765, String? summonerName, String? providerType, String? apiKey}) {}
+  void connect(
+    String host, {
+    int port = 8765,
+    String? summonerName,
+    String? providerType,
+    String? apiKey,
+  }) {}
 
   @override
   void disconnect() {}
@@ -44,7 +52,7 @@ class FakeWsService extends ChangeNotifier implements WsService {
     notifyListeners();
   }
 
-  void setGameActive(bool value) {
+  void setGameActive({required bool value}) {
     _gameActive = value;
     notifyListeners();
   }
@@ -65,7 +73,7 @@ void main() {
         (WidgetTester tester) async {
           final service = FakeWsService()
             ..setStatus(ConnectionStatus.connected)
-            ..setGameActive(true);
+            ..setGameActive(value: true);
 
           await tester.pumpWidget(_buildWithService(service));
           await tester.pump();
@@ -80,7 +88,7 @@ void main() {
         (WidgetTester tester) async {
           final service = FakeWsService()
             ..setStatus(ConnectionStatus.connected)
-            ..setGameActive(false);
+            ..setGameActive(value: false);
 
           await tester.pumpWidget(_buildWithService(service));
           await tester.pump();
@@ -109,7 +117,7 @@ void main() {
         (WidgetTester tester) async {
           final service = FakeWsService()
             ..setStatus(ConnectionStatus.connected)
-            ..setGameActive(true);
+            ..setGameActive(value: true);
 
           await tester.pumpWidget(_buildWithService(service));
           await tester.pump();
@@ -128,13 +136,13 @@ void main() {
         (WidgetTester tester) async {
           final service = FakeWsService()
             ..setStatus(ConnectionStatus.connected)
-            ..setGameActive(false);
+            ..setGameActive(value: false);
 
           await tester.pumpWidget(_buildWithService(service));
           await tester.pump();
           expect(find.byType(FloatingActionButton), findsNothing);
 
-          service.setGameActive(true);
+          service.setGameActive(value: true);
           await tester.pump();
 
           expect(find.byType(FloatingActionButton), findsOneWidget);

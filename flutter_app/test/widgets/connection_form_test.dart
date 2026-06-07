@@ -33,7 +33,8 @@ void main() {
         expect(find.text('Claude'), findsOneWidget);
         expect(find.text('OpenAI'), findsOneWidget);
         expect(find.text('Gemini'), findsOneWidget);
-        expect(find.byType(TextField), findsNWidgets(3)); // Host, Port, Summoner
+        // Host, Port, Summoner
+        expect(find.byType(TextField), findsNWidgets(3));
         expect(find.text('none API Key'), findsNothing);
 
         await tester.tap(find.text('Claude'));

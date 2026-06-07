@@ -72,7 +72,13 @@ class WsService extends ChangeNotifier {
     _intentionalDisconnect = false;
     _reconnectDelay = const Duration(seconds: 1);
 
-    _doConnect(host, port: port, summonerName: summonerName, providerType: providerType, apiKey: apiKey);
+    _doConnect(
+      host,
+      port: port,
+      summonerName: summonerName,
+      providerType: providerType,
+      apiKey: apiKey,
+    );
   }
 
   void disconnect() {
@@ -161,7 +167,8 @@ class WsService extends ChangeNotifier {
 
       if (_status != ConnectionStatus.connected) {
         _status = ConnectionStatus.connected;
-        _reconnectDelay = const Duration(seconds: 1); // reset backoff on success
+        // reset backoff on success
+        _reconnectDelay = const Duration(seconds: 1);
       }
 
       switch (msg.event) {

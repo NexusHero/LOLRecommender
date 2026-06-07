@@ -7,7 +7,11 @@ void main() {
   group('ItemRecommendation', () {
     group('fromJson', () {
       test('fromJson_HeuristicSource_SetsIsLlmFalse', () {
-        final json = {'items': [], 'reasoning': 'Mixed Damage', 'source': 'heuristic'};
+        final json = {
+          'items': [],
+          'reasoning': 'Mixed Damage',
+          'source': 'heuristic',
+        };
 
         final rec = ItemRecommendation.fromJson(json);
 
@@ -17,7 +21,11 @@ void main() {
       });
 
       test('fromJson_LlmSource_SetsIsLlmTrue', () {
-        final json = {'items': [], 'reasoning': 'AI reasoning', 'source': 'llm'};
+        final json = {
+          'items': [],
+          'reasoning': 'AI reasoning',
+          'source': 'llm',
+        };
 
         final rec = ItemRecommendation.fromJson(json);
 
@@ -28,8 +36,18 @@ void main() {
       test('fromJson_TwoNestedItems_ParsesBothItems', () {
         final json = {
           'items': [
-            {'id': 3033, 'name': 'Mortal Reminder', 'reason': 'vs healers', 'priority': 'core'},
-            {'id': 3140, 'name': 'Quicksilver Sash', 'reason': 'vs CC', 'priority': 'situational'},
+            {
+              'id': 3033,
+              'name': 'Mortal Reminder',
+              'reason': 'vs healers',
+              'priority': 'core',
+            },
+            {
+              'id': 3140,
+              'name': 'Quicksilver Sash',
+              'reason': 'vs CC',
+              'priority': 'situational',
+            },
           ],
           'reasoning': 'test reasoning',
           'source': 'heuristic',
