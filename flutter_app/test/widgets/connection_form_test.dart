@@ -8,84 +8,80 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets(
-    'ConnectionForm shows API key field when LLM provider selected',
-    (WidgetTester tester) async {
-    String? capturedProvider;
-    String? capturedApiKey;
+  group('ConnectionForm', () {
+    testWidgets(
+      'ConnectionForm_LlmProviderSelected_ShowsApiKeyField',
+      (WidgetTester tester) async {
+        String? capturedProvider;
+        String? capturedApiKey;
 
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ConnectionForm(
-            onConnect: (host, port, summonerName, providerType, apiKey) {
-              capturedProvider = providerType;
-              capturedApiKey = apiKey;
-            },
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ConnectionForm(
+                onConnect: (host, port, summonerName, providerType, apiKey) {
+                  capturedProvider = providerType;
+                  capturedApiKey = apiKey;
+                },
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('None (Heuristic only)'), findsOneWidget);
+        expect(find.text('Claude'), findsOneWidget);
+        expect(find.text('OpenAI'), findsOneWidget);
+        expect(find.text('Gemini'), findsOneWidget);
+        expect(find.byType(TextField), findsNWidgets(3)); // Host, Port, Summoner
+        expect(find.text('none API Key'), findsNothing);
+
+        await tester.tap(find.text('Claude'));
+        await tester.pumpAndSettle();
+
+        expect(find.byType(TextField), findsNWidgets(4));
+        expect(find.text('claude API Key'), findsOneWidget);
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'claude API Key'),
+          'test-claude-key',
+        );
+        await tester.ensureVisible(find.text('CONNECT'));
+        await tester.tap(find.text('CONNECT'));
+        await tester.pumpAndSettle();
+
+        expect(capturedProvider, 'claude');
+        expect(capturedApiKey, 'test-claude-key');
+      },
     );
-    await tester.pumpAndSettle();
 
-    // Verify radio buttons exist
-    expect(find.text('None (Heuristic only)'), findsOneWidget);
-    expect(find.text('Claude'), findsOneWidget);
-    expect(find.text('OpenAI'), findsOneWidget);
-    expect(find.text('Gemini'), findsOneWidget);
+    testWidgets(
+      'ConnectionForm_NoneProvider_ConnectsWithoutApiKey',
+      (WidgetTester tester) async {
+        String? capturedProvider;
+        String? capturedApiKey;
 
-    // API key field should not be visible initially (because "none" is default)
-    expect(find.byType(TextField), findsNWidgets(3)); // Host, Port, Summoner
-    expect(find.text('none API Key'), findsNothing);
-
-    // Select Claude
-    await tester.tap(find.text('Claude'));
-    await tester.pumpAndSettle();
-
-    // Now 4 TextFields should be visible
-    expect(find.byType(TextField), findsNWidgets(4));
-    expect(find.text('claude API Key'), findsOneWidget);
-
-    // Enter API key
-    await tester.enterText(
-      find.widgetWithText(TextField, 'claude API Key'),
-      'test-claude-key',
-    );
-    
-    // Tap connect
-    await tester.ensureVisible(find.text('CONNECT'));
-    await tester.tap(find.text('CONNECT'));
-    await tester.pumpAndSettle();
-
-    expect(capturedProvider, 'claude');
-    expect(capturedApiKey, 'test-claude-key');
-  });
-  
-  testWidgets(
-    'ConnectionForm works with none provider',
-    (WidgetTester tester) async {
-    String? capturedProvider;
-    String? capturedApiKey;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: ConnectionForm(
-            onConnect: (host, port, summonerName, providerType, apiKey) {
-              capturedProvider = providerType;
-              capturedApiKey = apiKey;
-            },
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ConnectionForm(
+                onConnect: (host, port, summonerName, providerType, apiKey) {
+                  capturedProvider = providerType;
+                  capturedApiKey = apiKey;
+                },
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.text('CONNECT'));
+        await tester.tap(find.text('CONNECT'));
+        await tester.pumpAndSettle();
+
+        expect(capturedProvider, 'none');
+        expect(capturedApiKey, '');
+      },
     );
-
-    // Tap connect directly
-    await tester.ensureVisible(find.text('CONNECT'));
-    await tester.tap(find.text('CONNECT'));
-    await tester.pumpAndSettle();
-
-    expect(capturedProvider, 'none');
-    expect(capturedApiKey, '');
   });
 }

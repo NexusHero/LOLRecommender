@@ -19,9 +19,7 @@ class _FakeSink implements WebSocketSink {
   }
 
   @override
-  void add(dynamic data) {
-    sentData.add(data);
-  }
+  void add(dynamic data) => sentData.add(data);
 
   @override
   void addError(Object error, [StackTrace? stackTrace]) {}
@@ -65,7 +63,6 @@ class FakeWebSocketChannel with StreamChannelMixin implements WebSocketChannel {
 // --- Helpers ---
 
 String _encode(Map<String, dynamic> json) => jsonEncode(json);
-
 const _connectedMsg = {'event': 'CONNECTED', 'timestamp': 0};
 
 void main() {
@@ -82,125 +79,134 @@ void main() {
       service.dispose();
     });
 
-    test('initial status is disconnected', () {
-      expect(service.status, ConnectionStatus.disconnected);
-      expect(service.gameActive, isFalse);
-      expect(service.gameState, isNull);
+    group('initial state', () {
+      test('initialState_BeforeConnect_StatusIsDisconnected', () {
+        expect(service.status, ConnectionStatus.disconnected);
+        expect(service.gameActive, isFalse);
+        expect(service.gameState, isNull);
+      });
     });
 
-    test('status is connecting immediately after connect()', () {
-      service.connect('localhost');
+    group('connect', () {
+      test('connect_Called_StatusBecomesConnecting', () {
+        service.connect('localhost');
 
-      expect(service.status, ConnectionStatus.connecting);
+        expect(service.status, ConnectionStatus.connecting);
+      });
+
+      test('connect_CalledWhileConnecting_DoesNotDuplicateConnection', () {
+        service.connect('localhost');
+        service.connect('localhost');
+
+        expect(service.status, ConnectionStatus.connecting);
+      });
+
+      test('connect_AfterFirstMessageReceived_StatusBecomesConnected', () async {
+        service.connect('localhost');
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+
+        expect(service.status, ConnectionStatus.connected);
+      });
+
+      test('connect_AfterFirstMessage_LastEventIsUpdated', () async {
+        service.connect('localhost');
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+
+        expect(service.lastEvent, 'CONNECTED');
+      });
     });
 
-    test('does not reconnect if already connecting', () {
-      service.connect('localhost');
-      service.connect('localhost');
-
-      expect(service.status, ConnectionStatus.connecting);
-    });
-
-    test('status becomes connected after first message', () async {
-      service.connect('localhost');
-      fakeChannel.push(_encode(_connectedMsg));
-      await Future.microtask(() {});
-
-      expect(service.status, ConnectionStatus.connected);
-    });
-
-    test('lastEvent is updated on each message', () async {
-      service.connect('localhost');
-      fakeChannel.push(_encode(_connectedMsg));
-      await Future.microtask(() {});
-
-      expect(service.lastEvent, 'CONNECTED');
-    });
-
-    test('gameActive becomes false on GAME_INACTIVE', () async {
-      service.connect('localhost');
-      fakeChannel.push(_encode(_connectedMsg));
-      await Future.microtask(() {});
-
-      fakeChannel.push(_encode({'event': 'GAME_INACTIVE', 'timestamp': 1}));
-      await Future.microtask(() {});
-
-      expect(service.gameActive, isFalse);
-      expect(service.gameState, isNull);
-      expect(service.recommendation, isNull);
-    });
-
-    test('status becomes error on stream error', () async {
-      service.connect('localhost');
-      fakeChannel.pushError(Exception('network failure'));
-      await Future.microtask(() {});
-
-      expect(service.status, ConnectionStatus.error);
-      expect(service.lastError, isNotNull);
-    });
-
-    test('status becomes disconnected when stream closes', () async {
-      service.connect('localhost');
-      await fakeChannel.close();
-      await Future.microtask(() {});
-
-      expect(service.status, ConnectionStatus.disconnected);
-    });
-
-    test('disconnect resets all state', () async {
-      service.connect('localhost');
-      fakeChannel.push(_encode(_connectedMsg));
-      await Future.microtask(() {});
-
-      service.disconnect();
-
-      expect(service.status, ConnectionStatus.disconnected);
-      expect(service.gameActive, isFalse);
-      expect(service.gameState, isNull);
-      expect(service.recommendation, isNull);
-      expect(service.lastEvent, '');
-    });
-
-    test('notifyListeners is called on status change', () async {
-      var notifyCount = 0;
-      service.addListener(() => notifyCount++);
-
-      service.connect('localhost');
-      expect(notifyCount, 1); // connecting
-
-      fakeChannel.push(_encode(_connectedMsg));
-      await Future.microtask(() {});
-      expect(notifyCount, 2); // connected
-    });
-
-    group('auto-reconnect', () {
-      test('explicit disconnect prevents reconnect', () async {
+    group('disconnect', () {
+      test('disconnect_WhileConnected_ResetsAllState', () async {
         service.connect('localhost');
         fakeChannel.push(_encode(_connectedMsg));
         await Future.microtask(() {});
 
         service.disconnect();
-        // After explicit disconnect the flag is set — no reconnect timer should fire
+
         expect(service.status, ConnectionStatus.disconnected);
+        expect(service.gameActive, isFalse);
+        expect(service.gameState, isNull);
+        expect(service.recommendation, isNull);
+        expect(service.lastEvent, '');
       });
+    });
 
-      test('status becomes disconnected when stream closes unexpectedly', () async {
-        service.connect('localhost');
-        await fakeChannel.close();
-        await Future.microtask(() {});
-
-        // Disconnected (reconnect timer pending, but not yet fired)
-        expect(service.status, ConnectionStatus.disconnected);
-      });
-
-      test('reconnect delay resets to 1s on successful manual connect', () async {
+    group('game state events', () {
+      test('onMessage_GameInactiveReceived_ClearsGameState', () async {
         service.connect('localhost');
         fakeChannel.push(_encode(_connectedMsg));
         await Future.microtask(() {});
 
-        // After a successful connection the reconnect backoff is reset
+        fakeChannel.push(_encode({'event': 'GAME_INACTIVE', 'timestamp': 1}));
+        await Future.microtask(() {});
+
+        expect(service.gameActive, isFalse);
+        expect(service.gameState, isNull);
+        expect(service.recommendation, isNull);
+      });
+    });
+
+    group('error handling', () {
+      test('onError_StreamEmitsError_StatusBecomesError', () async {
+        service.connect('localhost');
+        fakeChannel.pushError(Exception('network failure'));
+        await Future.microtask(() {});
+
+        expect(service.status, ConnectionStatus.error);
+        expect(service.lastError, isNotNull);
+      });
+
+      test('onDone_StreamCloses_StatusBecomesDisconnected', () async {
+        service.connect('localhost');
+        await fakeChannel.close();
+        await Future.microtask(() {});
+
+        expect(service.status, ConnectionStatus.disconnected);
+      });
+    });
+
+    group('notifyListeners', () {
+      test('connect_StatusChanges_NotifiesListeners', () async {
+        var notifyCount = 0;
+        service.addListener(() => notifyCount++);
+
+        service.connect('localhost');
+        expect(notifyCount, 1);
+
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+        expect(notifyCount, 2);
+      });
+    });
+
+    group('auto-reconnect', () {
+      test('disconnect_ExplicitDisconnect_PreventsFurtherReconnect', () async {
+        service.connect('localhost');
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+
+        service.disconnect();
+
+        expect(service.status, ConnectionStatus.disconnected);
+      });
+
+      test('onDone_UnexpectedStreamClose_StatusBecomesDisconnected', () async {
+        service.connect('localhost');
+        await fakeChannel.close();
+        await Future.microtask(() {});
+
+        expect(service.status, ConnectionStatus.disconnected);
+      });
+
+      test('connect_AfterSuccessfulConnection_ReconnectDelayIsReset', () async {
+        service.connect('localhost');
+        fakeChannel.push(_encode(_connectedMsg));
+        await Future.microtask(() {});
+
         expect(service.status, ConnectionStatus.connected);
-        // Disconnect and reconnect manually
         service.disconnect();
         service.connect('localhost');
         expect(service.status, ConnectionStatus.connecting);
@@ -208,7 +214,7 @@ void main() {
     });
 
     group('triggerAnalysis', () {
-      test('sends TRIGGER_ANALYSIS message when connected', () async {
+      test('triggerAnalysis_StatusConnected_SendsTriggerAnalysisEvent', () async {
         service.connect('localhost');
         fakeChannel.push(_encode(_connectedMsg));
         await Future.microtask(() {});
@@ -221,15 +227,14 @@ void main() {
         expect(sent['event'], 'TRIGGER_ANALYSIS');
       });
 
-      test('does nothing when status is disconnected', () {
+      test('triggerAnalysis_StatusDisconnected_SendsNothing', () {
         service.triggerAnalysis();
 
         expect(fakeChannel.sentData, isEmpty);
       });
 
-      test('does nothing when status is connecting (no CONNECTED msg yet)', () {
+      test('triggerAnalysis_StatusConnecting_SendsNothing', () {
         service.connect('localhost');
-        // still in connecting state — no CONNECTED received
         final sentBefore = fakeChannel.sentData.length;
 
         service.triggerAnalysis();
@@ -239,7 +244,7 @@ void main() {
     });
 
     group('summonerName', () {
-      test('sends SET_SUMMONER message when summonerName is provided', () {
+      test('connect_WithSummonerName_SendsSetSummonerMessage', () {
         service.connect('localhost', summonerName: 'MySummoner');
 
         expect(fakeChannel.sentData, hasLength(1));
@@ -249,21 +254,19 @@ void main() {
         expect(sent['summonerName'], 'MySummoner');
       });
 
-      test('does not send SET_SUMMONER when summonerName is null', () {
+      test('connect_WithoutSummonerName_DoesNotSendSetSummoner', () {
         service.connect('localhost');
 
         expect(fakeChannel.sentData, isEmpty);
       });
 
-      test('does not send SET_SUMMONER when summonerName is empty', () {
+      test('connect_WithEmptySummonerName_DoesNotSendSetSummoner', () {
         service.connect('localhost', summonerName: '');
 
         expect(fakeChannel.sentData, isEmpty);
       });
 
-      test('sends SET_SUMMONER before stream subscription starts', () {
-        // Verify the message is sent before listening to the stream,
-        // so the server receives it as early as possible.
+      test('connect_WithSummonerName_SendsMessageBeforeStreamSubscription', () {
         service.connect('localhost', summonerName: 'EarlyBird');
 
         expect(fakeChannel.sentData, hasLength(1));
