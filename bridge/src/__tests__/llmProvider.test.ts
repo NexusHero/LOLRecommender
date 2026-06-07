@@ -1,5 +1,21 @@
 import { createLlmProvider, buildUserPrompt, parseAnalysisResponse } from "../llmProvider";
-import { makeGameState, makeBaseRec } from "./fixtures";
+import { makeGameState, makeBaseRec, makePlayer } from "./fixtures";
+
+// jest.mock wird gehoisted — factory darf keine äußeren Variablen nutzen
+jest.mock("../ddragonService", () => ({
+  ddragon: {
+    init: jest.fn().mockResolvedValue(undefined),
+    getItemInfo: jest.fn().mockReturnValue(undefined),
+    getChampionAbilities: jest.fn().mockResolvedValue(undefined),
+    currentVersion: "test",
+  },
+}));
+
+// Zugriff auf die gemockte Instanz nach dem Hoist
+const mockDdragon = jest.requireMock("../ddragonService").ddragon as {
+  getItemInfo: jest.Mock;
+  getChampionAbilities: jest.Mock;
+};
 
 describe("createLlmProvider", () => {
   it("createLlmProvider_Claude_ReturnsProviderWithCorrectName", async () => {
@@ -28,36 +44,112 @@ describe("createLlmProvider", () => {
 });
 
 describe("buildUserPrompt", () => {
-  it("buildUserPrompt_StandardGameState_ContainsChampionTimeAndPhaseInfo", () => {
+  beforeEach(() => {
+    mockDdragon.getItemInfo.mockReturnValue(undefined);
+    mockDdragon.getChampionAbilities.mockResolvedValue(undefined);
+  });
+
+  it("buildUserPrompt_StandardGameState_ContainsChampionTimeAndPhaseInfo", async () => {
     const state = makeGameState({
       localPlayer: { ...makeGameState().localPlayer, championName: "Lux" },
       enemies: [{ ...makeGameState().localPlayer, championName: "Soraka", team: "CHAOS" }],
       gameTime: 125,
     });
 
-    const prompt = buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state, makeBaseRec());
 
     expect(prompt).toContain("Me: Lux");
     expect(prompt).toContain("Enemies: Soraka");
-    expect(prompt).toContain("Suggested items: Mortal Reminder");
+    expect(prompt).toContain("- Mortal Reminder");
     expect(prompt).toContain("Time: 2:05");
     expect(prompt).toContain("Game Phase: early");
   });
 
-  it("buildUserPrompt_MidGameTime_ContainsMidPhase", () => {
+  it("buildUserPrompt_MidGameTime_ContainsMidPhase", async () => {
     const state = makeGameState({ gameTime: 15 * 60 });
 
-    const prompt = buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state, makeBaseRec());
 
     expect(prompt).toContain("Game Phase: mid");
   });
 
-  it("buildUserPrompt_LateGameTime_ContainsLatePhase", () => {
+  it("buildUserPrompt_LateGameTime_ContainsLatePhase", async () => {
     const state = makeGameState({ gameTime: 26 * 60 });
 
-    const prompt = buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state, makeBaseRec());
 
     expect(prompt).toContain("Game Phase: late");
+  });
+
+  it("buildUserPrompt_NoItems_ShowsNone", async () => {
+    const state = makeGameState();
+    const rec = makeBaseRec({ items: [] });
+
+    const prompt = await buildUserPrompt(state, rec);
+
+    expect(prompt).toContain("Suggested items:\nNone");
+  });
+
+  it("buildUserPrompt_DDragonHasItemStats_StatsAppearedInPrompt", async () => {
+    mockDdragon.getItemInfo.mockReturnValue({
+      name: "Banshee's Veil",
+      stats: "80 AP, 65 MR",
+      plaintext: "Blocks a single negative ability",
+    });
+    const state = makeGameState();
+    const rec = makeBaseRec({
+      items: [{ id: 3102, name: "Banshee's Veil", reason: "AP enemies", priority: "core" }],
+    });
+
+    const prompt = await buildUserPrompt(state, rec);
+
+    expect(prompt).toContain("80 AP, 65 MR");
+    expect(prompt).toContain("Blocks a single negative ability");
+  });
+
+  it("buildUserPrompt_DDragonHasChampionAbilities_AbilitiesInPrompt", async () => {
+    mockDdragon.getChampionAbilities.mockImplementation((name: string) => {
+      if (name === "Lux") return Promise.resolve({ q: "Light Binding", w: "Prismatic Barrier", e: "Lucent Singularity", r: "Final Spark" });
+      if (name === "Zed") return Promise.resolve({ q: "Razor Shuriken", w: "Living Shadow", e: "Shadow Slash", r: "Death Mark" });
+      return Promise.resolve(undefined);
+    });
+    const state = makeGameState({
+      localPlayer: makePlayer({ championName: "Lux", position: "MID" }),
+      enemies: [makePlayer({ championName: "Zed", position: "MID", team: "CHAOS" })],
+    });
+
+    const prompt = await buildUserPrompt(state, makeBaseRec());
+
+    expect(prompt).toContain("Q=Light Binding");
+    expect(prompt).toContain("R=Final Spark");
+    expect(prompt).toContain("Q=Razor Shuriken");
+    expect(prompt).toContain("R=Death Mark");
+  });
+
+  it("buildUserPrompt_NoOpponent_ShowsUnknown", async () => {
+    const state = makeGameState({
+      localPlayer: makePlayer({ position: "TOP" }),
+      enemies: [],
+    });
+
+    const prompt = await buildUserPrompt(state, makeBaseRec());
+
+    expect(prompt).toContain("Opponent: unknown");
+  });
+
+  it("buildUserPrompt_DDragonUnavailableForAll_PromptStillBuilds", async () => {
+    mockDdragon.getItemInfo.mockReturnValue(undefined);
+    mockDdragon.getChampionAbilities.mockResolvedValue(undefined);
+    const state = makeGameState({
+      localPlayer: makePlayer({ championName: "Ahri" }),
+      enemies: [makePlayer({ championName: "Zed", team: "CHAOS" })],
+    });
+
+    const prompt = await buildUserPrompt(state, makeBaseRec());
+
+    // Prompt muss trotzdem gebaut werden — nur ohne Stats und Abilities
+    expect(prompt).toContain("My champion: Ahri");
+    expect(prompt).not.toContain("Q=");
   });
 });
 
