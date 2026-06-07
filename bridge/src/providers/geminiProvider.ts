@@ -3,6 +3,29 @@ import type { LlmProvider, LlmAnalysis } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
+function friendlyGeminiError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const status = (err as Record<string, unknown>)?.status;
+
+  if (status === 429 || msg.includes("429")) {
+    const retryMatch = msg.match(/"retryDelay"\s*:\s*"(\d+)s"/);
+    const seconds = retryMatch ? retryMatch[1] : null;
+    return seconds
+      ? `Rate limit exceeded. Retry in ${seconds}s (free-tier quota).`
+      : "Rate limit exceeded (free-tier quota). Please wait before retrying.";
+  }
+
+  if (status === 401 || msg.includes("401") || msg.toLowerCase().includes("api key")) {
+    return "Invalid API key.";
+  }
+
+  if (status === 503 || msg.includes("503")) {
+    return "Service unavailable. Try again shortly.";
+  }
+
+  return msg.split("\n")[0];
+}
+
 export class GeminiProvider implements LlmProvider {
   readonly name = "gemini";
   private readonly client: GoogleGenerativeAI;
@@ -38,8 +61,7 @@ export class GeminiProvider implements LlmProvider {
 
       return parseAnalysisResponse(text, heuristicRec);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new Error(`Gemini: ${msg}`);
+      throw new Error(`Gemini: ${friendlyGeminiError(err)}`);
     }
   }
 }
