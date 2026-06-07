@@ -75,7 +75,11 @@ class LocalPlayerCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               StatChip('HP', '${stats.healthMax.toInt()}', AppColors.success),
-              StatChip('AD', '${stats.attackDamage.toInt()}', AppColors.errorLight),
+              StatChip(
+                'AD',
+                '${stats.attackDamage.toInt()}',
+                AppColors.errorLight,
+              ),
               StatChip('AP', '${stats.abilityPower.toInt()}', AppColors.magic),
               StatChip('MR', '${stats.magicResist.toInt()}', AppColors.cyan),
               StatChip('ARM', '${stats.armor.toInt()}', AppColors.gold),

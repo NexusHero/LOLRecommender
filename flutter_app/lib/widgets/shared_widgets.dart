@@ -1,4 +1,3 @@
-// ignore_for_file: lines_longer_than_80_chars
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
@@ -8,7 +7,7 @@ import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/utils/ddragon.dart';
 
-// ─── AI sweeping border ────────────────────────────────────────────────────────
+// ─── AI sweeping border ──────────────────────────────────────────────────────
 
 /// Draws an animated arc sweeping around the border to signal AI activity.
 /// [strokeWidth] controls thickness; [sweepFraction] the length of the arc
@@ -122,7 +121,8 @@ class _SweepPainter extends CustomPainter {
       final segEnd = startDist + sweepLen * ((i + 1) / steps);
       final opacity = math.pow(segFrac, 0.5).toDouble() * 0.9 + 0.1;
 
-      final segPath = _extractWrapped(pm, total, segStart % total, segEnd % total);
+      final segPath = _extractWrapped(
+        pm, total, segStart % total, segEnd % total);
       canvas.drawPath(
         segPath,
         Paint()
@@ -157,7 +157,7 @@ class _SweepPainter extends CustomPainter {
   bool shouldRepaint(_SweepPainter old) => old.progress != progress;
 }
 
-// ─── Card container ────────────────────────────────────────────────────────────
+// ─── Card container ──────────────────────────────────────────────────────────
 
 class GameCard extends StatelessWidget {
   const GameCard({
@@ -183,7 +183,7 @@ class GameCard extends StatelessWidget {
   }
 }
 
-// ─── Champion avatar ───────────────────────────────────────────────────────────
+// ─── Champion avatar ─────────────────────────────────────────────────────────
 
 class ChampAvatar extends StatelessWidget {
   const ChampAvatar({
@@ -255,7 +255,7 @@ class ChampAvatar extends StatelessWidget {
   }
 }
 
-// ─── Item slot ─────────────────────────────────────────────────────────────────
+// ─── Item slot ───────────────────────────────────────────────────────────────
 
 class ItemSlot extends StatelessWidget {
   const ItemSlot({
@@ -318,7 +318,7 @@ class ItemSlot extends StatelessWidget {
   }
 }
 
-// ─── Item row ──────────────────────────────────────────────────────────────────
+// ─── Item row ────────────────────────────────────────────────────────────────
 
 class ItemRow extends StatelessWidget {
   const ItemRow({required this.items, super.key});
@@ -343,7 +343,7 @@ class ItemRow extends StatelessWidget {
   }
 }
 
-// ─── Badge ─────────────────────────────────────────────────────────────────────
+// ─── Badge ───────────────────────────────────────────────────────────────────
 
 class Badge extends StatelessWidget {
   const Badge(this.text, {required this.bg, required this.fg, super.key});
@@ -370,7 +370,7 @@ class Badge extends StatelessWidget {
   }
 }
 
-// ─── KDA number ────────────────────────────────────────────────────────────────
+// ─── KDA number ──────────────────────────────────────────────────────────────
 
 class KdaNum extends StatelessWidget {
   const KdaNum(this.text, this.color, {super.key});
@@ -384,7 +384,7 @@ class KdaNum extends StatelessWidget {
       );
 }
 
-// ─── KDA separator ─────────────────────────────────────────────────────────────
+// ─── KDA separator ───────────────────────────────────────────────────────────
 
 class KdaSep extends StatelessWidget {
   const KdaSep({super.key});
@@ -396,7 +396,7 @@ class KdaSep extends StatelessWidget {
       );
 }
 
-// ─── Stat chip ─────────────────────────────────────────────────────────────────
+// ─── Stat chip ───────────────────────────────────────────────────────────────
 
 class StatChip extends StatelessWidget {
   const StatChip(this.label, this.value, this.color, {super.key});

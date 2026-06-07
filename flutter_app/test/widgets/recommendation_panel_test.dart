@@ -10,6 +10,7 @@ void main() {
       (WidgetTester tester) async {
         const recommendation = ItemRecommendation(
           source: RecommendationSource.llm,
+          provider: 'claude',
           reasoning: 'Claude says this is a good item against high AP burst.',
           items: [
             RecommendedItem(
@@ -46,6 +47,7 @@ void main() {
       (WidgetTester tester) async {
         const recommendation = ItemRecommendation(
           source: RecommendationSource.heuristic,
+          provider: 'heuristic',
           reasoning:
               'Enemy comp is balanced. No specific counter items needed.',
           items: [],

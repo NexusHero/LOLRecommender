@@ -1,4 +1,3 @@
-// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart' hide Badge;
 import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/models/strategy.dart';
@@ -81,7 +80,8 @@ class RecommendationPanel extends StatelessWidget {
                   ),
                   Text(
                     _providerLabel,
-                    style: AppTextStyles.bodyBold.copyWith(color: _providerColor),
+                    style: AppTextStyles.bodyBold
+                        .copyWith(color: _providerColor),
                   ),
                 ],
               ),
@@ -90,26 +90,26 @@ class RecommendationPanel extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  if (recommendation.isLlm)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _providerColor.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(
-                          color: _providerColor.withValues(alpha: 0.3),
-                        ),
-                      ),
-                      child: Text(
-                        'AI',
-                        style: TextStyle(
-                          color: _providerColor,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _providerColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: _providerColor.withValues(alpha: 0.3),
                       ),
                     ),
+                    child: Text(
+                      recommendation.isLlm ? 'AI' : 'AUTO',
+                      style: TextStyle(
+                        color: _providerColor,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
                   if (timeAgo.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(timeAgo, style: AppTextStyles.caption),
@@ -205,7 +205,11 @@ class _StrategyCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.military_tech_outlined, size: 15, color: AppColors.gold),
+              const Icon(
+                Icons.military_tech_outlined,
+                size: 15,
+                color: AppColors.gold,
+              ),
               const SizedBox(width: 6),
               const Text('GAME PLAN', style: AppTextStyles.label),
               const Spacer(),
@@ -232,7 +236,8 @@ class _StrategyCard extends StatelessWidget {
             label: 'LATE',
             text: strategy.lateGamePlan,
           ),
-          if (strategy.laneMatchupAnalysis != null || strategy.counterPlay != null) ...[
+          if (strategy.laneMatchupAnalysis != null ||
+              strategy.counterPlay != null) ...[
             const Divider(color: AppColors.border, height: 16),
             if (strategy.laneMatchupAnalysis != null) ...[
               _StrategyRow(
@@ -313,8 +318,12 @@ class _RecItemTile extends StatelessWidget {
                     const SizedBox(width: 6),
                     Badge(
                       item.isCore ? 'CORE' : 'SITUATIONAL',
-                      bg: item.isCore ? AppColors.goldSubtle : AppColors.allySubtle,
-                      fg: item.isCore ? AppColors.gold : AppColors.textSecondary,
+                      bg: item.isCore
+                          ? AppColors.goldSubtle
+                          : AppColors.allySubtle,
+                      fg: item.isCore
+                          ? AppColors.gold
+                          : AppColors.textSecondary,
                     ),
                   ],
                 ),

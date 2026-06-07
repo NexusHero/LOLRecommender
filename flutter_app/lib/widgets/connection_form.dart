@@ -109,10 +109,15 @@ class _ConnectionFormState extends State<ConnectionForm> {
           // ── Value Proposition ───────────────────────────────────
           const Icon(Icons.shield_outlined, size: 48, color: AppColors.gold),
           const SizedBox(height: 12),
-          const Text('LoL Coach', textAlign: TextAlign.center, style: AppTextStyles.display),
+          const Text(
+            'LoL Coach',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.display,
+          ),
           const SizedBox(height: 8),
           const Text(
-            'Real-time item advice during your match.\nAlways know what to build — powered by AI.',
+            'Real-time item advice during your match.\n'
+                'Always know what to build — powered by AI.',
             textAlign: TextAlign.center,
             style: AppTextStyles.caption,
           ),
@@ -125,7 +130,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
             decoration: const InputDecoration(
               labelText: 'Summoner Name (Optional)',
               hintText: 'Your in-game name',
-              prefixIcon: Icon(Icons.person_outline, color: AppColors.textSecondary),
+              prefixIcon: Icon(
+                Icons.person_outline,
+                color: AppColors.textSecondary,
+              ),
             ),
             keyboardType: TextInputType.text,
             textInputAction: TextInputAction.next,
@@ -136,7 +144,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
           const Text('AI Provider', style: AppTextStyles.captionBold),
           const SizedBox(height: 4),
           const Text(
-            'AI gives smarter, context-aware advice. Basic uses fast built-in rules.',
+            'AI gives smarter, context-aware advice. '
+                'Basic uses fast built-in rules.',
             style: AppTextStyles.caption,
           ),
           const SizedBox(height: 10),
@@ -165,7 +174,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
                       decoration: InputDecoration(
                         labelText: '$_providerType API Key',
                         hintText: 'Enter your API key',
-                        prefixIcon: const Icon(Icons.vpn_key_outlined, color: AppColors.textSecondary),
+                        prefixIcon: const Icon(
+                          Icons.vpn_key_outlined,
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       keyboardType: TextInputType.text,
                       textInputAction: TextInputAction.done,
@@ -214,7 +226,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
                           decoration: InputDecoration(
                             labelText: 'Server IP',
                             hintText: 'e.g. 192.168.1.100',
-                            prefixIcon: const Icon(Icons.computer_outlined, color: AppColors.textSecondary),
+                            prefixIcon: const Icon(
+                              Icons.computer_outlined,
+                              color: AppColors.textSecondary,
+                            ),
                             errorText: _ipError,
                           ),
                           keyboardType: TextInputType.url,
@@ -226,7 +241,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
                           enabled: !widget.isConnecting,
                           decoration: const InputDecoration(
                             labelText: 'Port',
-                            prefixIcon: Icon(Icons.settings_ethernet, color: AppColors.textSecondary),
+                            prefixIcon: Icon(
+                              Icons.settings_ethernet,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                           keyboardType: TextInputType.number,
                           textInputAction: TextInputAction.next,
@@ -249,7 +267,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
               ),
               child: Text(
                 widget.error!,
-                style: AppTextStyles.caption.copyWith(color: AppColors.errorLight),
+                style: AppTextStyles.caption
+                    .copyWith(color: AppColors.errorLight),
               ),
             ),
           ],
@@ -267,7 +286,10 @@ class _ConnectionFormState extends State<ConnectionForm> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text('Connecting to bridge...', style: AppTextStyles.caption),
+                const Text(
+                  'Connecting to bridge...',
+                  style: AppTextStyles.caption,
+                ),
               ],
             ),
           ],
@@ -288,7 +310,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
           ),
           const SizedBox(height: 20),
           const Text(
-            'The bridge server must be running on the same machine.\nDefault: localhost:8765',
+            'The bridge server must be running on the same machine.\n'
+                'Default: localhost:8765',
             textAlign: TextAlign.center,
             style: AppTextStyles.caption,
           ),

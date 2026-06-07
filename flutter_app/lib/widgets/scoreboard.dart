@@ -40,7 +40,11 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  const Icon(Icons.people_outline, size: 16, color: AppColors.textSecondary),
+                  const Icon(
+                    Icons.people_outline,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
                   const SizedBox(width: 6),
                   const Text('SCOREBOARD', style: AppTextStyles.label),
                   const Spacer(),
@@ -129,7 +133,9 @@ class PlayerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = player.scores;
     return Container(
-      color: isHighlighted ? AppColors.allySubtle.withAlpha(160) : Colors.transparent,
+      color: isHighlighted
+          ? AppColors.allySubtle.withAlpha(160)
+          : Colors.transparent,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       child: Row(
         children: [
@@ -147,7 +153,9 @@ class PlayerRow extends StatelessWidget {
                 Text(
                   player.championName,
                   style: AppTextStyles.captionBold.copyWith(
-                    color: isHighlighted ? AppColors.cyan : AppColors.textPrimary,
+                    color: isHighlighted
+                        ? AppColors.cyan
+                        : AppColors.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
