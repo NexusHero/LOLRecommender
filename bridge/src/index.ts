@@ -6,6 +6,10 @@ import { BridgeWsServer } from "./wsServer.js";
 import { BridgeOrchestrator } from "./orchestrator.js";
 import { MessageRouter } from "./messageRouter.js";
 import { createLlmProvider } from "./llmProvider.js";
+import { ddragon } from "./ddragonService.js";
+
+// DDragon im Hintergrund initialisieren — kein blocking start
+ddragon.init().catch((err) => console.error("[Main] DDragon init error:", err));
 
 const LOCAL_SUMMONER = process.env.SUMMONER_NAME ?? "";
 if (!LOCAL_SUMMONER) {

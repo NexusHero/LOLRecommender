@@ -4,6 +4,7 @@ import { getGamePhase } from "./stateMinifier.js";
 import { ClaudeProvider } from "./providers/claudeProvider.js";
 import { OpenAiProvider } from "./providers/openaiProvider.js";
 import { GeminiProvider } from "./providers/geminiProvider.js";
+import { ddragon } from "./ddragonService.js";
 
 export const SYSTEM_PROMPT = `You are an experienced League of Legends coach.
 Analyze the game state and respond ONLY with a JSON object — no markdown, no code blocks, no extra text.
@@ -69,11 +70,10 @@ function buildRoleContext(state: ParsedGameState, role: string): string {
   return "";
 }
 
-export function buildUserPrompt(
+export async function buildUserPrompt(
   state: ParsedGameState,
   heuristicRec: ItemRecommendation,
-): string {
-  const itemNames = heuristicRec.items.map((i) => i.name).join(", ") || "None";
+): Promise<string> {
   const phase = getGamePhase(state.gameTime);
 
   const myPos = state.localPlayer.position || "UNKNOWN";
@@ -88,20 +88,47 @@ export function buildUserPrompt(
     ? state.enemies.find((e) => e.position === opponentPos)
     : undefined);
 
+  // Fetch abilities in parallel
+  const [myAbilities, opponentAbilities] = await Promise.all([
+    ddragon.getChampionAbilities(state.localPlayer.championName),
+    primaryOpponent ? ddragon.getChampionAbilities(primaryOpponent.championName) : Promise.resolve(undefined),
+  ]);
+
+  const myAbilityStr = myAbilities
+    ? ` | Abilities: Q=${myAbilities.q}, W=${myAbilities.w}, E=${myAbilities.e}, R=${myAbilities.r}`
+    : "";
+
+  const opponentAbilityStr = opponentAbilities
+    ? ` | Abilities: Q=${opponentAbilities.q}, W=${opponentAbilities.w}, E=${opponentAbilities.e}, R=${opponentAbilities.r}`
+    : "";
+
   const opponentStr = primaryOpponent
-    ? `Opponent (${primaryOpponent.position || myPos}): ${primaryOpponent.championName} — KDA ${primaryOpponent.scores.kills}/${primaryOpponent.scores.deaths}/${primaryOpponent.scores.assists}, CS ${primaryOpponent.scores.creepScore}, Vision: ${Math.round(primaryOpponent.scores.wardScore)}, Lvl ${primaryOpponent.level}${primaryOpponent.isDead ? ", currently DEAD" : ""}`
+    ? `Opponent (${primaryOpponent.position || myPos}): ${primaryOpponent.championName} — KDA ${primaryOpponent.scores.kills}/${primaryOpponent.scores.deaths}/${primaryOpponent.scores.assists}, CS ${primaryOpponent.scores.creepScore}, Vision: ${Math.round(primaryOpponent.scores.wardScore)}, Lvl ${primaryOpponent.level}${primaryOpponent.isDead ? ", currently DEAD" : ""}${opponentAbilityStr}`
     : "Opponent: unknown (position data unavailable)";
 
   const roleContext = buildRoleContext(state, myPos);
+
+  // Build item lines with DDragon stats
+  const itemLines = heuristicRec.items.length === 0
+    ? "None"
+    : heuristicRec.items.map((item) => {
+        const info = ddragon.getItemInfo(item.id);
+        if (!info) return `- ${item.name}`;
+        const statsStr = info.stats ? ` (${info.stats})` : "";
+        const descStr = info.plaintext ? ` — ${info.plaintext}` : "";
+        return `- ${item.name}${statsStr}${descStr}`;
+      }).join("\n");
 
   return `Current Game State:
 ${minifyGameState(state)}
 Game Phase: ${phase} (< 14min = early, 14-25min = mid, > 25min = late)
 My role: ${myPos}${myPos === "UTILITY" ? ` (Vision score: ${Math.round(myVision)})` : ""}
+My champion: ${state.localPlayer.championName}${myAbilityStr}
 
 ${opponentStr}
 ${roleContext}
-Suggested items: ${itemNames}
+Suggested items:
+${itemLines}
 
 Respond with the JSON object as instructed.`;
 }

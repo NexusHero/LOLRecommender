@@ -27,7 +27,7 @@ export class ClaudeProvider implements LlmProvider {
           },
         ],
         messages: [
-          { role: "user", content: buildUserPrompt(state, heuristicRec) },
+          { role: "user", content: await buildUserPrompt(state, heuristicRec) },
         ],
       });
 
