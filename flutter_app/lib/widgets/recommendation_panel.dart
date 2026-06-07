@@ -37,10 +37,6 @@ class RecommendationPanel extends StatelessWidget {
     return recommendation.isLlm ? AppColors.magic : AppColors.textSecondary;
   }
 
-  Color get _providerBg {
-    return recommendation.isLlm ? AppColors.magicSubtle : AppColors.surfaceDark;
-  }
-
   IconData get _providerIcon {
     return recommendation.isLlm ? Icons.smart_toy_outlined : Icons.tune;
   }
@@ -54,32 +50,77 @@ class RecommendationPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Provider source banner — clearly shows who answered
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: _providerBg,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: _providerColor.withValues(alpha: 0.35),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(_providerIcon, size: 14, color: _providerColor),
-                const SizedBox(width: 6),
-                Text(
-                  'Answered by $_providerLabel',
-                  style: AppTextStyles.captionBold.copyWith(color: _providerColor),
+          // Provider header — iOS-style icon box + label hierarchy
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _providerColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: _providerColor.withValues(alpha: 0.3),
+                  ),
                 ),
-                const Spacer(),
-                if (timeAgo.isNotEmpty)
-                  Text(timeAgo, style: AppTextStyles.caption),
-              ],
-            ),
+                child: Icon(_providerIcon, size: 20, color: _providerColor),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'ANSWERED BY',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  Text(
+                    _providerLabel,
+                    style: AppTextStyles.bodyBold.copyWith(color: _providerColor),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (recommendation.isLlm)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _providerColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: _providerColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        'AI',
+                        style: TextStyle(
+                          color: _providerColor,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                  if (timeAgo.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(timeAgo, style: AppTextStyles.caption),
+                  ],
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
+          const Divider(color: AppColors.border, height: 1),
+          const SizedBox(height: 12),
           const Row(
             children: [
               Icon(Icons.lightbulb_outline, size: 15, color: AppColors.cyan),
@@ -107,11 +148,28 @@ class RecommendationPanel extends StatelessWidget {
 
     if (!recommendation.isLlm) return card;
 
-    return AiSweepingBorder(
-      strokeWidth: 2.5,
-      sweepFraction: 0.32,
-      duration: const Duration(milliseconds: 1600),
-      child: card,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.magic.withValues(alpha: 0.22),
+            blurRadius: 24,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: AppColors.magic.withValues(alpha: 0.08),
+            blurRadius: 50,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: AiSweepingBorder(
+        strokeWidth: 2.5,
+        sweepFraction: 0.32,
+        duration: const Duration(milliseconds: 1600),
+        child: card,
+      ),
     );
   }
 }
