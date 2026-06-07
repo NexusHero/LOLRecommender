@@ -130,15 +130,96 @@ LOLRecommender/
 
 ## Running tests
 
-```bash
-# Bridge (Unit & Integration tests)
-cd bridge
-npm test
+### All-in-one script (`test.sh`)
 
-# Flutter (Widget & Logic tests)
-cd flutter_app
-flutter test
+The root `test.sh` script runs both the bridge (Jest) and the Flutter test suite in one command:
+
+```bash
+./test.sh                    # bridge + flutter (goldens excluded)
+./test.sh --coverage         # bridge tests with coverage report
+./test.sh --mock-server      # start mock LoL server before bridge tests
+./test.sh --goldens          # include flutter golden pixel tests
+./test.sh --update-goldens   # regenerate golden baselines, then run all
+./test.sh --bridge-only      # skip flutter
+./test.sh --flutter-only     # skip bridge
+./test.sh --watch            # jest watch mode (flutter skipped)
 ```
+
+#### Mock LoL server
+
+`--mock-server` starts a local HTTP server on port `29990` that replays a scripted
+game scenario (GAME\_STARTED → ITEM\_PURCHASED → LEVEL\_UP → PLAYER\_DIED →
+HIGH\_GOLD\_REACHED → GAME\_INACTIVE). The bridge's poller connects to it instead
+of the real Riot API. The server is guaranteed to stop when the script exits,
+even on Ctrl-C or error.
+
+```bash
+./test.sh --mock-server --bridge-only
+```
+
+You can also run the mock server standalone for manual development:
+
+```bash
+# Terminal 1 — mock server
+cd bridge
+npm run mock-lol
+
+# Terminal 2 — bridge pointing at the mock server
+LIVE_CLIENT_URL=http://localhost:2999/liveclientdata/allgamedata \
+SUMMONER_NAME=TestPlayer npm run dev
+```
+
+### Bridge only (Jest)
+
+```bash
+cd bridge
+npm test                    # all tests
+npm test -- --coverage      # with coverage report
+npm test -- --watch         # watch mode
+```
+
+Coverage thresholds are enforced in CI:
+
+| Metric | Threshold |
+|--------|-----------|
+| Statements | 85 % |
+| Lines | 85 % |
+| Branches | 80 % |
+| Functions | 80 % |
+
+#### Mutation testing (Stryker)
+
+```bash
+cd bridge
+npx stryker run
+# Report: bridge/reports/mutation/report.html
+```
+
+### Flutter only
+
+```bash
+cd flutter_app
+flutter test                                              # unit + widget tests
+flutter test --update-goldens test/widgets/recommendation_panel_golden_test.dart
+                                                          # regenerate golden baselines
+```
+
+> **Golden tests** require a baseline PNG committed under `flutter_app/test/goldens/`.
+> Run `--update-goldens` once on CI and commit the generated files before the
+> golden tests will pass in subsequent runs.
+
+### Test architecture
+
+| Layer | Tool | Location |
+|-------|------|----------|
+| Unit (bridge) | Jest + ts-jest | `bridge/src/__tests__/` |
+| Contract (AsyncAPI) | Jest + Zod | `bridge/src/__tests__/asyncapi.test.ts` |
+| Integration (bridge) | Jest | `bridge/src/__tests__/integration.test.ts` |
+| Game scenario (full pipeline) | Jest | `bridge/src/__tests__/scenario.test.ts` |
+| E2E (real WS wiring) | Jest | `bridge/src/__tests__/e2e.test.ts` |
+| Default fetcher (HTTP) | Jest | `bridge/src/__tests__/defaultFetcher.test.ts` |
+| Unit + Widget (Flutter) | flutter\_test | `flutter_app/test/` |
+| Golden / visual regression | flutter\_test | `flutter_app/test/widgets/*_golden_test.dart` |
 
 ---
 
