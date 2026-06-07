@@ -32,9 +32,13 @@ Enemies: ${enemiesStr}`;
 
 function formatPlayer(p: Player, gold?: number): string {
   const kda = `${p.scores.kills}/${p.scores.deaths}/${p.scores.assists}`;
-  let str = `${p.championName} (Lvl ${p.level}, KDA: ${kda})`;
+  const cs = `CS: ${p.scores.creepScore}`;
+  const vision = p.scores.wardScore > 0 ? `, Vision: ${Math.round(p.scores.wardScore)}` : "";
+  const pos = p.position ? ` [${p.position}]` : "";
+  const dead = p.isDead ? ", DEAD" : "";
+  let str = `${p.championName}${pos} (Lvl ${p.level}, KDA: ${kda}, ${cs}${vision}${dead})`;
   if (gold !== undefined) {
-    str = `${p.championName} (Lvl ${p.level}, Gold: ${gold}, KDA: ${kda})`;
+    str = `${p.championName}${pos} (Lvl ${p.level}, Gold: ${gold}, KDA: ${kda}, ${cs}${vision}${dead})`;
   }
   return str;
 }

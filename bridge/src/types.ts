@@ -101,6 +101,8 @@ export interface Strategy {
   summary: string;
   immediateAction: string;
   lateGamePlan: string;
+  laneMatchupAnalysis?: string;
+  counterPlay?: string;
 }
 
 export interface ItemRecommendation {

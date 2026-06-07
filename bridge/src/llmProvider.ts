@@ -13,11 +13,21 @@ Use this exact format:
   "strategy": {
     "winCondition": "early" or "mid" or "late",
     "summary": "1 sentence: when and how the player wins this game",
-    "immediateAction": "1 sentence: what to do RIGHT NOW in-game",
-    "lateGamePlan": "1 sentence: how to close out the game with the final build"
+    "immediateAction": "1 sentence: what to do RIGHT NOW in-game, referencing their champion and current stats",
+    "lateGamePlan": "1 sentence: how to close out the game with the final build",
+    "laneMatchupAnalysis": "1-2 sentences: role-specific comparison — what the opponent/enemy duo is doing better or worse using the metrics that matter for this role",
+    "counterPlay": "1 sentence: one concrete role-appropriate action to gain or stop losing the matchup right now"
   }
 }
-Be specific. Consider KDA, gold, champion matchups, and the current game phase.`;
+
+Adjust analysis based on the player's role:
+- UTILITY (Support): ignore CS entirely. Focus on vision score, assists, and whether the ADC is alive and ahead. A support death that lets the ADC get kills is a good trade. Counterplay is about engage, disengage, peel, or vision control — not farming.
+- BOTTOM (ADC): CS lead/deficit matters most. Staying alive to deal sustained damage in fights. Laning phase is about CS and poking, not all-ins unless you are ahead.
+- TOP: check if the champion is a known split-pusher (e.g. Tryndamere, Fiora, Jax, Camille). If so, advise on split push timing vs teleport plays, not teamfighting. If they are a teamfighter, advise on grouping.
+- JUNGLE: focus on objective control (Drake, Baron, Rift Herald) and which lanes are losing and need a gank.
+- MIDDLE: consider roaming to bot/top, wave management before roaming, and priority for objectives.
+
+Be specific. Reference actual numbers (CS difference, kill lead, vision score, gold gap). Do not give generic advice.`;
 
 export interface LlmAnalysis {
   reasoning: string;
@@ -39,6 +49,26 @@ export interface LlmProvider {
 
 export type ProviderType = "claude" | "openai" | "gemini";
 
+function buildRoleContext(state: ParsedGameState, role: string): string {
+  if (role === "UTILITY") {
+    const allyAdc = state.allies.find((a) => a.position === "BOTTOM");
+    if (allyAdc) {
+      return `Your ADC (protect): ${allyAdc.championName} — KDA ${allyAdc.scores.kills}/${allyAdc.scores.deaths}/${allyAdc.scores.assists}, Lvl ${allyAdc.level}${allyAdc.isDead ? ", DEAD" : ""}`;
+    }
+    return "Your ADC: not found in ally list";
+  }
+  if (role === "JUNGLE") {
+    const drakes = state.allies.filter((a) => a.scores.kills > 0).length;
+    const losingLanes = state.allies.filter(
+      (a) => a.scores.deaths > a.scores.kills + a.scores.assists,
+    );
+    if (losingLanes.length > 0) {
+      return `Lanes that may need a gank: ${losingLanes.map((a) => `${a.championName} (${a.position || "?"}, KDA ${a.scores.kills}/${a.scores.deaths}/${a.scores.assists})`).join(", ")}`;
+    }
+  }
+  return "";
+}
+
 export function buildUserPrompt(
   state: ParsedGameState,
   heuristicRec: ItemRecommendation,
@@ -46,10 +76,31 @@ export function buildUserPrompt(
   const itemNames = heuristicRec.items.map((i) => i.name).join(", ") || "None";
   const phase = getGamePhase(state.gameTime);
 
+  const myPos = state.localPlayer.position || "UNKNOWN";
+  const myVision = state.localPlayer.scores.wardScore;
+
+  const laneOpponent = myPos !== "UNKNOWN"
+    ? state.enemies.find((e) => e.position === myPos)
+    : undefined;
+
+  const opponentPos = myPos === "UTILITY" ? "BOTTOM" : myPos;
+  const primaryOpponent = laneOpponent ?? (myPos !== "UNKNOWN"
+    ? state.enemies.find((e) => e.position === opponentPos)
+    : undefined);
+
+  const opponentStr = primaryOpponent
+    ? `Opponent (${primaryOpponent.position || myPos}): ${primaryOpponent.championName} — KDA ${primaryOpponent.scores.kills}/${primaryOpponent.scores.deaths}/${primaryOpponent.scores.assists}, CS ${primaryOpponent.scores.creepScore}, Vision: ${Math.round(primaryOpponent.scores.wardScore)}, Lvl ${primaryOpponent.level}${primaryOpponent.isDead ? ", currently DEAD" : ""}`
+    : "Opponent: unknown (position data unavailable)";
+
+  const roleContext = buildRoleContext(state, myPos);
+
   return `Current Game State:
 ${minifyGameState(state)}
 Game Phase: ${phase} (< 14min = early, 14-25min = mid, > 25min = late)
+My role: ${myPos}${myPos === "UTILITY" ? ` (Vision score: ${Math.round(myVision)})` : ""}
 
+${opponentStr}
+${roleContext}
 Suggested items: ${itemNames}
 
 Respond with the JSON object as instructed.`;
@@ -70,6 +121,8 @@ export function parseAnalysisResponse(
         summary: (strat?.summary as string | undefined) ?? fallback.strategy.summary,
         immediateAction: (strat?.immediateAction as string | undefined) ?? fallback.strategy.immediateAction,
         lateGamePlan: (strat?.lateGamePlan as string | undefined) ?? fallback.strategy.lateGamePlan,
+        laneMatchupAnalysis: (strat?.laneMatchupAnalysis as string | undefined) ?? fallback.strategy.laneMatchupAnalysis,
+        counterPlay: (strat?.counterPlay as string | undefined) ?? fallback.strategy.counterPlay,
       },
     };
   } catch {
