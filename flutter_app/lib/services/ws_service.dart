@@ -148,6 +148,11 @@ class WsService extends ChangeNotifier {
     }
   }
 
+  void triggerAnalysis() {
+    if (_channel == null || _status != ConnectionStatus.connected) return;
+    _channel!.sink.add(jsonEncode({'event': 'TRIGGER_ANALYSIS'}));
+  }
+
   void _onData(dynamic raw) {
     try {
       final json = jsonDecode(raw as String) as Map<String, dynamic>;

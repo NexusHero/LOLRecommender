@@ -47,6 +47,9 @@ const wsServer = new BridgeWsServer(
     if (message.event === "SET_SUMMONER" && typeof message.summonerName === "string") {
       orchestrator.setSummonerName(message.summonerName);
     }
+    if (message.event === "TRIGGER_ANALYSIS") {
+      orchestrator.triggerManualAnalysis();
+    }
     if (message.event === "SET_LLM_PROVIDER") {
       const providerType = message.provider as ProviderType | undefined;
       const apiKey = message.apiKey as string | undefined;

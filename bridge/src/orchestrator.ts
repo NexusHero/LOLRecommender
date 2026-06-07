@@ -13,6 +13,7 @@ export interface OrchestratorConfig {
 export class BridgeOrchestrator {
   private lastLlmCallAt = 0;
   private llmProvider: LlmProvider | null;
+  private lastState: ParsedGameState | null = null;
 
   constructor(
     private readonly wsServer: BridgeWsServer,
@@ -26,6 +27,7 @@ export class BridgeOrchestrator {
 
   async handleGameData(raw: AllGameData): Promise<void> {
     const state = parseGameState(raw, this.config.summonerName);
+    this.lastState = state;
     const events = this.eventDetector.detect(state);
 
     for (const event of events) {
@@ -60,13 +62,8 @@ export class BridgeOrchestrator {
     let useLlm = false;
 
     if (this.llmProvider !== null && this.wsServer.clientCount > 0) {
-      if (eventType === "GAME_STARTED") {
-        useLlm = true; // Always trigger LLM on game start
-      } else if (eventType === "PLAYER_DIED") {
-        // Trigger LLM if high gold and cooldown passed
-        if (state.activePlayer.currentGold >= HIGH_GOLD_THRESHOLD && now - this.lastLlmCallAt > this.config.llmCooldownMs) {
-          useLlm = true;
-        }
+      if (eventType === "GAME_STARTED" || eventType === "PLAYER_DIED" || eventType === "MANUAL") {
+        useLlm = true;
       }
     }
 
@@ -97,7 +94,17 @@ export class BridgeOrchestrator {
     );
   }
 
+  async triggerManualAnalysis(): Promise<void> {
+    if (!this.lastState) {
+      console.log("[Orchestrator] Manual analysis requested but no game state available.");
+      return;
+    }
+    console.log("[Orchestrator] Manual analysis triggered.");
+    await this.sendRecommendation(this.lastState, "MANUAL");
+  }
+
   resetDetector(): void {
+    this.lastState = null;
     this.eventDetector.reset();
   }
 

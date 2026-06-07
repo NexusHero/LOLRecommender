@@ -30,6 +30,15 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           body: _buildBody(context, ws),
+          floatingActionButton: ws.gameActive
+              ? FloatingActionButton.extended(
+                  onPressed: ws.triggerAnalysis,
+                  icon: const Icon(Icons.bolt),
+                  label: const Text('Analyse'),
+                  backgroundColor: AppColors.primaryGold,
+                  foregroundColor: Colors.black,
+                )
+              : null,
         );
       },
     );
