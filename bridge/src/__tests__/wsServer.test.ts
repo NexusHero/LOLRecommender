@@ -27,30 +27,33 @@ describe("BridgeWsServer", () => {
   });
 
   describe("connection management", () => {
-    it("increments clientCount on connection", () => {
+    it("connection_ClientConnects_IncrementsClientCount", () => {
       mockWss.emit("connection", new MockWebSocket(), fakeReq());
 
       expect(server.clientCount).toBe(1);
     });
 
-    it("decrements clientCount on close", () => {
+    it("connection_ClientCloses_DecrementsClientCount", () => {
       const ws = new MockWebSocket();
       mockWss.emit("connection", ws, fakeReq());
+
       ws.emit("close");
 
       expect(server.clientCount).toBe(0);
     });
 
-    it("decrements clientCount on error", () => {
+    it("connection_ClientErrors_DecrementsClientCount", () => {
       const ws = new MockWebSocket();
       mockWss.emit("connection", ws, fakeReq());
+
       ws.emit("error", new Error("test"));
 
       expect(server.clientCount).toBe(0);
     });
 
-    it("sends CONNECTED message on new connection", () => {
+    it("connection_ClientConnects_SendsConnectedMessage", () => {
       const ws = new MockWebSocket();
+
       mockWss.emit("connection", ws, fakeReq());
 
       expect(ws.send).toHaveBeenCalledTimes(1);
@@ -60,7 +63,7 @@ describe("BridgeWsServer", () => {
   });
 
   describe("broadcast", () => {
-    it("sends message to all open clients", () => {
+    it("broadcast_MultipleOpenClients_SendsToAll", () => {
       const ws1 = new MockWebSocket();
       const ws2 = new MockWebSocket();
       mockWss.emit("connection", ws1, fakeReq());
@@ -77,7 +80,7 @@ describe("BridgeWsServer", () => {
       expect(payload.event).toBe("GAME_TICK");
     });
 
-    it("does not send to clients with non-OPEN readyState", () => {
+    it("broadcast_ClientNotOpen_SkipsClosedClient", () => {
       const ws = new MockWebSocket();
       mockWss.emit("connection", ws, fakeReq());
       ws.readyState = WebSocket.CLOSED;
@@ -88,15 +91,59 @@ describe("BridgeWsServer", () => {
       expect(ws.send).not.toHaveBeenCalled();
     });
 
-    it("is a no-op when there are no clients", () => {
+    it("broadcast_NoClients_DoesNotThrow", () => {
       expect(() =>
-        server.broadcast({ event: "GAME_TICK", timestamp: 0 })
+        server.broadcast({ event: "GAME_TICK", timestamp: 0 }),
       ).not.toThrow();
     });
   });
 
+  describe("message handling", () => {
+    it("onMessage_ClientSendsValidJson_ParsesAndCallsHandler", () => {
+      const handler = jest.fn();
+      const serverWithHandler = new BridgeWsServer(mockWss as any, handler);
+      const ws = new MockWebSocket();
+      mockWss.emit("connection", ws, fakeReq());
+
+      ws.emit("message", Buffer.from(JSON.stringify({ event: "TRIGGER_ANALYSIS" })));
+
+      expect(handler).toHaveBeenCalledWith(ws, { event: "TRIGGER_ANALYSIS" });
+    });
+
+    it("onMessage_ClientSendsMalformedJson_DoesNotThrow", () => {
+      const serverWithHandler = new BridgeWsServer(mockWss as any, jest.fn());
+      const ws = new MockWebSocket();
+      mockWss.emit("connection", ws, fakeReq());
+
+      expect(() => {
+        ws.emit("message", Buffer.from("not json {{{"));
+      }).not.toThrow();
+    });
+
+    it("onMessage_NoHandlerRegistered_IgnoresMessageSilently", () => {
+      const ws = new MockWebSocket();
+      mockWss.emit("connection", ws, fakeReq());
+
+      expect(() => {
+        ws.emit("message", Buffer.from(JSON.stringify({ event: "SET_SUMMONER" })));
+      }).not.toThrow();
+    });
+
+    it("onMessage_SetSummonerMessage_PassesParsedObjectToHandler", () => {
+      const handler = jest.fn();
+      const serverWithHandler = new BridgeWsServer(mockWss as any, handler);
+      const ws = new MockWebSocket();
+      mockWss.emit("connection", ws, fakeReq());
+      const msg = { event: "SET_SUMMONER", summonerName: "Faker" };
+
+      ws.emit("message", Buffer.from(JSON.stringify(msg)));
+
+      expect(handler).toHaveBeenCalledWith(ws, msg);
+    });
+  });
+
   describe("close", () => {
-    it("delegates to the underlying WebSocketServer", () => {
+    it("close_Called_DelegatesToUnderlyingWss", () => {
       server.close();
 
       expect(mockWss.close).toHaveBeenCalledTimes(1);
