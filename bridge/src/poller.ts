@@ -1,8 +1,9 @@
 import https from "https";
+import http from "http";
 import { AllGameDataSchema, type AllGameData } from "./types.js";
 
-const LIVE_CLIENT_URL = process.env.LIVE_CLIENT_URL ?? "https://127.0.0.1:2999/liveclientdata/allgamedata";
 const POLL_INTERVAL_MS = 1000;
+const DEFAULT_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata";
 
 // Number of consecutive fetch failures before signalling GAME_INACTIVE.
 // Transient network spikes (e.g. brief API hiccup) will not flip the state.
@@ -10,12 +11,18 @@ export const MAX_POLL_FAILURES = 3;
 
 export type DataFetcher = () => Promise<unknown>;
 
-// Self-signed Cert der Live Client API ignorieren
+// Supports both https:// (real Riot API, self-signed cert accepted) and
+// http:// (local mock-lol-server for development).
+// URL is read lazily so LIVE_CLIENT_URL env var set after module load is picked up.
 function createDefaultFetcher(): DataFetcher {
-  const agent = new https.Agent({ rejectUnauthorized: false });
+  const url = process.env.LIVE_CLIENT_URL ?? DEFAULT_URL;
+  const isHttps = url.startsWith("https://");
+  const lib: typeof https = isHttps ? https : (http as unknown as typeof https);
+  const agent = isHttps ? new https.Agent({ rejectUnauthorized: false }) : undefined;
+
   return () =>
     new Promise((resolve, reject) => {
-      const req = https.get(LIVE_CLIENT_URL, { agent }, (res) => {
+      const req = lib.get(url, { agent } as https.RequestOptions, (res) => {
         let body = "";
         res.on("data", (chunk: Buffer) => (body += chunk.toString()));
         res.on("end", () => {
