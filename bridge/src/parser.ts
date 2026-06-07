@@ -4,14 +4,18 @@ export function parseGameState(
   raw: AllGameData,
   localSummonerName: string
 ): ParsedGameState {
-  const localPlayer = raw.allPlayers.find(
-    (p) => p.summonerName === localSummonerName
-  );
+  // activePlayer.summonerName is always the local player per Riot API contract.
+  // We use it to find the matching entry in allPlayers (which has champion/items/team).
+  // The user-configured localSummonerName is only a fallback for spectator mode where
+  // activePlayer is absent.
+  const activeName = raw.activePlayer.summonerName;
+  const localPlayer =
+    raw.allPlayers.find((p) => p.summonerName === activeName) ??
+    raw.allPlayers.find((p) => p.summonerName === localSummonerName);
 
   if (!localPlayer) {
-    // Fallback: ersten Spieler nehmen (passiert bei Spectate oder falschem Namen)
     console.warn(
-      `[Parser] Local player '${localSummonerName}' not found — falling back to first player.`
+      `[Parser] Local player not found (activePlayer='${activeName}', configured='${localSummonerName}') — falling back to first player.`
     );
   }
 
