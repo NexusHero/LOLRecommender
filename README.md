@@ -158,23 +158,6 @@ lolclient/
 ./test.sh --watch            # jest watch mode (flutter skipped)
 ```
 
-### Bridge only (Jest)
-
-```bash
-cd bridge
-npm test                    # all tests
-npm test -- --coverage      # with coverage report
-npm test -- --watch         # watch mode
-```
-
-Coverage thresholds enforced in CI:
-
-| Metric | Threshold |
-|--------|-----------|
-| Statements | 85 % |
-| Lines | 85 % |
-| Branches | 80 % |
-| Functions | 80 % |
 
 #### Mutation testing (Stryker)
 
@@ -195,18 +178,6 @@ flutter test --update-goldens test/widgets/recommendation_panel_golden_test.dart
 
 > **Golden tests** require a baseline PNG committed under `flutter_app/test/goldens/`.
 > Run `--update-goldens` once and commit the generated files before golden tests will pass.
-
-### Test architecture
-
-| Layer | Tool | Location |
-|-------|------|----------|
-| Unit (bridge) | Jest + ts-jest | `bridge/src/__tests__/` |
-| Contract (AsyncAPI) | Jest + Zod | `bridge/src/__tests__/asyncapi.test.ts` |
-| Integration (bridge) | Jest | `bridge/src/__tests__/integration.test.ts` |
-| Game scenario (full pipeline) | Jest | `bridge/src/__tests__/scenario.test.ts` |
-| E2E (real WS wiring) | Jest | `bridge/src/__tests__/e2e.test.ts` |
-| Unit + Widget (Flutter) | flutter\_test | `flutter_app/test/` |
-| Golden / visual regression | flutter\_test | `flutter_app/test/widgets/*_golden_test.dart` |
 
 ---
 
