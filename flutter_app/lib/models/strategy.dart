@@ -11,7 +11,8 @@ class Strategy {
   });
 
   factory Strategy.fromJson(Map<String, dynamic> json) => Strategy(
-        winCondition: WinCondition.values.byName(json['winCondition'] as String),
+        winCondition: WinCondition.values
+            .byName(json['winCondition'] as String),
         summary: json['summary'] as String,
         immediateAction: json['immediateAction'] as String,
         lateGamePlan: json['lateGamePlan'] as String,
