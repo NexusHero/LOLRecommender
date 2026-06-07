@@ -1,7 +1,8 @@
 // Golden tests for RecommendationPanel.
 //
 // Generate baseline files on first run:
-//   flutter test --update-goldens test/widgets/recommendation_panel_golden_test.dart
+//   flutter test --update-goldens \
+//     test/widgets/recommendation_panel_golden_test.dart
 //
 // On subsequent runs the snapshots are compared pixel-by-pixel.
 // Golden files are committed under test/goldens/ and reviewed in PRs.
@@ -80,7 +81,9 @@ void main() {
 
         await expectLater(
           find.byType(RecommendationPanel),
-          matchesGoldenFile('goldens/recommendation_panel_heuristic_empty.png'),
+          matchesGoldenFile(
+            'goldens/recommendation_panel_heuristic_empty.png',
+          ),
         );
       },
     );

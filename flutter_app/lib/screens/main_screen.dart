@@ -59,7 +59,11 @@ class _MainScreenState extends State<MainScreen> {
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 18),
+              const Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
               const SizedBox(width: 10),
               Expanded(child: Text('AI error: ${ws.lastLlmError}')),
             ],
@@ -94,7 +98,8 @@ class _MainScreenState extends State<MainScreen> {
               ),
             ],
           ),
-          const VerticalDivider(width: 1, thickness: 1, color: AppColors.border),
+          const VerticalDivider(
+            width: 1, thickness: 1, color: AppColors.border),
           Expanded(
             child: IndexedStack(
               index: _currentIndex,

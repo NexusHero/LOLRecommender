@@ -39,6 +39,15 @@ class FakeWsService extends ChangeNotifier implements WsService {
   DateTime? get recommendationTime => null;
 
   @override
+  String? get lastLlmError => null;
+
+  @override
+  String get activeProviderType => 'none';
+
+  @override
+  void clearLlmError() {}
+
+  @override
   void triggerAnalysis() => triggerAnalysisCalled = true;
 
   @override
@@ -84,7 +93,7 @@ void main() {
           await tester.pumpWidget(_buildWithService(service));
           await tester.pump();
 
-          expect(find.text('Analyse'), findsOneWidget);
+          expect(find.text('Analyse (Basic)'), findsOneWidget);
           expect(find.byType(FloatingActionButton), findsOneWidget);
         },
       );
@@ -99,7 +108,7 @@ void main() {
           await tester.pumpWidget(_buildWithService(service));
           await tester.pump();
 
-          expect(find.text('Analyse'), findsNothing);
+          expect(find.text('Analyse (Basic)'), findsNothing);
           expect(find.byType(FloatingActionButton), findsNothing);
         },
       );
@@ -128,7 +137,7 @@ void main() {
           await tester.pumpWidget(_buildWithService(service));
           await tester.pump();
 
-          await tester.tap(find.text('Analyse'));
+          await tester.tap(find.byType(FloatingActionButton));
           await tester.pump();
 
           expect(service.triggerAnalysisCalled, isTrue);

@@ -28,14 +28,22 @@ class GameTopBar extends StatelessWidget {
           ),
           Row(
             children: [
-              const Icon(Icons.timer_outlined, size: 14, color: AppColors.textSecondary),
+              const Icon(
+                Icons.timer_outlined,
+                size: 14,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: 4),
               Text(_fmt(gameState.gameTime), style: AppTextStyles.bodyBold),
             ],
           ),
           Row(
             children: [
-              const Icon(Icons.monetization_on_outlined, size: 14, color: AppColors.gold),
+              const Icon(
+                Icons.monetization_on_outlined,
+                size: 14,
+                color: AppColors.gold,
+              ),
               const SizedBox(width: 4),
               Text(
                 '${gameState.activePlayer.currentGold.toInt()}g',

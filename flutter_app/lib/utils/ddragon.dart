@@ -16,7 +16,8 @@ const _kChampOverrides = <String, String>{
 
 String _version = _kFallbackVersion;
 
-/// Call once at startup. Uses cached version immediately; refreshes in background.
+/// Call once at startup. Uses cached version immediately;
+/// refreshes in background.
 Future<void> initDDragonVersion() async {
   try {
     final prefs = await SharedPreferences.getInstance();

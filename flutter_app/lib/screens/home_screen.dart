@@ -99,7 +99,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ─── Status dot ────────────────────────────────────────────────────────────────
+// ─── Status dot ──────────────────────────────────────────────────────────────
 
 class _StatusDot extends StatelessWidget {
   const _StatusDot({required this.status});
@@ -121,7 +121,7 @@ class _StatusDot extends StatelessWidget {
   }
 }
 
-// ─── AI mode banner ────────────────────────────────────────────────────────────
+// ─── AI mode banner ──────────────────────────────────────────────────────────
 
 class _AiModeBanner extends StatefulWidget {
   const _AiModeBanner({required this.providerType});
@@ -262,7 +262,7 @@ class _AiModeBannerState extends State<_AiModeBanner>
   }
 }
 
-// ─── Pulsing FAB ───────────────────────────────────────────────────────────────
+// ─── Pulsing FAB ─────────────────────────────────────────────────────────────
 
 class _PulsingFab extends StatefulWidget {
   const _PulsingFab({required this.ws});
@@ -334,7 +334,7 @@ class _PulsingFabState extends State<_PulsingFab>
   }
 }
 
-// ─── Waiting view ──────────────────────────────────────────────────────────────
+// ─── Waiting view ────────────────────────────────────────────────────────────
 
 class _WaitingView extends StatelessWidget {
   const _WaitingView();
