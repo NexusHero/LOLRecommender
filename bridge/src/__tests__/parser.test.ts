@@ -26,6 +26,18 @@ describe("parseGameState", () => {
     expect(state.localPlayer.summonerName).toBe("MyPlayer");
   });
 
+  it("parseGameState_ActivePlayerNameMatchesAllPlayers_ReturnsCorrectPlayer", () => {
+    // Riot ID format: activePlayer.summonerName may differ from user-configured name
+    const local = makePlayer({ summonerName: "BaklavaBoy#EUW", team: "ORDER" });
+    const other = makePlayer({ summonerName: "Jinx#NA1", team: "ORDER" });
+    const raw = makeRaw([local, other]);
+    raw.activePlayer.summonerName = "BaklavaBoy#EUW";
+
+    const state = parseGameState(raw, "BaklavaBoy");
+
+    expect(state.localPlayer.summonerName).toBe("BaklavaBoy#EUW");
+  });
+
   it("parseGameState_NoMatchingSummonerName_FallsBackToFirstPlayer", () => {
     const first = makePlayer({ summonerName: "FirstPlayer", team: "ORDER" });
     const raw = makeRaw([first]);
