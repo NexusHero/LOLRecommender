@@ -52,6 +52,22 @@ describe("GeminiProvider", () => {
     await expect(provider.getAnalysis(makeGameState(), baseRec)).rejects.toThrow("Gemini: API unavailable");
   });
 
+  it("getAnalysis_RateLimitError_ShowsFriendlyMessageWithRetryDelay", async () => {
+    const rateLimitErr = Object.assign(
+      new Error('[429 Too Many Requests] quota exceeded. Please retry in 7.77s. [{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"7s"}]'),
+      { status: 429 },
+    );
+    const mockGenerateContent = jest.fn().mockRejectedValue(rateLimitErr);
+    (GoogleGenerativeAI as jest.Mock).mockImplementation(() => ({
+      getGenerativeModel: jest.fn().mockReturnValue({ generateContent: mockGenerateContent }),
+    }));
+    const provider = new GeminiProvider("test-key");
+
+    await expect(provider.getAnalysis(makeGameState(), baseRec)).rejects.toThrow(
+      "Gemini: Rate limit exceeded. Retry in 7s (free-tier quota).",
+    );
+  });
+
   it("getAnalysis_EmptyContent_FallsBackToHeuristicReasoningAndStrategy", async () => {
     mockGeminiResponse("");
     const provider = new GeminiProvider("test-key");
