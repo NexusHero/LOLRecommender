@@ -64,7 +64,7 @@ describe("GeminiProvider", () => {
     const provider = new GeminiProvider("test-key");
 
     await expect(provider.getAnalysis(makeGameState(), baseRec)).rejects.toThrow(
-      "Gemini: Rate limit exceeded. Retry in 7s (free-tier quota).",
+      "Gemini: 429 · Rate limit exceeded",
     );
   });
 

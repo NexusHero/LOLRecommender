@@ -157,6 +157,26 @@ export function parseAnalysisResponse(
   }
 }
 
+const HTTP_DESCRIPTIONS: Record<number, string> = {
+  400: "Bad request",
+  401: "Invalid API key",
+  403: "Forbidden",
+  429: "Rate limit exceeded",
+  500: "Server error",
+  503: "Service unavailable",
+};
+
+export function friendlyApiError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  const statusFromErr = (err as Record<string, unknown>)?.status as number | undefined;
+  const statusFromMsg = Number(msg.match(/\[(\d{3})\s/)?.[1]) || undefined;
+  const status = statusFromErr ?? statusFromMsg;
+  if (status && HTTP_DESCRIPTIONS[status]) {
+    return `${status} · ${HTTP_DESCRIPTIONS[status]}`;
+  }
+  return msg.split("\n")[0].slice(0, 120);
+}
+
 /**
  * Factory function — creates the correct LlmProvider from a type string + API key.
  * Imports are now static so Webpack and pkg bundle them correctly for the .exe.
