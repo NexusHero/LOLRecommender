@@ -128,6 +128,25 @@ class _StrategyCard extends StatelessWidget {
             label: 'LATE',
             text: strategy.lateGamePlan,
           ),
+          if (strategy.laneMatchupAnalysis != null || strategy.counterPlay != null) ...[
+            const Divider(color: AppColors.border, height: 16),
+            if (strategy.laneMatchupAnalysis != null) ...[
+              _StrategyRow(
+                icon: Icons.compare_arrows,
+                iconColor: AppColors.textSecondary,
+                label: 'MATCHUP',
+                text: strategy.laneMatchupAnalysis!,
+              ),
+              const SizedBox(height: 4),
+            ],
+            if (strategy.counterPlay != null)
+              _StrategyRow(
+                icon: Icons.gps_fixed,
+                iconColor: AppColors.warning,
+                label: 'COUNTER',
+                text: strategy.counterPlay!,
+              ),
+          ],
         ],
       ),
     );
