@@ -18,7 +18,7 @@ Set-Location ..
 # 2. Build the Flutter App
 Write-Host "`n--- Step 2: Building Flutter App (Windows) ---" -ForegroundColor Yellow
 Set-Location .\flutter_app
-flutter build windows
+flutter build windows --release
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to build the Flutter app." -ForegroundColor Red
     exit $LASTEXITCODE
