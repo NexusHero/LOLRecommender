@@ -18,7 +18,10 @@ import type { WsMessage } from "../types.js";
 jest.mock("../llmProvider.js", () => ({
   createLlmProvider: jest.fn().mockResolvedValue({
     name: "mock",
-    getExplanation: jest.fn(),
+    getAnalysis: jest.fn().mockResolvedValue({
+      reasoning: "mock reasoning",
+      strategy: { winCondition: "mid", summary: "s", immediateAction: "a", lateGamePlan: "b" },
+    }),
   }),
 }));
 

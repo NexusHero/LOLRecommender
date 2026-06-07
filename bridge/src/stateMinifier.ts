@@ -1,5 +1,11 @@
 import type { ParsedGameState, Player } from "./types.js";
 
+export function getGamePhase(gameTimeSec: number): "early" | "mid" | "late" {
+  if (gameTimeSec < 14 * 60) return "early";
+  if (gameTimeSec < 25 * 60) return "mid";
+  return "late";
+}
+
 export function minifyGameState(state: ParsedGameState): string {
   const gameTimeSec = Math.max(0, state.gameTime);
   const timeMins = Math.floor(gameTimeSec / 60);

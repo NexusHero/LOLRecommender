@@ -55,6 +55,7 @@ export class BridgeOrchestrator {
     const heuristicRec = getHeuristicRecommendations(
       profile,
       state.localPlayer.championName,
+      state,
     );
 
     const useLlm =
@@ -66,11 +67,16 @@ export class BridgeOrchestrator {
 
     if (useLlm) {
       try {
-        const llmReasoning = await this.llmProvider!.getExplanation(
+        const llmAnalysis = await this.llmProvider!.getAnalysis(
           state,
           heuristicRec,
         );
-        finalRec = { ...heuristicRec, reasoning: llmReasoning, source: "llm" };
+        finalRec = {
+          ...heuristicRec,
+          reasoning: llmAnalysis.reasoning,
+          strategy: llmAnalysis.strategy,
+          source: "llm",
+        };
       } catch (err) {
         console.error(`[Orchestrator] LLM failed for ${eventType}:`, err);
       }

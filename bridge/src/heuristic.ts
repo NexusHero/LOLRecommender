@@ -1,4 +1,5 @@
-import type { Player, CompProfile, ItemRecommendation, RecommendedItem } from "./types.js";
+import type { Player, CompProfile, ItemRecommendation, RecommendedItem, Strategy, ParsedGameState } from "./types.js";
+import { getGamePhase } from "./stateMinifier.js";
 import championsData from "./data/champions.json";
 import itemsData from "./data/items.json";
 
@@ -37,9 +38,49 @@ export function buildCompProfile(enemies: Player[]): CompProfile {
   };
 }
 
+export function buildHeuristicStrategy(
+  state: ParsedGameState,
+  profile: CompProfile,
+  myChampion: string,
+): Strategy {
+  const phase = getGamePhase(state.gameTime);
+  const me = state.localPlayer.scores;
+  const myKdaScore = me.kills + me.assists - me.deaths;
+  const isAhead = myKdaScore > 0 && state.activePlayer.currentGold > 1500;
+  const isApChamp = AP_CHAMPIONS.has(myChampion);
+  const enemyHeavyCC = profile.ccScore >= 3;
+
+  const winCondition: Strategy["winCondition"] = isAhead ? "early" : isApChamp ? "late" : "mid";
+
+  let summary: string;
+  let immediateAction: string;
+  let lateGamePlan: string;
+
+  if (isAhead) {
+    summary = "You are ahead — close out the game before enemies can scale.";
+    immediateAction = "Push towers, take Dragons, and force fights you can win.";
+    lateGamePlan = "Group as 5 for Baron and end the game through mid lane.";
+  } else if (phase === "early") {
+    summary = "Focus on farming safely — your power spike comes later.";
+    immediateAction = "Farm under tower if needed and avoid risky all-ins.";
+    lateGamePlan = "Once your core items are complete, you win most fights.";
+  } else if (enemyHeavyCC) {
+    summary = "Avoid extended teamfights — the enemy CC can shut you down.";
+    immediateAction = "Pick off isolated targets and avoid clumping with your team.";
+    lateGamePlan = "Use your completed build to split-push or flank in teamfights.";
+  } else {
+    summary = `Scale into your ${winCondition}-game power spike and then take over.`;
+    immediateAction = "Secure Drake and farm efficiently between skirmishes.";
+    lateGamePlan = "With your full build you outscale — force Baron fights to finish.";
+  }
+
+  return { winCondition, summary, immediateAction, lateGamePlan };
+}
+
 export function getHeuristicRecommendations(
   profile: CompProfile,
-  myChampion: string
+  myChampion: string,
+  state: ParsedGameState,
 ): ItemRecommendation {
   const recommended: RecommendedItem[] = [];
 
@@ -84,6 +125,7 @@ export function getHeuristicRecommendations(
     items: recommended,
     reasoning: formatReasoning(profile),
     source: "heuristic",
+    strategy: buildHeuristicStrategy(state, profile, myChampion),
   };
 }
 

@@ -1,15 +1,20 @@
 import { ClaudeProvider } from "../providers/claudeProvider";
-import { makeGameState } from "./fixtures";
-import type { ItemRecommendation } from "../types";
+import { makeGameState, makeBaseRec } from "./fixtures";
 import Anthropic from "@anthropic-ai/sdk";
 
 jest.mock("@anthropic-ai/sdk");
 
-const baseRec: ItemRecommendation = {
-  items: [{ id: 3033, name: "Mortal Reminder", reason: "vs healers", priority: "core" }],
-  reasoning: "heuristic reasoning",
-  source: "heuristic",
-};
+const baseRec = makeBaseRec();
+
+const validJsonResponse = JSON.stringify({
+  itemReasoning: "LLM reasoning text",
+  strategy: {
+    winCondition: "mid",
+    summary: "Scale into mid game.",
+    immediateAction: "Farm safely.",
+    lateGamePlan: "Fight with full build.",
+  },
+});
 
 describe("ClaudeProvider", () => {
   beforeEach(() => {
@@ -18,8 +23,8 @@ describe("ClaudeProvider", () => {
 
   function mockAnthropicResponse(contentOverride: object = {}) {
     const mockCreate = jest.fn().mockResolvedValue({
-      content: [{ type: "text", text: "LLM reasoning text" }],
-      usage: { input_tokens: 100, output_tokens: 30 },
+      content: [{ type: "text", text: validJsonResponse }],
+      usage: { input_tokens: 100, output_tokens: 50 },
       ...contentOverride,
     });
     (Anthropic as unknown as jest.Mock).mockImplementation(() => ({
@@ -28,48 +33,63 @@ describe("ClaudeProvider", () => {
     return mockCreate;
   }
 
-  it("getExplanation_ValidApiKey_ReturnsLlmText", async () => {
+  it("getAnalysis_ValidApiKey_ReturnsLlmReasoningAndStrategy", async () => {
     mockAnthropicResponse();
     const provider = new ClaudeProvider("test-key");
 
-    const result = await provider.getExplanation(makeGameState(), baseRec);
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
 
-    expect(result).toBe("LLM reasoning text");
+    expect(result.reasoning).toBe("LLM reasoning text");
+    expect(result.strategy.winCondition).toBe("mid");
+    expect(result.strategy.immediateAction).toBe("Farm safely.");
   });
 
-  it("getExplanation_ClientThrows_FallsBackToHeuristicReasoning", async () => {
+  it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
     (Anthropic as unknown as jest.Mock).mockImplementation(() => ({
       messages: { create: jest.fn().mockRejectedValue(new Error("API unavailable")) },
     }));
     const provider = new ClaudeProvider("test-key");
 
-    const result = await provider.getExplanation(makeGameState(), baseRec);
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
 
-    expect(result).toBe("heuristic reasoning");
+    expect(result.reasoning).toBe("heuristic reasoning");
+    expect(result.strategy).toEqual(baseRec.strategy);
   });
 
-  it("getExplanation_EmptyContentArray_FallsBackToHeuristicReasoning", async () => {
+  it("getAnalysis_EmptyContentArray_FallsBackToHeuristicReasoningAndStrategy", async () => {
     mockAnthropicResponse({ content: [], usage: { input_tokens: 0, output_tokens: 0 } });
     const provider = new ClaudeProvider("test-key");
 
-    const result = await provider.getExplanation(makeGameState(), baseRec);
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
 
-    expect(result).toBe("heuristic reasoning");
+    expect(result.reasoning).toBe("heuristic reasoning");
+    expect(result.strategy).toEqual(baseRec.strategy);
   });
 
-  it("getExplanation_NonTextContentBlock_FallsBackToHeuristicReasoning", async () => {
+  it("getAnalysis_NonTextContentBlock_FallsBackToHeuristicReasoningAndStrategy", async () => {
     mockAnthropicResponse({
       content: [{ type: "tool_use", id: "x", name: "test", input: {} }],
       usage: { input_tokens: 0, output_tokens: 0 },
     });
     const provider = new ClaudeProvider("test-key");
 
-    const result = await provider.getExplanation(makeGameState(), baseRec);
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
 
-    expect(result).toBe("heuristic reasoning");
+    expect(result.reasoning).toBe("heuristic reasoning");
+    expect(result.strategy).toEqual(baseRec.strategy);
   });
 
-  it("getExplanation_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
+  it("getAnalysis_InvalidJson_FallsBackToHeuristicReasoningAndStrategy", async () => {
+    mockAnthropicResponse({ content: [{ type: "text", text: "not valid json" }], usage: { input_tokens: 0, output_tokens: 0 } });
+    const provider = new ClaudeProvider("test-key");
+
+    const result = await provider.getAnalysis(makeGameState(), baseRec);
+
+    expect(result.reasoning).toBe("heuristic reasoning");
+    expect(result.strategy).toEqual(baseRec.strategy);
+  });
+
+  it("getAnalysis_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
     const mockCreate = mockAnthropicResponse();
     const provider = new ClaudeProvider("test-key");
     const state = makeGameState({
@@ -77,7 +97,7 @@ describe("ClaudeProvider", () => {
       enemies: [{ ...makeGameState().localPlayer, championName: "Soraka", team: "CHAOS" }],
     });
 
-    await provider.getExplanation(state, baseRec);
+    await provider.getAnalysis(state, baseRec);
 
     const callArg = mockCreate.mock.calls[0][0];
     const userContent = callArg.messages[0].content as string;

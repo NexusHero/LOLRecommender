@@ -20,7 +20,15 @@ describe("Integration: Match Progressions", () => {
 
     const llmProvider = {
       name: "mock-llm",
-      getExplanation: jest.fn().mockResolvedValue("Mock Integration Reason"),
+      getAnalysis: jest.fn().mockResolvedValue({
+        reasoning: "Mock Integration Reason",
+        strategy: {
+          winCondition: "mid",
+          summary: "Scale into mid game.",
+          immediateAction: "Farm safely.",
+          lateGamePlan: "Fight with full build.",
+        },
+      }),
     } as unknown as LlmProvider;
 
     const orchestrator = new BridgeOrchestrator(
@@ -44,7 +52,7 @@ describe("Integration: Match Progressions", () => {
     });
 
   const getLatestLlmCallArg = (llmProvider: any): any => {
-    const calls = llmProvider.getExplanation.mock.calls;
+    const calls = llmProvider.getAnalysis.mock.calls;
     if (calls.length === 0) return null;
     return calls[calls.length - 1][0];
   };
@@ -56,7 +64,7 @@ describe("Integration: Match Progressions", () => {
       makePlayer({ championName: "Lux", level: 5, scores: { kills: 0, deaths: 3, assists: 0, creepScore: 20, wardScore: 0 } }),
       makeEnemy("Zed", 3, 0, 6),
     ]));
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
 
     advanceTime(10 * 60 * 1000);
 
@@ -67,7 +75,7 @@ describe("Integration: Match Progressions", () => {
     rawMid.activePlayer = makeActivePlayer({ currentGold: 1200 });
     await orchestrator.handleGameData(rawMid);
 
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(2);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(2);
     expect(getLatestLlmCallArg(llmProvider).localPlayer.scores.deaths).toBe(8);
   });
 
@@ -88,7 +96,7 @@ describe("Integration: Match Progressions", () => {
     rawMid.activePlayer = makeActivePlayer({ currentGold: 3000 });
     await orchestrator.handleGameData(rawMid);
 
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(2);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(2);
     expect(getLatestLlmCallArg(llmProvider).localPlayer.scores.kills).toBe(12);
   });
 
@@ -185,20 +193,20 @@ describe("Integration: Match Progressions", () => {
     const { orchestrator, llmProvider } = setup();
 
     await orchestrator.handleGameData(makeRawGameData([makePlayer({ championName: "Yasuo", isDead: false })]));
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
 
     await orchestrator.handleGameData(makeRawGameData([makePlayer({ championName: "Yasuo", isDead: true })]));
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(2);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(2);
 
     await orchestrator.handleGameData(makeRawGameData([makePlayer({ championName: "Yasuo", isDead: false })]));
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(2);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(2);
 
     await orchestrator.handleGameData(makeRawGameData([makePlayer({ championName: "Yasuo", isDead: true })]));
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(3);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(3);
 
     await orchestrator.handleGameData(makeRawGameData([makePlayer({ championName: "Yasuo", isDead: false })]));
     await orchestrator.handleGameData(makeRawGameData([makePlayer({ championName: "Yasuo", isDead: true })]));
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(4);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(4);
   });
 
   it("triggerManualAnalysis_MidGame_BroadcastsCorrectChampionState", async () => {
@@ -208,13 +216,13 @@ describe("Integration: Match Progressions", () => {
       makePlayer({ championName: "Jinx", level: 10, scores: { kills: 5, deaths: 1, assists: 3, creepScore: 150, wardScore: 0 } }),
       makeEnemy("Malphite", 1, 3, 10),
     ]));
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
-    (llmProvider.getExplanation as jest.Mock).mockClear();
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
+    (llmProvider.getAnalysis as jest.Mock).mockClear();
     broadcasts.length = 0;
 
     await orchestrator.triggerManualAnalysis();
 
-    expect(llmProvider.getExplanation).toHaveBeenCalledTimes(1);
+    expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
     const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
     expect(rec).toBeDefined();
     expect(rec?.recommendation?.source).toBe("llm");
@@ -226,7 +234,7 @@ describe("Integration: Match Progressions", () => {
 
     await orchestrator.triggerManualAnalysis();
 
-    expect(llmProvider.getExplanation).not.toHaveBeenCalled();
+    expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
     expect(broadcasts).toHaveLength(0);
   });
 });
