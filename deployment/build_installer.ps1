@@ -42,7 +42,7 @@ Copy-Item $bridgeExe -Destination $releaseDir -Force
 
 Set-Location .\flutter_app
 Write-Host "Running msix:create..."
-flutter pub run msix:create
+dart run msix:create
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to create MSIX package." -ForegroundColor Red
     exit $LASTEXITCODE
@@ -61,4 +61,5 @@ if (Test-Path $msixSource) {
     Write-Host "`nSuccess! MSIX package generated at .\dist\LoLCoach.msix" -ForegroundColor Green
 } else {
     Write-Host "Could not find the generated MSIX file at $msixSource." -ForegroundColor Red
+    exit 1
 }
