@@ -99,7 +99,7 @@ class _MainScreenState extends State<MainScreen> {
             ],
           ),
           const VerticalDivider(
-            width: 1, thickness: 1, color: AppColors.border),
+            width: 1, thickness: 1, color: AppColors.border,),
           Expanded(
             child: IndexedStack(
               index: _currentIndex,

@@ -24,6 +24,7 @@ void main() {
       (WidgetTester tester) async {
         const recommendation = ItemRecommendation(
           source: RecommendationSource.llm,
+          provider: 'claude',
           reasoning: 'Enemies have 3 CC champions. QSS is essential.',
           items: [
             RecommendedItem(
@@ -64,6 +65,7 @@ void main() {
       (WidgetTester tester) async {
         const recommendation = ItemRecommendation(
           source: RecommendationSource.heuristic,
+          provider: 'heuristic',
           reasoning: 'Balanced comp — no specific counters needed.',
           items: [],
         );

@@ -92,7 +92,7 @@ class RecommendationPanel extends StatelessWidget {
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2),
+                        horizontal: 7, vertical: 2,),
                     decoration: BoxDecoration(
                       color: _providerColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
