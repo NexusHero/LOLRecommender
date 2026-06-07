@@ -16,29 +16,21 @@ describe("GeminiProvider", () => {
     jest.clearAllMocks();
   });
 
-  function mockGeminiResponse(contentOverride: string | null = "LLM reasoning text", throwError = false) {
+  function mockGeminiResponse(content: string | null = "LLM reasoning text", throwError = false) {
     const mockGenerateContent = jest.fn();
-    
     if (throwError) {
       mockGenerateContent.mockRejectedValue(new Error("API unavailable"));
     } else {
-      mockGenerateContent.mockResolvedValue({
-        response: { text: () => contentOverride }
-      });
+      mockGenerateContent.mockResolvedValue({ response: { text: () => content } });
     }
-    
-    const mockGetGenerativeModel = jest.fn().mockReturnValue({
-      generateContent: mockGenerateContent
-    });
-
+    const mockGetGenerativeModel = jest.fn().mockReturnValue({ generateContent: mockGenerateContent });
     (GoogleGenerativeAI as jest.Mock).mockImplementation(() => ({
-      getGenerativeModel: mockGetGenerativeModel
+      getGenerativeModel: mockGetGenerativeModel,
     }));
-    
     return mockGenerateContent;
   }
 
-  it("returns the LLM text on success", async () => {
+  it("getExplanation_ValidApiKey_ReturnsLlmText", async () => {
     mockGeminiResponse();
     const provider = new GeminiProvider("test-key");
 
@@ -47,7 +39,7 @@ describe("GeminiProvider", () => {
     expect(result).toBe("LLM reasoning text");
   });
 
-  it("falls back to heuristic reasoning when client throws", async () => {
+  it("getExplanation_ClientThrows_FallsBackToHeuristicReasoning", async () => {
     mockGeminiResponse(null, true);
     const provider = new GeminiProvider("test-key");
 
@@ -56,7 +48,7 @@ describe("GeminiProvider", () => {
     expect(result).toBe("heuristic reasoning");
   });
 
-  it("falls back when content is empty", async () => {
+  it("getExplanation_EmptyContent_FallsBackToHeuristicReasoning", async () => {
     mockGeminiResponse("");
     const provider = new GeminiProvider("test-key");
 
@@ -65,7 +57,7 @@ describe("GeminiProvider", () => {
     expect(result).toBe("heuristic reasoning");
   });
 
-  it("includes champion and enemy names in the API request", async () => {
+  it("getExplanation_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
     const mockGenerateContent = mockGeminiResponse();
     const provider = new GeminiProvider("test-key");
     const state = makeGameState({

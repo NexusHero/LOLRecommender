@@ -22,15 +22,13 @@ describe("ClaudeProvider", () => {
       usage: { input_tokens: 100, output_tokens: 30 },
       ...contentOverride,
     });
-    
     (Anthropic as unknown as jest.Mock).mockImplementation(() => ({
-      messages: { create: mockCreate }
+      messages: { create: mockCreate },
     }));
-    
     return mockCreate;
   }
 
-  it("returns the LLM text on success", async () => {
+  it("getExplanation_ValidApiKey_ReturnsLlmText", async () => {
     mockAnthropicResponse();
     const provider = new ClaudeProvider("test-key");
 
@@ -39,9 +37,9 @@ describe("ClaudeProvider", () => {
     expect(result).toBe("LLM reasoning text");
   });
 
-  it("falls back to heuristic reasoning when client throws", async () => {
+  it("getExplanation_ClientThrows_FallsBackToHeuristicReasoning", async () => {
     (Anthropic as unknown as jest.Mock).mockImplementation(() => ({
-      messages: { create: jest.fn().mockRejectedValue(new Error("API unavailable")) }
+      messages: { create: jest.fn().mockRejectedValue(new Error("API unavailable")) },
     }));
     const provider = new ClaudeProvider("test-key");
 
@@ -50,7 +48,7 @@ describe("ClaudeProvider", () => {
     expect(result).toBe("heuristic reasoning");
   });
 
-  it("falls back when content array is empty", async () => {
+  it("getExplanation_EmptyContentArray_FallsBackToHeuristicReasoning", async () => {
     mockAnthropicResponse({ content: [], usage: { input_tokens: 0, output_tokens: 0 } });
     const provider = new ClaudeProvider("test-key");
 
@@ -59,11 +57,11 @@ describe("ClaudeProvider", () => {
     expect(result).toBe("heuristic reasoning");
   });
 
-  it("falls back when first content block is not text type", async () => {
+  it("getExplanation_NonTextContentBlock_FallsBackToHeuristicReasoning", async () => {
     mockAnthropicResponse({
-        content: [{ type: "tool_use", id: "x", name: "test", input: {} }],
-        usage: { input_tokens: 0, output_tokens: 0 },
-      });
+      content: [{ type: "tool_use", id: "x", name: "test", input: {} }],
+      usage: { input_tokens: 0, output_tokens: 0 },
+    });
     const provider = new ClaudeProvider("test-key");
 
     const result = await provider.getExplanation(makeGameState(), baseRec);
@@ -71,7 +69,7 @@ describe("ClaudeProvider", () => {
     expect(result).toBe("heuristic reasoning");
   });
 
-  it("includes champion and enemy names in the API request", async () => {
+  it("getExplanation_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
     const mockCreate = mockAnthropicResponse();
     const provider = new ClaudeProvider("test-key");
     const state = makeGameState({

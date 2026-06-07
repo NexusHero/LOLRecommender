@@ -17,7 +17,7 @@ function makeRaw(players: ReturnType<typeof makePlayer>[]): AllGameData {
 }
 
 describe("parseGameState", () => {
-  it("finds local player by summoner name", () => {
+  it("parseGameState_MatchingSummonerName_ReturnsCorrectLocalPlayer", () => {
     const local = makePlayer({ summonerName: "MyPlayer", team: "ORDER" });
     const raw = makeRaw([local, makePlayer({ summonerName: "Other", team: "CHAOS" })]);
 
@@ -26,7 +26,7 @@ describe("parseGameState", () => {
     expect(state.localPlayer.summonerName).toBe("MyPlayer");
   });
 
-  it("falls back to first player when summoner name not found", () => {
+  it("parseGameState_NoMatchingSummonerName_FallsBackToFirstPlayer", () => {
     const first = makePlayer({ summonerName: "FirstPlayer", team: "ORDER" });
     const raw = makeRaw([first]);
 
@@ -35,7 +35,7 @@ describe("parseGameState", () => {
     expect(state.localPlayer.summonerName).toBe("FirstPlayer");
   });
 
-  it("correctly separates allies from enemies", () => {
+  it("parseGameState_ThreePlayersOnDifferentTeams_SeparatesAlliesAndEnemies", () => {
     const local = makePlayer({ summonerName: "Local", team: "ORDER" });
     const ally = makePlayer({ summonerName: "Ally", team: "ORDER" });
     const enemy = makePlayer({ summonerName: "Enemy", team: "CHAOS" });
@@ -49,7 +49,7 @@ describe("parseGameState", () => {
     expect(state.enemies[0].summonerName).toBe("Enemy");
   });
 
-  it("does not include local player in allies", () => {
+  it("parseGameState_SingleLocalPlayer_ExcludesLocalPlayerFromAllies", () => {
     const local = makePlayer({ summonerName: "Local", team: "ORDER" });
     const raw = makeRaw([local]);
 
@@ -58,7 +58,7 @@ describe("parseGameState", () => {
     expect(state.allies).toHaveLength(0);
   });
 
-  it("copies gameTime and gameMode from raw data", () => {
+  it("parseGameState_AramGameMode_CopiesGameTimeAndMode", () => {
     const raw = makeRaw([makePlayer()]);
     raw.gameData.gameTime = 300;
     raw.gameData.gameMode = "ARAM";

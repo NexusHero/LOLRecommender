@@ -2,7 +2,7 @@ import { buildCompProfile, getHeuristicRecommendations } from "../heuristic";
 import { makePlayer } from "./fixtures";
 
 describe("buildCompProfile", () => {
-  it("returns full AP ratio for all-AP team", () => {
+  it("buildCompProfile_AllApChampions_ReturnsApRatioOne", () => {
     const enemies = [
       makePlayer({ championName: "Ahri" }),
       makePlayer({ championName: "Lux" }),
@@ -15,7 +15,7 @@ describe("buildCompProfile", () => {
     expect(profile.adRatio).toBe(0);
   });
 
-  it("returns correct ratios for mixed team", () => {
+  it("buildCompProfile_HalfApHalfAd_ReturnsEqualRatios", () => {
     const enemies = [
       makePlayer({ championName: "Ahri" }),
       makePlayer({ championName: "Caitlyn" }),
@@ -27,7 +27,7 @@ describe("buildCompProfile", () => {
     expect(profile.adRatio).toBe(0.5);
   });
 
-  it("handles empty enemy list without dividing by zero", () => {
+  it("buildCompProfile_EmptyEnemyList_ReturnsSafeDefaults", () => {
     const profile = buildCompProfile([]);
 
     expect(profile.apRatio).toBe(0);
@@ -36,7 +36,7 @@ describe("buildCompProfile", () => {
     expect(profile.healScore).toBe(0);
   });
 
-  it("counts CC champions correctly", () => {
+  it("buildCompProfile_TwoCcChampions_ReturnsCcScoreTwo", () => {
     const enemies = [
       makePlayer({ championName: "Leona" }),
       makePlayer({ championName: "Nautilus" }),
@@ -48,7 +48,7 @@ describe("buildCompProfile", () => {
     expect(profile.ccScore).toBe(2);
   });
 
-  it("counts healer champions correctly", () => {
+  it("buildCompProfile_TwoHealers_ReturnsHealScoreTwo", () => {
     const enemies = [
       makePlayer({ championName: "Soraka" }),
       makePlayer({ championName: "Yuumi" }),
@@ -60,7 +60,7 @@ describe("buildCompProfile", () => {
     expect(profile.healScore).toBe(2);
   });
 
-  it("champions can count as both AP and healer", () => {
+  it("buildCompProfile_ApHealerChampion_CountsBothApAndHeal", () => {
     const enemies = [makePlayer({ championName: "Soraka" })];
 
     const profile = buildCompProfile(enemies);
@@ -71,7 +71,7 @@ describe("buildCompProfile", () => {
 });
 
 describe("getHeuristicRecommendations", () => {
-  it("recommends Morellonomicon vs 2+ healers for AP champion", () => {
+  it("getHeuristicRecommendations_ApChampVsTwoHealers_IncludesMorellonomicon", () => {
     const profile = { apRatio: 0.4, adRatio: 0.6, ccScore: 0, healScore: 2 };
 
     const rec = getHeuristicRecommendations(profile, "Ahri");
@@ -79,7 +79,7 @@ describe("getHeuristicRecommendations", () => {
     expect(rec.items.some((i) => i.id === 3165)).toBe(true);
   });
 
-  it("recommends Mortal Reminder vs 2+ healers for AD champion", () => {
+  it("getHeuristicRecommendations_AdChampVsTwoHealers_IncludesMortalReminder", () => {
     const profile = { apRatio: 0.4, adRatio: 0.6, ccScore: 0, healScore: 2 };
 
     const rec = getHeuristicRecommendations(profile, "Caitlyn");
@@ -87,7 +87,7 @@ describe("getHeuristicRecommendations", () => {
     expect(rec.items.some((i) => i.id === 3033)).toBe(true);
   });
 
-  it("recommends Banshee's Veil vs AP-heavy comp", () => {
+  it("getHeuristicRecommendations_ApHeavyComp_IncludesBansheesVeil", () => {
     const profile = { apRatio: 0.8, adRatio: 0.2, ccScore: 0, healScore: 0 };
 
     const rec = getHeuristicRecommendations(profile, "Caitlyn");
@@ -95,7 +95,7 @@ describe("getHeuristicRecommendations", () => {
     expect(rec.items.some((i) => i.id === 3102)).toBe(true);
   });
 
-  it("recommends QSS vs 3+ CC champions", () => {
+  it("getHeuristicRecommendations_ThreePlusCcChampions_IncludesQss", () => {
     const profile = { apRatio: 0.4, adRatio: 0.6, ccScore: 3, healScore: 0 };
 
     const rec = getHeuristicRecommendations(profile, "Caitlyn");
@@ -103,7 +103,7 @@ describe("getHeuristicRecommendations", () => {
     expect(rec.items.some((i) => i.id === 3140)).toBe(true);
   });
 
-  it("recommends Randuin's Omen vs AD-heavy comp", () => {
+  it("getHeuristicRecommendations_AdHeavyComp_IncludesRanduinsOmen", () => {
     const profile = { apRatio: 0.1, adRatio: 0.9, ccScore: 0, healScore: 0 };
 
     const rec = getHeuristicRecommendations(profile, "Malphite");
@@ -111,7 +111,7 @@ describe("getHeuristicRecommendations", () => {
     expect(rec.items.some((i) => i.id === 3143)).toBe(true);
   });
 
-  it("returns no items for balanced comp with no threats", () => {
+  it("getHeuristicRecommendations_BalancedCompNoThreats_ReturnsEmptyItems", () => {
     const profile = { apRatio: 0.5, adRatio: 0.5, ccScore: 1, healScore: 1 };
 
     const rec = getHeuristicRecommendations(profile, "Caitlyn");
@@ -119,7 +119,7 @@ describe("getHeuristicRecommendations", () => {
     expect(rec.items).toHaveLength(0);
   });
 
-  it("source is always heuristic", () => {
+  it("getHeuristicRecommendations_AnyInput_SourceIsAlwaysHeuristic", () => {
     const profile = { apRatio: 0, adRatio: 1, ccScore: 0, healScore: 0 };
 
     const rec = getHeuristicRecommendations(profile, "Caitlyn");

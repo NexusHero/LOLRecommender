@@ -1,8 +1,8 @@
 import { minifyGameState } from "../stateMinifier.js";
 import { makeGameState, makePlayer, makeActivePlayer, makeItem } from "./fixtures.js";
 
-describe("stateMinifier", () => {
-  it("compresses the game state into a readable string", () => {
+describe("minifyGameState", () => {
+  it("minifyGameState_StandardMidGameState_ContainsAllPlayerFields", () => {
     const state = makeGameState({
       gameTime: 125,
       localPlayer: makePlayer({
@@ -37,7 +37,7 @@ describe("stateMinifier", () => {
     expect(result).toContain("Enemies: Zed (Lvl 6, KDA: 3/0/0)");
   });
 
-  it("handles empty items and empty teams gracefully", () => {
+  it("minifyGameState_EmptyItemsAndTeams_ShowsNonePlaceholders", () => {
     const state = makeGameState({
       gameTime: 0,
       localPlayer: makePlayer({ items: [] }),
@@ -54,79 +54,108 @@ describe("stateMinifier", () => {
     expect(result).toContain("Enemies: None");
   });
 
-  // Scenario 1
-  it("Scenario 1: Early game (Level 1, 0 items, 0:30 game time)", () => {
-    const state = makeGameState({
-      gameTime: 30,
-      localPlayer: makePlayer({
-        championName: "Lux", level: 1, scores: { kills: 0, deaths: 0, assists: 0, creepScore: 0, wardScore: 0 }, items: []
-      }),
-      activePlayer: makeActivePlayer({ currentGold: 500 })
+  describe("early game phase", () => {
+    it("minifyGameState_LevelOneZeroItemsAt30Seconds_FormatsCorrectly", () => {
+      const state = makeGameState({
+        gameTime: 30,
+        localPlayer: makePlayer({
+          championName: "Lux",
+          level: 1,
+          scores: { kills: 0, deaths: 0, assists: 0, creepScore: 0, wardScore: 0 },
+          items: [],
+        }),
+        activePlayer: makeActivePlayer({ currentGold: 500 }),
+      });
+
+      const result = minifyGameState(state);
+
+      expect(result).toContain("Time: 0:30");
+      expect(result).toContain("Me: Lux (Lvl 1, Gold: 500, KDA: 0/0/0)");
+      expect(result).toContain("My Items: None");
     });
-    const result = minifyGameState(state);
-    expect(result).toContain("Time: 0:30");
-    expect(result).toContain("Me: Lux (Lvl 1, Gold: 500, KDA: 0/0/0)");
-    expect(result).toContain("My Items: None");
   });
 
-  // Scenario 2
-  it("Scenario 2: Mid game (Level 11, boots + 1 item, 15:00 game time)", () => {
-    const state = makeGameState({
-      gameTime: 900,
-      localPlayer: makePlayer({
-        championName: "Yasuo", level: 11, scores: { kills: 5, deaths: 2, assists: 1, creepScore: 120, wardScore: 5 }, 
-        items: [makeItem({ displayName: "Berserker's Greaves" }), makeItem({ displayName: "Kraken Slayer" })]
-      }),
-      activePlayer: makeActivePlayer({ currentGold: 850 })
+  describe("mid game phase", () => {
+    it("minifyGameState_Level11WithTwoItemsAt15Minutes_FormatsCorrectly", () => {
+      const state = makeGameState({
+        gameTime: 900,
+        localPlayer: makePlayer({
+          championName: "Yasuo",
+          level: 11,
+          scores: { kills: 5, deaths: 2, assists: 1, creepScore: 120, wardScore: 5 },
+          items: [
+            makeItem({ displayName: "Berserker's Greaves" }),
+            makeItem({ displayName: "Kraken Slayer" }),
+          ],
+        }),
+        activePlayer: makeActivePlayer({ currentGold: 850 }),
+      });
+
+      const result = minifyGameState(state);
+
+      expect(result).toContain("Time: 15:00");
+      expect(result).toContain("Me: Yasuo (Lvl 11, Gold: 850, KDA: 5/2/1)");
+      expect(result).toContain("My Items: Berserker's Greaves, Kraken Slayer");
     });
-    const result = minifyGameState(state);
-    expect(result).toContain("Time: 15:00");
-    expect(result).toContain("Me: Yasuo (Lvl 11, Gold: 850, KDA: 5/2/1)");
-    expect(result).toContain("My Items: Berserker's Greaves, Kraken Slayer");
   });
 
-  // Scenario 3
-  it("Scenario 3: Late game (Level 18, full build 6 items, 40:00 game time)", () => {
-    const state = makeGameState({
-      gameTime: 2400,
-      localPlayer: makePlayer({
-        championName: "Vayne", level: 18, scores: { kills: 15, deaths: 4, assists: 8, creepScore: 350, wardScore: 12 }, 
-        items: Array(6).fill(makeItem({ displayName: "Infinity Edge" }))
-      }),
-      activePlayer: makeActivePlayer({ currentGold: 3200 })
+  describe("late game phase", () => {
+    it("minifyGameState_Level18FullBuildAt40Minutes_FormatsCorrectly", () => {
+      const state = makeGameState({
+        gameTime: 2400,
+        localPlayer: makePlayer({
+          championName: "Vayne",
+          level: 18,
+          scores: { kills: 15, deaths: 4, assists: 8, creepScore: 350, wardScore: 12 },
+          items: Array(6).fill(makeItem({ displayName: "Infinity Edge" })),
+        }),
+        activePlayer: makeActivePlayer({ currentGold: 3200 }),
+      });
+
+      const result = minifyGameState(state);
+
+      expect(result).toContain("Time: 40:00");
+      expect(result).toContain("Me: Vayne (Lvl 18, Gold: 3200, KDA: 15/4/8)");
+      expect(result).toContain(
+        "Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge",
+      );
     });
-    const result = minifyGameState(state);
-    expect(result).toContain("Time: 40:00");
-    expect(result).toContain("Me: Vayne (Lvl 18, Gold: 3200, KDA: 15/4/8)");
-    expect(result).toContain("Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge");
+
+    it("minifyGameState_HighKdaAndMassiveGoldLead_FormatsSnowballScenario", () => {
+      const state = makeGameState({
+        gameTime: 1200,
+        localPlayer: makePlayer({
+          championName: "Draven",
+          level: 14,
+          scores: { kills: 20, deaths: 0, assists: 5, creepScore: 200, wardScore: 2 },
+          items: [makeItem({ displayName: "Bloodthirster" })],
+        }),
+        activePlayer: makeActivePlayer({ currentGold: 10500 }),
+      });
+
+      const result = minifyGameState(state);
+
+      expect(result).toContain("Me: Draven (Lvl 14, Gold: 10500, KDA: 20/0/5)");
+    });
   });
 
-  // Scenario 4
-  it("Scenario 4: Snowball (High KDA and massive gold lead)", () => {
-    const state = makeGameState({
-      gameTime: 1200,
-      localPlayer: makePlayer({
-        championName: "Draven", level: 14, scores: { kills: 20, deaths: 0, assists: 5, creepScore: 200, wardScore: 2 }, 
-        items: [makeItem({ displayName: "Bloodthirster" })]
-      }),
-      activePlayer: makeActivePlayer({ currentGold: 10500 })
-    });
-    const result = minifyGameState(state);
-    expect(result).toContain("Me: Draven (Lvl 14, Gold: 10500, KDA: 20/0/5)");
-  });
+  describe("edge cases", () => {
+    it("minifyGameState_NegativeGameTime_ClampsToZero", () => {
+      const state = makeGameState({
+        gameTime: -15.5,
+        localPlayer: makePlayer({
+          championName: "Zilean",
+          level: 30,
+          scores: { kills: 999, deaths: 999, assists: 999, creepScore: 999, wardScore: 999 },
+          items: [],
+        }),
+        activePlayer: makeActivePlayer({ currentGold: -500 }),
+      });
 
-  // Scenario 5
-  it("Scenario 5: Edge case (Negative game time, large scores)", () => {
-    const state = makeGameState({
-      gameTime: -15.5, // e.g. loading screen or pre-game
-      localPlayer: makePlayer({
-        championName: "Zilean", level: 30, scores: { kills: 999, deaths: 999, assists: 999, creepScore: 999, wardScore: 999 }, items: []
-      }),
-      activePlayer: makeActivePlayer({ currentGold: -500 })
+      const result = minifyGameState(state);
+
+      expect(result).toContain("Time: 0:00");
+      expect(result).toContain("Me: Zilean (Lvl 30, Gold: -500, KDA: 999/999/999)");
     });
-    const result = minifyGameState(state);
-    // Negative game time (loading screen / pre-game) is clamped to 0:00
-    expect(result).toContain("Time: 0:00");
-    expect(result).toContain("Me: Zilean (Lvl 30, Gold: -500, KDA: 999/999/999)");
   });
 });

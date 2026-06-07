@@ -9,14 +9,14 @@ describe("EventDetector", () => {
   });
 
   describe("detect", () => {
-    it("fires GAME_STARTED on first call", () => {
+    it("detect_FirstCall_EmitsGameStarted", () => {
       const events = detector.detect(makeGameState());
 
       expect(events).toHaveLength(1);
       expect(events[0].type).toBe("GAME_STARTED");
     });
 
-    it("does not fire GAME_STARTED on second call", () => {
+    it("detect_SameStateSecondCall_DoesNotEmitGameStarted", () => {
       const state = makeGameState();
       detector.detect(state);
 
@@ -25,17 +25,17 @@ describe("EventDetector", () => {
       expect(events.every((e) => e.type !== "GAME_STARTED")).toBe(true);
     });
 
-    it("detects item purchase by enemy", () => {
+    it("detect_EnemyBuysNewItem_EmitsItemPurchased", () => {
       const enemy = makePlayer({ summonerName: "Enemy1", team: "CHAOS" });
       detector.detect(makeGameState({ enemies: [enemy] }));
-
       const enemyWithItem = { ...enemy, items: [makeItem({ itemID: 3102 })] };
+
       const events = detector.detect(makeGameState({ enemies: [enemyWithItem] }));
 
       expect(events.some((e) => e.type === "ITEM_PURCHASED")).toBe(true);
     });
 
-    it("does not fire ITEM_PURCHASED for already owned items", () => {
+    it("detect_EnemyHasExistingItem_DoesNotEmitItemPurchased", () => {
       const item = makeItem({ itemID: 3102 });
       const enemy = makePlayer({ summonerName: "Enemy1", team: "CHAOS", items: [item] });
       detector.detect(makeGameState({ enemies: [enemy] }));
@@ -45,11 +45,11 @@ describe("EventDetector", () => {
       expect(events.every((e) => e.type !== "ITEM_PURCHASED")).toBe(true);
     });
 
-    it("detects level up of local player", () => {
+    it("detect_LocalPlayerLevelsUp_EmitsLevelUpWithNewLevel", () => {
       detector.detect(makeGameState({ localPlayer: makePlayer({ level: 1 }) }));
 
       const events = detector.detect(
-        makeGameState({ localPlayer: makePlayer({ level: 2 }) })
+        makeGameState({ localPlayer: makePlayer({ level: 2 }) }),
       );
 
       const levelUp = events.find((e) => e.type === "LEVEL_UP");
@@ -59,7 +59,7 @@ describe("EventDetector", () => {
       }
     });
 
-    it("fires GAME_TICK when crossing a 30-second boundary", () => {
+    it("detect_GameTimeCrossesTickBoundary_EmitsGameTick", () => {
       detector.detect(makeGameState({ gameTime: 1 }));
 
       const events = detector.detect(makeGameState({ gameTime: 31 }));
@@ -67,7 +67,7 @@ describe("EventDetector", () => {
       expect(events.some((e) => e.type === "GAME_TICK")).toBe(true);
     });
 
-    it("does not fire GAME_TICK within same 30-second window", () => {
+    it("detect_GameTimeWithinSameTickWindow_DoesNotEmitGameTick", () => {
       detector.detect(makeGameState({ gameTime: 1 }));
 
       const events = detector.detect(makeGameState({ gameTime: 15 }));
@@ -75,44 +75,51 @@ describe("EventDetector", () => {
       expect(events.every((e) => e.type !== "GAME_TICK")).toBe(true);
     });
 
-    it("fires PLAYER_DIED when localPlayer.isDead transitions from false to true", () => {
+    it("detect_LocalPlayerTransitionsToIsDead_EmitsPlayerDied", () => {
       detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: false }) }));
 
-      const events = detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
+      const events = detector.detect(
+        makeGameState({ localPlayer: makePlayer({ isDead: true }) }),
+      );
 
       expect(events.some((e) => e.type === "PLAYER_DIED")).toBe(true);
     });
 
-    it("does not fire PLAYER_DIED if localPlayer remains dead", () => {
+    it("detect_LocalPlayerRemainsIsDead_DoesNotEmitPlayerDied", () => {
       detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
-      // flush GAME_STARTED
       detector.reset();
       detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
 
-      const events = detector.detect(makeGameState({ localPlayer: makePlayer({ isDead: true }) }));
+      const events = detector.detect(
+        makeGameState({ localPlayer: makePlayer({ isDead: true }) }),
+      );
 
       expect(events.every((e) => e.type !== "PLAYER_DIED")).toBe(true);
     });
 
-    it("fires HIGH_GOLD_REACHED when activePlayer crosses 1000g", () => {
+    it("detect_GoldCrossesThreshold_EmitsHighGoldReached", () => {
       detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 900 }) }));
 
-      const events = detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1050 }) }));
+      const events = detector.detect(
+        makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1050 }) }),
+      );
 
       expect(events.some((e) => e.type === "HIGH_GOLD_REACHED")).toBe(true);
     });
 
-    it("does not fire HIGH_GOLD_REACHED if gold was already above 1000g", () => {
+    it("detect_GoldAlreadyAboveThreshold_DoesNotEmitHighGoldReached", () => {
       detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1100 }) }));
 
-      const events = detector.detect(makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1500 }) }));
+      const events = detector.detect(
+        makeGameState({ activePlayer: makeActivePlayer({ currentGold: 1500 }) }),
+      );
 
       expect(events.every((e) => e.type !== "HIGH_GOLD_REACHED")).toBe(true);
     });
   });
 
   describe("reset", () => {
-    it("fires GAME_STARTED again after reset", () => {
+    it("reset_AfterReset_NextDetectEmitsGameStarted", () => {
       detector.detect(makeGameState());
       detector.reset();
 
@@ -121,11 +128,11 @@ describe("EventDetector", () => {
       expect(events[0].type).toBe("GAME_STARTED");
     });
 
-    it("clears last state so old events are not re-detected", () => {
+    it("reset_AfterReset_OldItemsDoNotTriggerItemPurchased", () => {
       const enemy = makePlayer({ summonerName: "E", team: "CHAOS", items: [makeItem()] });
       detector.detect(makeGameState({ enemies: [enemy] }));
       detector.reset();
-      detector.detect(makeGameState({ enemies: [enemy] })); // re-fires GAME_STARTED
+      detector.detect(makeGameState({ enemies: [enemy] }));
 
       const events = detector.detect(makeGameState({ enemies: [enemy] }));
 
