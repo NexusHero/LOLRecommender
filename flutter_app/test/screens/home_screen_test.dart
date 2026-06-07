@@ -1,0 +1,145 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:lol_coach/screens/home_screen.dart';
+import 'package:lol_coach/services/ws_service.dart';
+import 'package:provider/provider.dart';
+
+class FakeWsService extends ChangeNotifier implements WsService {
+  ConnectionStatus _status = ConnectionStatus.disconnected;
+  bool _gameActive = false;
+  bool triggerAnalysisCalled = false;
+
+  @override
+  ConnectionStatus get status => _status;
+
+  @override
+  bool get gameActive => _gameActive;
+
+  @override
+  bool get isConnected => _status == ConnectionStatus.connected;
+
+  @override
+  dynamic get gameState => null;
+
+  @override
+  dynamic get recommendation => null;
+
+  @override
+  String get lastEvent => '';
+
+  @override
+  String? get lastError => null;
+
+  @override
+  void triggerAnalysis() => triggerAnalysisCalled = true;
+
+  @override
+  void connect(String host, {int port = 8765, String? summonerName, String? providerType, String? apiKey}) {}
+
+  @override
+  void disconnect() {}
+
+  void setStatus(ConnectionStatus s) {
+    _status = s;
+    notifyListeners();
+  }
+
+  void setGameActive(bool value) {
+    _gameActive = value;
+    notifyListeners();
+  }
+}
+
+Widget _buildWithService(FakeWsService service) {
+  return ChangeNotifierProvider<WsService>.value(
+    value: service,
+    child: const MaterialApp(home: HomeScreen()),
+  );
+}
+
+void main() {
+  group('HomeScreen', () {
+    group('FAB visibility', () {
+      testWidgets(
+        'HomeScreen_GameActive_ShowsAnalyseFab',
+        (WidgetTester tester) async {
+          final service = FakeWsService()
+            ..setStatus(ConnectionStatus.connected)
+            ..setGameActive(true);
+
+          await tester.pumpWidget(_buildWithService(service));
+          await tester.pump();
+
+          expect(find.text('Analyse'), findsOneWidget);
+          expect(find.byType(FloatingActionButton), findsOneWidget);
+        },
+      );
+
+      testWidgets(
+        'HomeScreen_GameNotActive_HidesAnalyseFab',
+        (WidgetTester tester) async {
+          final service = FakeWsService()
+            ..setStatus(ConnectionStatus.connected)
+            ..setGameActive(false);
+
+          await tester.pumpWidget(_buildWithService(service));
+          await tester.pump();
+
+          expect(find.text('Analyse'), findsNothing);
+          expect(find.byType(FloatingActionButton), findsNothing);
+        },
+      );
+
+      testWidgets(
+        'HomeScreen_Disconnected_HidesAnalyseFab',
+        (WidgetTester tester) async {
+          final service = FakeWsService();
+
+          await tester.pumpWidget(_buildWithService(service));
+          await tester.pump();
+
+          expect(find.byType(FloatingActionButton), findsNothing);
+        },
+      );
+    });
+
+    group('FAB interaction', () {
+      testWidgets(
+        'HomeScreen_FabTapped_CallsTriggerAnalysis',
+        (WidgetTester tester) async {
+          final service = FakeWsService()
+            ..setStatus(ConnectionStatus.connected)
+            ..setGameActive(true);
+
+          await tester.pumpWidget(_buildWithService(service));
+          await tester.pump();
+
+          await tester.tap(find.text('Analyse'));
+          await tester.pump();
+
+          expect(service.triggerAnalysisCalled, isTrue);
+        },
+      );
+    });
+
+    group('FAB lifecycle', () {
+      testWidgets(
+        'HomeScreen_GameBecomesActive_FabAppearsWithoutRebuild',
+        (WidgetTester tester) async {
+          final service = FakeWsService()
+            ..setStatus(ConnectionStatus.connected)
+            ..setGameActive(false);
+
+          await tester.pumpWidget(_buildWithService(service));
+          await tester.pump();
+          expect(find.byType(FloatingActionButton), findsNothing);
+
+          service.setGameActive(true);
+          await tester.pump();
+
+          expect(find.byType(FloatingActionButton), findsOneWidget);
+        },
+      );
+    });
+  });
+}
