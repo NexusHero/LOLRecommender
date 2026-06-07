@@ -125,6 +125,7 @@ export function getHeuristicRecommendations(
     items: recommended,
     reasoning: formatReasoning(profile),
     source: "heuristic",
+    provider: "heuristic",
     strategy: buildHeuristicStrategy(state, profile, myChampion),
   };
 }

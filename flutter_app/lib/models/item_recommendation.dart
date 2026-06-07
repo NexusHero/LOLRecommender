@@ -7,6 +7,7 @@ class ItemRecommendation {
     required this.items,
     required this.reasoning,
     required this.source,
+    required this.provider,
     this.strategy,
   });
 
@@ -17,6 +18,7 @@ class ItemRecommendation {
             .toList(),
         reasoning: json['reasoning'] as String,
         source: RecommendationSource.values.byName(json['source'] as String),
+        provider: (json['provider'] as String?) ?? 'heuristic',
         strategy: json['strategy'] != null
             ? Strategy.fromJson(json['strategy'] as Map<String, dynamic>)
             : null,
@@ -25,6 +27,7 @@ class ItemRecommendation {
   final List<RecommendedItem> items;
   final String reasoning;
   final RecommendationSource source;
+  final String provider;
   final Strategy? strategy;
 
   bool get isLlm => source == RecommendationSource.llm;

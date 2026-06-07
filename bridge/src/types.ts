@@ -109,6 +109,7 @@ export interface ItemRecommendation {
   items: RecommendedItem[];
   reasoning: string;
   source: "heuristic" | "llm";
+  provider: string;
   strategy: Strategy;
 }
 
