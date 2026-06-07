@@ -1,9 +1,11 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
 import 'package:lol_coach/screens/home_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/widgets/connection_form.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -13,12 +15,12 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _currentIndex = 1; // Start on Settings tab
+  int _currentIndex = 1; // Default to Settings until prefs are loaded
 
   @override
   void initState() {
     super.initState();
-    // Listen to changes in connection status to show error snackbars
+    _loadInitialTab();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<WsService>().addListener(_onWsChanged);
     });
@@ -30,6 +32,13 @@ class _MainScreenState extends State<MainScreen> {
     super.dispose();
   }
 
+  Future<void> _loadInitialTab() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted && prefs.getString('host') != null) {
+      setState(() => _currentIndex = 0);
+    }
+  }
+
   void _onWsChanged() {
     if (!mounted) return;
     final ws = context.read<WsService>();
@@ -37,7 +46,7 @@ class _MainScreenState extends State<MainScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Connection Error: ${ws.lastError}'),
-          backgroundColor: AppColors.errorRed,
+          backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -47,31 +56,34 @@ class _MainScreenState extends State<MainScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
+      body: Row(
         children: [
-          const HomeScreen(),
-          _buildSettingsTab(context),
-        ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        backgroundColor: AppColors.surfaceMedium,
-        selectedItemColor: AppColors.primaryGold,
-        unselectedItemColor: AppColors.textMuted,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_esports_outlined),
-            label: 'Coach',
+          NavigationRail(
+            selectedIndex: _currentIndex,
+            onDestinationSelected: (i) => setState(() => _currentIndex = i),
+            labelType: NavigationRailLabelType.all,
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.sports_esports_outlined),
+                selectedIcon: Icon(Icons.sports_esports),
+                label: Text('Coach'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: Text('Settings'),
+              ),
+            ],
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Settings',
+          const VerticalDivider(width: 1, thickness: 1, color: AppColors.border),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                const HomeScreen(),
+                _buildSettingsTab(context),
+              ],
+            ),
           ),
         ],
       ),
@@ -80,7 +92,7 @@ class _MainScreenState extends State<MainScreen> {
 
   Widget _buildSettingsTab(BuildContext context) {
     final ws = context.watch<WsService>();
-    
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Settings'),
@@ -104,10 +116,7 @@ class _MainScreenState extends State<MainScreen> {
             providerType: providerType,
             apiKey: apiKey,
           );
-          // Auto-switch to Coach tab immediately
-          setState(() {
-            _currentIndex = 0;
-          });
+          setState(() => _currentIndex = 0);
         },
       ),
     );

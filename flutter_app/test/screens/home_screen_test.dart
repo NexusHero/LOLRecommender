@@ -33,6 +33,12 @@ class FakeWsService extends ChangeNotifier implements WsService {
   String? get lastError => null;
 
   @override
+  bool get isAnalyzing => false;
+
+  @override
+  DateTime? get recommendationTime => null;
+
+  @override
   void triggerAnalysis() => triggerAnalysisCalled = true;
 
   @override

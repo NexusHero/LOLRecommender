@@ -30,6 +30,8 @@ class WsService extends ChangeNotifier {
   ItemRecommendation? _recommendation;
   String _lastEvent = '';
   bool _gameActive = false;
+  bool _isAnalyzing = false;
+  DateTime? _recommendationTime;
 
   // Reconnect state
   bool _intentionalDisconnect = false;
@@ -50,6 +52,8 @@ class WsService extends ChangeNotifier {
   String get lastEvent => _lastEvent;
   bool get gameActive => _gameActive;
   bool get isConnected => _status == ConnectionStatus.connected;
+  bool get isAnalyzing => _isAnalyzing;
+  DateTime? get recommendationTime => _recommendationTime;
 
   void connect(
     String host, {
@@ -97,6 +101,8 @@ class WsService extends ChangeNotifier {
     _gameActive = false;
     _lastEvent = '';
     _lastError = null;
+    _isAnalyzing = false;
+    _recommendationTime = null;
     notifyListeners();
   }
 
@@ -156,6 +162,8 @@ class WsService extends ChangeNotifier {
 
   void triggerAnalysis() {
     if (_channel == null || _status != ConnectionStatus.connected) return;
+    _isAnalyzing = true;
+    notifyListeners();
     _channel!.sink.add(jsonEncode({'event': 'TRIGGER_ANALYSIS'}));
   }
 
@@ -176,15 +184,20 @@ class WsService extends ChangeNotifier {
           _gameActive = false;
           _gameState = null;
           _recommendation = null;
+          _isAnalyzing = false;
         case 'RECOMMENDATION':
           _recommendation = msg.recommendation;
           if (msg.gameState != null) _gameState = msg.gameState;
           _gameActive = true;
+          _isAnalyzing = false;
+          _recommendationTime = DateTime.now();
         default:
           if (msg.gameState != null) {
             _gameState = msg.gameState;
             _gameActive = true;
           }
+          // Any incoming data while analyzing means bridge is responsive
+          _isAnalyzing = false;
       }
     } catch (e) {
       debugPrint('[WsService] Parse error: $e');

@@ -1,6 +1,8 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart' hide Badge;
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/shared_widgets.dart';
 
 class LocalPlayerCard extends StatelessWidget {
@@ -31,26 +33,19 @@ class LocalPlayerCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Text(
-                          player.championName,
-                          style: const TextStyle(
-                            color: AppColors.textLightGrey,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Text(player.championName, style: AppTextStyles.heading),
                         const SizedBox(width: 8),
                         Badge(
                           'Lv ${player.level}',
-                          bg: AppColors.borderDark,
-                          fg: AppColors.secondaryCyan,
+                          bg: AppColors.border,
+                          fg: AppColors.cyan,
                         ),
                         if (player.position.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           Badge(
                             player.position.toUpperCase(),
-                            bg: AppColors.greenDark,
-                            fg: AppColors.greenLight,
+                            bg: AppColors.successSubtle,
+                            fg: AppColors.success,
                           ),
                         ],
                       ],
@@ -58,18 +53,15 @@ class LocalPlayerCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Row(
                       children: [
-                        KdaNum('${scores.kills}', AppColors.secondaryCyan),
+                        KdaNum('${scores.kills}', AppColors.cyan),
                         const KdaSep(),
-                        KdaNum('${scores.deaths}', AppColors.errorRed),
+                        KdaNum('${scores.deaths}', AppColors.errorLight),
                         const KdaSep(),
-                        KdaNum('${scores.assists}', AppColors.textLightGrey),
+                        KdaNum('${scores.assists}', AppColors.textPrimary),
                         const SizedBox(width: 14),
                         Text(
                           'CS ${scores.creepScore}',
-                          style: const TextStyle(
-                            color: AppColors.textMuted,
-                            fontSize: 12,
-                          ),
+                          style: AppTextStyles.caption,
                         ),
                       ],
                     ),
@@ -82,31 +74,15 @@ class LocalPlayerCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              StatChip(
-                'HP',
-                '${stats.healthMax.toInt()}',
-                AppColors.successGreen,
-              ),
-              StatChip(
-                'AD',
-                '${stats.attackDamage.toInt()}',
-                AppColors.errorRed,
-              ),
-              StatChip(
-                'AP',
-                '${stats.abilityPower.toInt()}',
-                AppColors.magicPurple,
-              ),
-              StatChip(
-                'MR',
-                '${stats.magicResist.toInt()}',
-                AppColors.secondaryCyan,
-              ),
-              StatChip('ARM', '${stats.armor.toInt()}', AppColors.primaryGold),
+              StatChip('HP', '${stats.healthMax.toInt()}', AppColors.success),
+              StatChip('AD', '${stats.attackDamage.toInt()}', AppColors.errorLight),
+              StatChip('AP', '${stats.abilityPower.toInt()}', AppColors.magic),
+              StatChip('MR', '${stats.magicResist.toInt()}', AppColors.cyan),
+              StatChip('ARM', '${stats.armor.toInt()}', AppColors.gold),
               StatChip(
                 'CRIT',
                 '${(stats.critChance * 100).toInt()}%',
-                AppColors.warningOrange,
+                AppColors.warning,
               ),
             ],
           ),

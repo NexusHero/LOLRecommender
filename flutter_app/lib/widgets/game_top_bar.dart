@@ -1,6 +1,8 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/theme/app_text_styles.dart';
 
 class GameTopBar extends StatelessWidget {
   const GameTopBar({required this.gameState, super.key});
@@ -22,46 +24,22 @@ class GameTopBar extends StatelessWidget {
         children: [
           Text(
             gameState.gameMode.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.primaryGold,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.5,
-            ),
+            style: AppTextStyles.label,
           ),
           Row(
             children: [
-              const Icon(
-                Icons.timer_outlined,
-                size: 14,
-                color: AppColors.textMuted,
-              ),
+              const Icon(Icons.timer_outlined, size: 14, color: AppColors.textSecondary),
               const SizedBox(width: 4),
-              Text(
-                _fmt(gameState.gameTime),
-                style: const TextStyle(
-                  color: AppColors.textLightGrey,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(_fmt(gameState.gameTime), style: AppTextStyles.bodyBold),
             ],
           ),
           Row(
             children: [
-              const Icon(
-                Icons.monetization_on_outlined,
-                size: 14,
-                color: AppColors.primaryGold,
-              ),
+              const Icon(Icons.monetization_on_outlined, size: 14, color: AppColors.gold),
               const SizedBox(width: 4),
               Text(
                 '${gameState.activePlayer.currentGold.toInt()}g',
-                style: const TextStyle(
-                  color: AppColors.primaryGold,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: AppTextStyles.bodyBold.copyWith(color: AppColors.gold),
               ),
             ],
           ),

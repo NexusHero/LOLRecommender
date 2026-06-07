@@ -1,6 +1,8 @@
+// ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/shared_widgets.dart';
 
 class ScoreboardSection extends StatefulWidget {
@@ -26,37 +28,25 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: AppColors.borderDark),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.people_outline,
-                    size: 16,
-                    color: AppColors.primaryGold,
-                  ),
+                  const Icon(Icons.people_outline, size: 16, color: AppColors.textSecondary),
                   const SizedBox(width: 6),
-                  const Text(
-                    'SCOREBOARD',
-                    style: TextStyle(
-                      color: AppColors.primaryGold,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
+                  const Text('SCOREBOARD', style: AppTextStyles.label),
                   const Spacer(),
                   Icon(
                     _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppColors.textMuted,
+                    color: AppColors.textSecondary,
                     size: 20,
                   ),
                 ],
@@ -64,18 +54,18 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
             ),
           ),
           if (_expanded) ...[
-            const Divider(color: AppColors.borderDark, height: 1),
+            const Divider(color: AppColors.border, height: 1),
             TeamBlock(
               label: 'ALLIES',
               players: [widget.localPlayer, ...widget.allies],
-              accentColor: AppColors.blueDark,
+              accentColor: AppColors.allyBlue,
               highlightName: widget.localPlayer.summonerName,
             ),
-            const Divider(color: AppColors.borderDark, height: 1),
+            const Divider(color: AppColors.border, height: 1),
             TeamBlock(
               label: 'ENEMIES',
               players: widget.enemies,
-              accentColor: AppColors.redDark,
+              accentColor: AppColors.enemyRed,
               highlightName: null,
             ),
             const SizedBox(height: 4),
@@ -107,14 +97,11 @@ class TeamBlock extends StatelessWidget {
         Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-          color: accentColor.withAlpha(60),
+          color: accentColor.withAlpha(50),
           child: Text(
             label,
-            style: TextStyle(
-              color: Color.lerp(accentColor, Colors.white, 0.6),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
+            style: AppTextStyles.label.copyWith(
+              color: Color.lerp(accentColor, Colors.white, 0.5),
             ),
           ),
         ),
@@ -142,9 +129,7 @@ class PlayerRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = player.scores;
     return Container(
-      color: isHighlighted
-          ? AppColors.blueDeep.withAlpha(100)
-          : Colors.transparent,
+      color: isHighlighted ? AppColors.allySubtle.withAlpha(160) : Colors.transparent,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       child: Row(
         children: [
@@ -161,40 +146,28 @@ class PlayerRow extends StatelessWidget {
               children: [
                 Text(
                   player.championName,
-                  style: TextStyle(
-                    color: isHighlighted
-                        ? AppColors.secondaryCyan
-                        : AppColors.textLightGrey,
-                    fontSize: 12,
-                    fontWeight:
-                        isHighlighted ? FontWeight.bold : FontWeight.normal,
+                  style: AppTextStyles.captionBold.copyWith(
+                    color: isHighlighted ? AppColors.cyan : AppColors.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   player.summonerName,
-                  style: const TextStyle(
-                    color: AppColors.textDark,
-                    fontSize: 10,
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          Text(
-            'Lv${player.level}',
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 11),
-          ),
+          Text('Lv${player.level}', style: AppTextStyles.caption),
           const SizedBox(width: 8),
           SizedBox(
             width: 64,
             child: Text(
               '${s.kills}/${s.deaths}/${s.assists}',
-              style: const TextStyle(
-                color: AppColors.textLightGrey,
-                fontSize: 11,
-              ),
+              style: AppTextStyles.captionBold,
               textAlign: TextAlign.center,
             ),
           ),
@@ -202,10 +175,7 @@ class PlayerRow extends StatelessWidget {
             width: 38,
             child: Text(
               '${s.creepScore}cs',
-              style: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 10,
-              ),
+              style: AppTextStyles.caption,
               textAlign: TextAlign.right,
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/game_view.dart';
 import 'package:provider/provider.dart';
 
@@ -30,17 +31,28 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
           body: _buildBody(context, ws),
-          floatingActionButton: ws.gameActive
-              ? FloatingActionButton.extended(
-                  onPressed: ws.triggerAnalysis,
-                  icon: const Icon(Icons.bolt),
-                  label: const Text('Analyse'),
-                  backgroundColor: AppColors.primaryGold,
-                  foregroundColor: Colors.black,
-                )
-              : null,
+          floatingActionButton: ws.gameActive ? _buildFab(ws) : null,
         );
       },
+    );
+  }
+
+  Widget _buildFab(WsService ws) {
+    return FloatingActionButton.extended(
+      onPressed: ws.isAnalyzing ? null : ws.triggerAnalysis,
+      backgroundColor: AppColors.gold,
+      foregroundColor: Colors.black,
+      icon: ws.isAnalyzing
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Colors.black,
+              ),
+            )
+          : const Icon(Icons.bolt),
+      label: Text(ws.isAnalyzing ? 'Analysing...' : 'Analyse'),
     );
   }
 
@@ -56,47 +68,33 @@ class HomeScreen extends StatelessWidget {
             children: [
               CircularProgressIndicator(),
               SizedBox(height: 16),
-              Text(
-                'Connecting to bridge...',
-                style: TextStyle(color: AppColors.primaryGold),
-              ),
+              Text('Connecting to bridge...', style: AppTextStyles.caption),
             ],
           ),
         );
-
       case ConnectionStatus.connected:
         if (!ws.gameActive || ws.gameState == null) return const _WaitingView();
         return GameView(
           gameState: ws.gameState!,
           recommendation: ws.recommendation,
           lastEvent: ws.lastEvent,
+          recommendationTime: ws.recommendationTime,
         );
     }
   }
 
   Widget _buildNotConnectedView() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.link_off,
-            size: 64,
-            color: Colors.grey.shade700,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Not Connected',
-            style: TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Go to Settings to connect to the Bridge.',
-            style: TextStyle(color: AppColors.textDark, fontSize: 14),
+          Icon(Icons.link_off, size: 56, color: AppColors.textDisabled),
+          SizedBox(height: 16),
+          Text('Not Connected', style: AppTextStyles.heading),
+          SizedBox(height: 8),
+          Text(
+            'Use the Settings tab on the left to connect.',
+            style: AppTextStyles.caption,
           ),
         ],
       ),
@@ -111,10 +109,10 @@ class _StatusDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
-      ConnectionStatus.connected => Colors.greenAccent,
-      ConnectionStatus.connecting => Colors.orange,
-      ConnectionStatus.error => Colors.redAccent,
-      ConnectionStatus.disconnected => Colors.grey,
+      ConnectionStatus.connected => AppColors.success,
+      ConnectionStatus.connecting => AppColors.warning,
+      ConnectionStatus.error => AppColors.errorLight,
+      ConnectionStatus.disconnected => AppColors.textDisabled,
     };
     return Container(
       width: 8,
@@ -129,27 +127,62 @@ class _WaitingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.sports_esports_outlined,
-            size: 64,
-            color: Colors.grey.shade700,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Waiting for game start...',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 16),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Start a League of Legends match',
-            style: TextStyle(color: AppColors.textDark, fontSize: 12),
-          ),
-        ],
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.sports_esports_outlined,
+              size: 56,
+              color: AppColors.textDisabled,
+            ),
+            SizedBox(height: 20),
+            Text('Ready to coach', style: AppTextStyles.heading),
+            SizedBox(height: 20),
+            _StepRow(
+              icon: Icons.check_circle_outline,
+              color: AppColors.success,
+              text: 'Bridge connected',
+            ),
+            SizedBox(height: 12),
+            _StepRow(
+              icon: Icons.radio_button_unchecked,
+              color: AppColors.textSecondary,
+              text: 'Start a League of Legends match',
+            ),
+            SizedBox(height: 12),
+            _StepRow(
+              icon: Icons.radio_button_unchecked,
+              color: AppColors.textSecondary,
+              text: 'Tap "Analyse" to get AI item advice',
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _StepRow extends StatelessWidget {
+  const _StepRow({
+    required this.icon,
+    required this.color,
+    required this.text,
+  });
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: color),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: AppTextStyles.body)),
+      ],
     );
   }
 }

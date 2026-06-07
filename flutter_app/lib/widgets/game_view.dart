@@ -13,10 +13,12 @@ class GameView extends StatelessWidget {
     required this.lastEvent,
     super.key,
     this.recommendation,
+    this.recommendationTime,
   });
   final ParsedGameState gameState;
   final ItemRecommendation? recommendation;
   final String lastEvent;
+  final DateTime? recommendationTime;
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +39,10 @@ class GameView extends StatelessWidget {
                 ),
                 if (recommendation != null) ...[
                   const SizedBox(height: 10),
-                  RecommendationPanel(recommendation: recommendation!),
+                  RecommendationPanel(
+                    recommendation: recommendation!,
+                    recommendationTime: recommendationTime,
+                  ),
                 ],
                 const SizedBox(height: 10),
                 ScoreboardSection(

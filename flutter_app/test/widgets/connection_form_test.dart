@@ -31,18 +31,19 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('None (Heuristic only)'), findsOneWidget);
+        // SegmentedButton shows all four provider options
+        expect(find.text('Basic'), findsOneWidget);
         expect(find.text('Claude'), findsOneWidget);
         expect(find.text('OpenAI'), findsOneWidget);
         expect(find.text('Gemini'), findsOneWidget);
-        // Host, Port, Summoner
-        expect(find.byType(TextField), findsNWidgets(3));
-        expect(find.text('none API Key'), findsNothing);
+        // Only Summoner Name visible — IP/Port hidden behind Advanced toggle
+        expect(find.byType(TextField), findsNWidgets(1));
 
         await tester.tap(find.text('Claude'));
         await tester.pumpAndSettle();
 
-        expect(find.byType(TextField), findsNWidgets(4));
+        // Summoner Name + API Key visible
+        expect(find.byType(TextField), findsNWidgets(2));
         expect(find.text('claude API Key'), findsOneWidget);
 
         await tester.enterText(

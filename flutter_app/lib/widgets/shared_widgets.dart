@@ -1,7 +1,9 @@
 // ignore_for_file: lines_longer_than_80_chars
-import 'package:flutter/material.dart' hide Badge;
+import 'package:flutter/material.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/theme/app_text_styles.dart';
+import 'package:lol_coach/utils/ddragon.dart';
 
 // ─── Card container ────────────────────────────────────────────────────────────
 
@@ -9,7 +11,7 @@ class GameCard extends StatelessWidget {
   const GameCard({
     required this.child,
     super.key,
-    this.borderColor = AppColors.borderDark,
+    this.borderColor = AppColors.border,
   });
   final Widget child;
   final Color borderColor;
@@ -21,7 +23,7 @@ class GameCard extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surfaceDark,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderColor),
       ),
       child: child,
@@ -42,31 +44,121 @@ class ChampAvatar extends StatelessWidget {
   final bool isDead;
   final double size;
 
-  Color _color(String n) {
+  Color _placeholderColor(String n) {
     final h = n.codeUnits.fold(0, (a, b) => a + b);
-    return HSLColor.fromAHSL(1, ((h * 37) % 360).toDouble(), 0.55, 0.28)
+    return HSLColor.fromAHSL(1, ((h * 37) % 360).toDouble(), 0.5, 0.25)
         .toColor();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _placeholder() {
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: isDead ? AppColors.blackGrey : _color(name),
-        borderRadius: BorderRadius.circular(4),
+        color: isDead ? const Color(0xFF2A2A2A) : _placeholderColor(name),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isDead ? AppColors.blackGreyDark : AppColors.primaryGold,
+          color: isDead ? const Color(0xFF444444) : AppColors.gold,
         ),
       ),
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
           style: TextStyle(
-            color: isDead ? AppColors.textGrey : AppColors.textLightGrey,
+            color: isDead ? AppColors.textSecondary : AppColors.textPrimary,
             fontSize: size * 0.42,
             fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (name.isEmpty) return _placeholder();
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: ColorFiltered(
+        colorFilter: isDead
+            ? const ColorFilter.matrix([
+                0.21, 0.72, 0.07, 0, 0,
+                0.21, 0.72, 0.07, 0, 0,
+                0.21, 0.72, 0.07, 0, 0,
+                0,    0,    0,    1, 0,
+              ])
+            : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+        child: Image.network(
+          champImageUrl(name),
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _placeholder(),
+          loadingBuilder: (_, child, loading) =>
+              loading == null ? child : _placeholder(),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Item slot ─────────────────────────────────────────────────────────────────
+
+class ItemSlot extends StatelessWidget {
+  const ItemSlot({
+    required this.itemId,
+    required this.displayName,
+    super.key,
+    this.size = 34,
+    this.borderColor = AppColors.borderAccent,
+  });
+  final int itemId;
+  final String displayName;
+  final double size;
+  final Color borderColor;
+
+  Widget _placeholder() {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceMedium,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: borderColor, width: 1.5),
+      ),
+      child: Center(
+        child: Text(
+          displayName.isNotEmpty ? displayName[0] : '?',
+          style: const TextStyle(
+            color: AppColors.gold,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: displayName,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: borderColor, width: 1.5),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Image.network(
+            itemImageUrl(itemId),
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _placeholder(),
+            loadingBuilder: (_, child, loading) =>
+                loading == null ? child : _placeholder(),
           ),
         ),
       ),
@@ -88,29 +180,10 @@ class ItemRow extends StatelessWidget {
       runSpacing: 4,
       children: sorted
           .map(
-            (item) => Tooltip(
-              message: item.displayName,
-              child: Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceMedium,
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(
-                    color: AppColors.blueBorder,
-                  ),
-                ),
-                child: Center(
-                  child: Text(
-                    item.displayName.isNotEmpty ? item.displayName[0] : '?',
-                    style: const TextStyle(
-                      color: AppColors.primaryGold,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
+            (item) => ItemSlot(
+              itemId: item.itemID,
+              displayName: item.displayName,
+              size: 30,
             ),
           )
           .toList(),
@@ -131,7 +204,7 @@ class Badge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
       decoration:
-          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(3)),
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(4)),
       child: Text(
         text,
         style: TextStyle(
@@ -155,11 +228,7 @@ class KdaNum extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         text,
-        style: TextStyle(
-          color: color,
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        style: AppTextStyles.bodyBold.copyWith(color: color),
       );
 }
 
@@ -171,10 +240,7 @@ class KdaSep extends StatelessWidget {
   @override
   Widget build(BuildContext context) => const Padding(
         padding: EdgeInsets.symmetric(horizontal: 3),
-        child: Text(
-          '/',
-          style: TextStyle(color: AppColors.blackGreyDark, fontSize: 14),
-        ),
+        child: Text('/', style: AppTextStyles.caption),
       );
 }
 
@@ -189,22 +255,11 @@ class StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textMuted,
-              fontSize: 9,
-              letterSpacing: 0.5,
-            ),
-          ),
+          Text(label, style: AppTextStyles.label),
           const SizedBox(height: 2),
           Text(
             value,
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
+            style: AppTextStyles.captionBold.copyWith(color: color),
           ),
         ],
       );
