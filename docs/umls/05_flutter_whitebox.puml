@@ -1,0 +1,58 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam ArrowColor #555555
+skinparam componentBorderColor #888888
+skinparam packageBorderColor #AAAAAA
+
+package "flutter_app/lib" {
+
+  component "main.dart\n[Entry Point\nProvider-Setup\nBridge-Autostart]" as main
+
+  package "services/" {
+    component "ws_service.dart\n[WsService]" as ws
+  }
+
+  package "screens/" {
+    component "main_screen.dart\n[MainScreen\nNavigation + Snackbars]" as main_screen
+    component "home_screen.dart\n[HomeScreen\nStatus-Routing]" as home_screen
+  }
+
+  package "widgets/" {
+    component "connection_form.dart\n[Verbindungseinstellungen\nProvider-Auswahl]" as conn_form
+    component "game_view.dart\n[Spielansicht]" as game_view
+    component "game_top_bar.dart\n[Spielmodus / Zeit / Gold]" as top_bar
+    component "local_player_card.dart\n[Eigener Champion + Items]" as player_card
+    component "recommendation_panel.dart\n[Item-Vorschläge + Erklärung]" as rec_panel
+    component "scoreboard.dart\n[Team-Übersicht]" as scoreboard
+  }
+
+  package "models/" {
+    component "GameState / Player\nItem / Recommendation\nWsMessage" as models
+  }
+
+  package "theme/" {
+    component "app_colors.dart\nAppTextStyles" as theme
+  }
+}
+
+main --> ws : ChangeNotifierProvider
+main --> main_screen : runApp
+
+main_screen --> home_screen
+
+home_screen --> conn_form : disconnected
+home_screen --> game_view : connected
+
+game_view --> top_bar
+game_view --> player_card
+game_view --> rec_panel
+game_view --> scoreboard
+
+ws --> models : deserialize JSON
+ws ..> main_screen : notifyListeners()
+
+conn_form ..> ws : connect / configure
+
+@enduml
