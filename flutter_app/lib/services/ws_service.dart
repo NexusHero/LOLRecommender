@@ -32,6 +32,7 @@ class WsService extends ChangeNotifier {
   String _lastEvent = '';
   bool _gameActive = false;
   bool _isAnalyzing = false;
+  bool _llmFailed = false;
   DateTime? _recommendationTime;
 
   // Reconnect state
@@ -56,6 +57,7 @@ class WsService extends ChangeNotifier {
   bool get gameActive => _gameActive;
   bool get isConnected => _status == ConnectionStatus.connected;
   bool get isAnalyzing => _isAnalyzing;
+  bool get llmFailed => _llmFailed;
   DateTime? get recommendationTime => _recommendationTime;
 
   void connect(
@@ -106,6 +108,7 @@ class WsService extends ChangeNotifier {
     _lastError = null;
     _lastLlmError = null;
     _isAnalyzing = false;
+    _llmFailed = false;
     _recommendationTime = null;
     notifyListeners();
   }
@@ -202,8 +205,14 @@ class WsService extends ChangeNotifier {
           _gameActive = true;
           _isAnalyzing = false;
           _recommendationTime = DateTime.now();
+        case 'RECOMMENDATION_UPDATE':
+          _recommendation = msg.recommendation ?? _recommendation;
+          if (msg.gameState != null) _gameState = msg.gameState;
+          _llmFailed = false;
+          _isAnalyzing = false;
         case 'LLM_ERROR':
           _lastLlmError = msg.error;
+          _llmFailed = true;
           _isAnalyzing = false;
         default:
           if (msg.gameState != null) {
