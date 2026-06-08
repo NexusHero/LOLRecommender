@@ -321,7 +321,7 @@ class _PulsingFabState extends State<_PulsingFab>
   Widget build(BuildContext context) {
     final ws = widget.ws;
     final provider = ws.activeProviderType;
-    final isAi = _isAiProvider(provider);
+    final isAi = _isAiProvider(provider) && !ws.llmFailed;
     final label = ws.isAnalyzing
         ? 'Analysing...'
         : isAi
