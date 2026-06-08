@@ -128,8 +128,32 @@ describe("BridgeOrchestrator", () => {
 
       await orchestrator.handleGameData(makeRawGameData());
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
       expect(rec?.recommendation?.source).toBe("llm");
+    });
+
+    it("sendRecommendation_LlmProviderSet_BroadcastsHeuristicImmediatelyThenUpdate", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
+
+      await orchestrator.handleGameData(makeRawGameData());
+
+      const events = broadcasts.map((b) => b.event);
+      expect(events).toContain("RECOMMENDATION");
+      expect(events).toContain("RECOMMENDATION_UPDATE");
+      const recIdx = events.indexOf("RECOMMENDATION");
+      const updateIdx = events.indexOf("RECOMMENDATION_UPDATE");
+      expect(recIdx).toBeLessThan(updateIdx);
+    });
+
+    it("sendRecommendation_LlmProviderSet_BothMessagesShareCorrelationId", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
+
+      await orchestrator.handleGameData(makeRawGameData());
+
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      const update = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
+      expect(rec?.correlationId).toBeDefined();
+      expect(rec?.correlationId).toBe(update?.correlationId);
     });
 
     it("sendRecommendation_ItemPurchasedEvent_AlwaysUsesHeuristic", async () => {
@@ -169,7 +193,7 @@ describe("BridgeOrchestrator", () => {
       raw2.activePlayer = makeActivePlayer({ currentGold: 50 });
       await orchestrator.handleGameData(raw2);
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
       expect(rec?.recommendation?.source).toBe("llm");
       expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
     });
@@ -188,9 +212,23 @@ describe("BridgeOrchestrator", () => {
       now = 102_000;
       await orchestrator.handleGameData(makeRawGameData([makePlayer({ isDead: true })]));
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      // LLM analysis is served (from cache or fresh — both valid), source must be "llm"
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
       expect(rec?.recommendation?.source).toBe("llm");
-      expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
+    });
+
+    it("sendRecommendation_CacheHit_SkipsLlmCallButStillBroadcastsUpdate", async () => {
+      const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
+      await orchestrator.handleGameData(makeRawGameData());
+      (llmProvider.getAnalysis as jest.Mock).mockClear();
+      broadcasts.length = 0;
+
+      // Same state again via triggerManualAnalysis → cache hit
+      await orchestrator.triggerManualAnalysis();
+
+      expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
+      const update = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
+      expect(update?.recommendation?.source).toBe("llm");
     });
   });
 
@@ -214,15 +252,14 @@ describe("BridgeOrchestrator", () => {
     });
 
     it("triggerManualAnalysis_LlmProviderSet_UsesLlm", async () => {
-      const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
+      const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
       await orchestrator.handleGameData(makeRawGameData());
-      (llmProvider.getAnalysis as jest.Mock).mockClear();
       broadcasts.length = 0;
 
       await orchestrator.triggerManualAnalysis();
 
-      expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      // LLM analysis served (fresh call or cache) — source must be "llm"
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
       expect(rec?.recommendation?.source).toBe("llm");
     });
 

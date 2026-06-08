@@ -87,7 +87,7 @@ describe("buildUserPrompt", () => {
 
     const prompt = await buildUserPrompt(state, rec);
 
-    expect(prompt).toContain("Suggested items:\nNone");
+    expect(prompt).toContain("Core items (heuristic baseline):\nNone");
   });
 
   it("buildUserPrompt_DDragonHasItemStats_StatsAppearedInPrompt", async () => {
@@ -196,5 +196,46 @@ describe("parseAnalysisResponse", () => {
 
     expect(result.reasoning).toBe("partial");
     expect(result.strategy.winCondition).toBe(fallback.strategy.winCondition);
+  });
+
+  it("parseAnalysisResponse_SituationalItems_ExtractedAndCappedAtTwo", () => {
+    const raw = JSON.stringify({
+      itemReasoning: "Good items",
+      situationalItems: [
+        { id: 3111, name: "Mercurial Scimitar", reason: "Heavy CC" },
+        { id: 3102, name: "Banshee's Veil", reason: "Poke comp" },
+        { id: 3047, name: "Plated Steelcaps", reason: "AD heavy" },
+      ],
+      strategy: { winCondition: "mid", summary: "s", immediateAction: "a", lateGamePlan: "b" },
+    });
+
+    const result = parseAnalysisResponse(raw, fallback);
+
+    expect(result.situationalItems).toHaveLength(2);
+    expect(result.situationalItems![0]).toEqual({ id: 3111, name: "Mercurial Scimitar", reason: "Heavy CC", priority: "situational" });
+  });
+
+  it("parseAnalysisResponse_EmptySituationalItems_ReturnsEmptyArray", () => {
+    const raw = JSON.stringify({
+      itemReasoning: "Good items",
+      situationalItems: [],
+      strategy: { winCondition: "mid", summary: "s", immediateAction: "a", lateGamePlan: "b" },
+    });
+
+    const result = parseAnalysisResponse(raw, fallback);
+
+    expect(result.situationalItems).toEqual([]);
+  });
+
+  it("parseAnalysisResponse_InvalidSituationalItem_Filtered", () => {
+    const raw = JSON.stringify({
+      itemReasoning: "Good items",
+      situationalItems: [{ id: 0, name: "", reason: "bad" }],
+      strategy: { winCondition: "mid", summary: "s", immediateAction: "a", lateGamePlan: "b" },
+    });
+
+    const result = parseAnalysisResponse(raw, fallback);
+
+    expect(result.situationalItems).toEqual([]);
   });
 });
