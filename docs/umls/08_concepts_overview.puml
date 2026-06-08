@@ -1,0 +1,70 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam componentBorderColor #888888
+skinparam noteBorderColor #CCCCCC
+skinparam noteBackgroundColor #FFFFF0
+skinparam ArrowColor #555555
+
+package "Bridge (Node.js)" {
+  component "Poller" as poller
+  component "Parser" as parser
+  component "Orchestrator" as orch
+  component "WsServer" as wsserver
+  component "LlmProvider" as llmprov
+  component "Heuristik" as heur
+}
+
+package "Flutter App (Dart)" {
+  component "WsService" as wsservice
+  component "Widgets" as ui
+}
+
+note as n_type
+  **Typsicherheit & Validierung**
+  Zod-Schemas (Bridge)
+  Dart-Typsystem (App)
+end note
+
+note as n_err
+  **Fehlerbehandlung**
+  Retry + Fallback
+  Exponentieller Backoff
+end note
+
+note as n_sec
+  **Sicherheit**
+  OS-Keychain (API-Keys)
+  TLS-Bypass lokal (:2999)
+end note
+
+note as n_test
+  **Testbarkeit**
+  Dependency Injection
+  Jest-Mocks / FakeWs
+end note
+
+note as n_llm
+  **Token-Optimierung & Cooldown**
+  minifyGameState()
+  7-Minuten-Cooldown
+end note
+
+n_type -- poller
+n_type -- parser
+n_type -- orch
+
+n_err -- poller
+n_err -- llmprov
+n_err -- wsservice
+
+n_sec -- wsservice
+n_sec -- poller
+
+n_test -- orch
+n_test -- llmprov
+n_test -- wsservice
+
+n_llm -- orch
+
+@enduml
