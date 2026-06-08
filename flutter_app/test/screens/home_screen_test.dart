@@ -36,6 +36,9 @@ class FakeWsService extends ChangeNotifier implements WsService {
   bool get isAnalyzing => false;
 
   @override
+  bool get llmFailed => false;
+
+  @override
   DateTime? get recommendationTime => null;
 
   @override

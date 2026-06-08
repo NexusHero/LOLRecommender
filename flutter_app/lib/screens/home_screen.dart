@@ -43,7 +43,10 @@ class HomeScreen extends StatelessWidget {
           body: Column(
             children: [
               if (ws.isConnected)
-                _AiModeBanner(providerType: ws.activeProviderType),
+                _AiModeBanner(
+                  providerType: ws.activeProviderType,
+                  llmFailed: ws.llmFailed,
+                ),
               Expanded(child: _buildBody(context, ws)),
             ],
           ),
@@ -124,8 +127,9 @@ class _StatusDot extends StatelessWidget {
 // ─── AI mode banner ──────────────────────────────────────────────────────────
 
 class _AiModeBanner extends StatefulWidget {
-  const _AiModeBanner({required this.providerType});
+  const _AiModeBanner({required this.providerType, required this.llmFailed});
   final String providerType;
+  final bool llmFailed;
 
   @override
   State<_AiModeBanner> createState() => _AiModeBannerState();
@@ -157,10 +161,17 @@ class _AiModeBannerState extends State<_AiModeBanner>
   @override
   Widget build(BuildContext context) {
     final isAi = _isAiProvider(widget.providerType);
-    final color = isAi ? AppColors.magic : AppColors.textSecondary;
-    final bg = isAi
-        ? AppColors.magic.withValues(alpha: 0.1)
-        : AppColors.surfaceDark;
+    final failed = isAi && widget.llmFailed;
+    final color = failed
+        ? AppColors.warning
+        : isAi
+            ? AppColors.magic
+            : AppColors.textSecondary;
+    final bg = failed
+        ? AppColors.warning.withValues(alpha: 0.08)
+        : isAi
+            ? AppColors.magic.withValues(alpha: 0.1)
+            : AppColors.surfaceDark;
     final label = _providerLabel(widget.providerType);
 
     return AnimatedContainer(
@@ -172,40 +183,51 @@ class _AiModeBannerState extends State<_AiModeBanner>
         color: bg,
         border: Border(
           bottom: BorderSide(
-            color: color.withValues(alpha: isAi ? 0.25 : 0.1),
+            color: color.withValues(alpha: 0.25),
           ),
         ),
       ),
       child: Row(
         children: [
-          AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, __) => Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: isAi ? _pulse.value : 0.45),
-                boxShadow: isAi
-                    ? [
-                        BoxShadow(
-                          color: AppColors.magic.withValues(
-                            alpha: _pulse.value * 0.7,
+          if (failed)
+            Icon(
+              Icons.warning_amber_rounded,
+              size: 14,
+              color: AppColors.warning,
+            )
+          else
+            AnimatedBuilder(
+              animation: _pulse,
+              builder: (_, __) => Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: isAi ? _pulse.value : 0.45),
+                  boxShadow: isAi && !failed
+                      ? [
+                          BoxShadow(
+                            color: AppColors.magic.withValues(
+                              alpha: _pulse.value * 0.7,
+                            ),
+                            blurRadius: 8,
+                            spreadRadius: 1,
                           ),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ]
-                    : null,
+                        ]
+                      : null,
+                ),
               ),
             ),
-          ),
           const SizedBox(width: 10),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             child: Text(
-              isAi ? '$label is coaching you' : 'Basic rules active',
-              key: ValueKey(widget.providerType),
+              failed
+                  ? '$label unavailable'
+                  : isAi
+                      ? '$label is coaching you'
+                      : 'Basic rules active',
+              key: ValueKey('${widget.providerType}_$failed'),
               style: AppTextStyles.caption.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
@@ -217,20 +239,20 @@ class _AiModeBannerState extends State<_AiModeBanner>
             duration: const Duration(milliseconds: 250),
             child: isAi
                 ? Container(
-                    key: const ValueKey('ai'),
+                    key: ValueKey('ai_$failed'),
                     padding:
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.magic.withValues(alpha: 0.18),
+                      color: color.withValues(alpha: 0.18),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(
-                        color: AppColors.magic.withValues(alpha: 0.35),
+                        color: color.withValues(alpha: 0.35),
                       ),
                     ),
-                    child: const Text(
-                      'AI',
+                    child: Text(
+                      failed ? 'ERROR' : 'AI',
                       style: TextStyle(
-                        color: AppColors.magic,
+                        color: color,
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.2,
