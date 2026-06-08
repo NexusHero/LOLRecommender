@@ -1,4 +1,4 @@
-import type { ParsedGameState, ItemRecommendation, Strategy } from "./types.js";
+import type { ParsedGameState, ItemRecommendation, RecommendedItem, Strategy } from "./types.js";
 import { minifyGameState } from "./stateMinifier.js";
 import { getGamePhase } from "./stateMinifier.js";
 import { ClaudeProvider } from "./providers/claudeProvider.js";
@@ -10,7 +10,10 @@ export const SYSTEM_PROMPT = `You are an experienced League of Legends coach.
 Analyze the game state and respond ONLY with a JSON object — no markdown, no code blocks, no extra text.
 Use this exact format:
 {
-  "itemReasoning": "2-3 sentences explaining why the suggested items are a good choice right now",
+  "itemReasoning": "2-3 sentences explaining why the core items are a good choice right now",
+  "situationalItems": [
+    {"id": 3111, "name": "Mercurial Scimitar", "reason": "One specific sentence why this item is needed right now"}
+  ],
   "strategy": {
     "winCondition": "early" or "mid" or "late",
     "summary": "1 sentence: when and how the player wins this game",
@@ -20,6 +23,9 @@ Use this exact format:
     "counterPlay": "1 sentence: one concrete role-appropriate action to gain or stop losing the matchup right now"
   }
 }
+
+The "Core items" listed are mechanically optimal picks — always explain these in itemReasoning.
+"situationalItems" is optional (use [] if nothing extra is needed). Add at most 2 items only when the game state genuinely warrants picks beyond the core list (e.g., 3+ CC enemies → QSS/Tenacity, fed AP carry → early MR, enemy heavy healing → Grievous Wounds). Never repeat items already in the core list.
 
 Adjust analysis based on the player's role:
 - UTILITY (Support): ignore CS entirely. Focus on vision score, assists, and whether the ADC is alive and ahead. A support death that lets the ADC get kills is a good trade. Counterplay is about engage, disengage, peel, or vision control — not farming.
@@ -33,6 +39,7 @@ Be specific. Reference actual numbers (CS difference, kill lead, vision score, g
 export interface LlmAnalysis {
   reasoning: string;
   strategy: Strategy;
+  situationalItems?: RecommendedItem[];
 }
 
 /**
@@ -127,7 +134,7 @@ My champion: ${state.localPlayer.championName}${myAbilityStr}
 
 ${opponentStr}
 ${roleContext}
-Suggested items:
+Core items (heuristic baseline):
 ${itemLines}
 
 Respond with the JSON object as instructed.`;
@@ -141,8 +148,19 @@ export function parseAnalysisResponse(
     const clean = raw.replace(/```(?:json)?\n?/g, "").trim();
     const parsed = JSON.parse(clean) as Record<string, unknown>;
     const strat = parsed.strategy as Record<string, unknown> | undefined;
+    const rawSituational = parsed.situationalItems as Array<Record<string, unknown>> | undefined;
+    const situationalItems: RecommendedItem[] = (rawSituational ?? [])
+      .slice(0, 2)
+      .map((item) => ({
+        id: Number(item.id ?? 0),
+        name: String(item.name ?? ""),
+        reason: String(item.reason ?? ""),
+        priority: "situational" as const,
+      }))
+      .filter((item) => item.id > 0 && item.name.length > 0);
     return {
       reasoning: (parsed.itemReasoning as string | undefined) ?? fallback.reasoning,
+      situationalItems,
       strategy: {
         winCondition: (strat?.winCondition as Strategy["winCondition"] | undefined) ?? fallback.strategy.winCondition,
         summary: (strat?.summary as string | undefined) ?? fallback.strategy.summary,

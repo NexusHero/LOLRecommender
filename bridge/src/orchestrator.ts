@@ -3,6 +3,7 @@ import { EventDetector, HIGH_GOLD_THRESHOLD } from "./eventDetector.js";
 import { buildCompProfile, getHeuristicRecommendations } from "./heuristic.js";
 import { BridgeWsServer } from "./wsServer.js";
 import type { LlmProvider } from "./llmProvider.js";
+import { CacheService } from "./cacheService.js";
 import type { AllGameData, ParsedGameState } from "./types.js";
 
 export interface OrchestratorConfig {
@@ -13,6 +14,8 @@ export interface OrchestratorConfig {
 export class BridgeOrchestrator {
   private llmProvider: LlmProvider | null;
   private lastState: ParsedGameState | null = null;
+  private readonly cache = new CacheService();
+  private correlationCounter = 0;
 
   constructor(
     private readonly wsServer: BridgeWsServer,
@@ -57,49 +60,66 @@ export class BridgeOrchestrator {
       state.localPlayer.championName,
       state,
     );
+    const correlationId = `${eventType}_${++this.correlationCounter}`;
+
+    // Phase 1: broadcast heuristic items immediately
+    this.wsServer.broadcast({
+      event: "RECOMMENDATION",
+      timestamp: this.clock(),
+      gameState: state,
+      recommendation: heuristicRec,
+      correlationId,
+    });
+    console.log(`[Rec] heuristic (Trigger: ${eventType}): ${heuristicRec.items.map((i) => i.name).join(", ")}`);
 
     const useLlm =
       this.llmProvider !== null &&
       this.wsServer.clientCount > 0 &&
       (eventType === "GAME_STARTED" || eventType === "PLAYER_DIED" || eventType === "MANUAL");
 
-    let finalRec = heuristicRec;
+    if (!useLlm) return;
 
-    if (useLlm) {
+    const heuristicItemIds = heuristicRec.items.map((i) => i.id);
+    const cacheKey = this.cache.buildKey(state, heuristicItemIds);
+    const cached = this.cache.get(cacheKey);
+
+    let llmAnalysis: Awaited<ReturnType<LlmProvider["getAnalysis"]>>;
+    if (cached) {
+      console.log(`[Orchestrator] Cache HIT (${eventType})`);
+      llmAnalysis = cached;
+    } else {
       try {
-        const llmAnalysis = await this.llmProvider!.getAnalysis(
-          state,
-          heuristicRec,
-        );
-        finalRec = {
-          ...heuristicRec,
-          reasoning: llmAnalysis.reasoning,
-          strategy: llmAnalysis.strategy,
-          source: "llm",
-          provider: this.llmProvider!.name,
-        };
+        llmAnalysis = await this.llmProvider!.getAnalysis(state, heuristicRec);
+        this.cache.set(cacheKey, llmAnalysis);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[Orchestrator] LLM failed for ${eventType}:`, msg);
-        this.wsServer.broadcast({
-          event: "LLM_ERROR",
-          timestamp: this.clock(),
-          error: msg,
-        });
-        // finalRec stays as heuristicRec — source remains "heuristic"
+        this.wsServer.broadcast({ event: "LLM_ERROR", timestamp: this.clock(), error: msg });
+        return;
       }
     }
 
+    // Merge: heuristic core items + LLM situational additions (dedup by id)
+    const coreIds = new Set(heuristicRec.items.map((i) => i.id));
+    const situational = (llmAnalysis.situationalItems ?? []).filter((i) => !coreIds.has(i.id));
+    const enrichedRec = {
+      ...heuristicRec,
+      items: [...heuristicRec.items, ...situational],
+      reasoning: llmAnalysis.reasoning,
+      strategy: llmAnalysis.strategy,
+      source: "llm" as const,
+      provider: this.llmProvider!.name,
+    };
+
+    // Phase 2: broadcast LLM-enriched recommendation
     this.wsServer.broadcast({
-      event: "RECOMMENDATION",
+      event: "RECOMMENDATION_UPDATE",
       timestamp: this.clock(),
       gameState: state,
-      recommendation: finalRec,
+      recommendation: enrichedRec,
+      correlationId,
     });
-
-    console.log(
-      `[Rec] ${finalRec.source} (Trigger: ${eventType}): ${finalRec.items.map((i) => i.name).join(", ")}`,
-    );
+    console.log(`[Rec] llm (Trigger: ${eventType}): ${enrichedRec.items.map((i) => i.name).join(", ")}`);
   }
 
   async triggerManualAnalysis(): Promise<void> {
@@ -113,6 +133,7 @@ export class BridgeOrchestrator {
 
   resetDetector(): void {
     this.lastState = null;
+    this.cache.clear();
     this.eventDetector.reset();
   }
 

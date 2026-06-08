@@ -94,6 +94,7 @@ export interface WsMessage {
   gameState?: ParsedGameState;
   recommendation?: ItemRecommendation;
   error?: string;
+  correlationId?: string;
 }
 
 export interface Strategy {
