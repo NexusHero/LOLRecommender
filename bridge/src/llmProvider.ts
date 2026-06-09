@@ -42,13 +42,14 @@ export interface LlmAnalysis {
   situationalItems?: RecommendedItem[];
 }
 
-/**
- * Common interface for all LLM providers.
- * Each provider wraps a specific AI SDK and exposes a uniform
- * `getAnalysis` method used by the Orchestrator.
- */
+export interface ModelInfo {
+  id: string;
+  displayName: string;
+}
+
 export interface LlmProvider {
   readonly name: string;
+  listModels(): Promise<ModelInfo[]>;
   getAnalysis(
     state: ParsedGameState,
     heuristicRec: ItemRecommendation,
@@ -185,8 +186,14 @@ const HTTP_DESCRIPTIONS: Record<number, string> = {
 };
 
 export function friendlyApiError(err: unknown): string {
+  const e = err as Record<string, unknown>;
+  // Anthropic SDK: err.error.message contains the exact API error (e.g. "credit balance too low")
+  const apiBodyMsg = (e?.error as Record<string, unknown> | undefined)?.message;
+  if (typeof apiBodyMsg === "string" && apiBodyMsg.length > 0) {
+    return apiBodyMsg.split("\n")[0].slice(0, 120);
+  }
   const msg = err instanceof Error ? err.message : String(err);
-  const statusFromErr = (err as Record<string, unknown>)?.status as number | undefined;
+  const statusFromErr = e?.status as number | undefined;
   const statusFromMsg = Number(msg.match(/\[(\d{3})\s/)?.[1]) || undefined;
   const status = statusFromErr ?? statusFromMsg;
   if (status && HTTP_DESCRIPTIONS[status]) {
@@ -202,14 +209,15 @@ export function friendlyApiError(err: unknown): string {
 export async function createLlmProvider(
   type: ProviderType,
   apiKey: string,
+  model?: string,
 ): Promise<LlmProvider> {
   switch (type) {
     case "claude":
-      return new ClaudeProvider(apiKey);
+      return new ClaudeProvider(apiKey, model);
     case "openai":
-      return new OpenAiProvider(apiKey);
+      return new OpenAiProvider(apiKey, model);
     case "gemini":
-      return new GeminiProvider(apiKey);
+      return new GeminiProvider(apiKey, model);
     default:
       throw new Error(`Unknown LLM provider: ${type}`);
   }

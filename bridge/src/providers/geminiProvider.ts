@@ -1,15 +1,35 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { LlmProvider, LlmAnalysis } from "../llmProvider.js";
+import type { LlmProvider, LlmAnalysis, ModelInfo } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse, friendlyApiError } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
 
+export const GEMINI_DEFAULT_MODEL = "gemini-2.0-flash";
+
 export class GeminiProvider implements LlmProvider {
   readonly name = "gemini";
   private readonly client: GoogleGenerativeAI;
+  private readonly modelId: string;
+  private readonly apiKey: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, model: string = GEMINI_DEFAULT_MODEL) {
     this.client = new GoogleGenerativeAI(apiKey);
+    this.modelId = model;
+    this.apiKey = apiKey;
+  }
+
+  async listModels(): Promise<ModelInfo[]> {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${this.apiKey}&pageSize=50`,
+    );
+    if (!res.ok) throw new Error(`Gemini models API returned ${res.status}`);
+    const data = await res.json() as { models: Array<{ name: string; displayName: string; supportedGenerationMethods: string[] }> };
+    return (data.models ?? [])
+      .filter((m) => m.supportedGenerationMethods.includes("generateContent"))
+      .map((m) => ({
+        id: m.name.replace("models/", ""),
+        displayName: m.displayName,
+      }));
   }
 
   async getAnalysis(
@@ -18,7 +38,7 @@ export class GeminiProvider implements LlmProvider {
   ): Promise<LlmAnalysis> {
     try {
       const model = this.client.getGenerativeModel({
-        model: "gemini-2.0-flash",
+        model: this.modelId,
         systemInstruction: SYSTEM_PROMPT,
       });
 
