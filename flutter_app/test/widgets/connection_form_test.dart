@@ -12,17 +12,20 @@ void main() {
 
   group('ConnectionForm', () {
     testWidgets(
-      'ConnectionForm_LlmProviderSelected_ShowsApiKeyField',
+      'ConnectionForm_LlmProviderSelected_ShowsApiKeyFieldAndModelDropdown',
       (WidgetTester tester) async {
         String? capturedProvider;
+        String? capturedModel;
         String? capturedApiKey;
 
         await tester.pumpWidget(
           MaterialApp(
             home: Scaffold(
               body: ConnectionForm(
-                onConnect: (host, port, summonerName, providerType, apiKey) {
+                onConnect:
+                    (host, port, summonerName, providerType, model, apiKey) {
                   capturedProvider = providerType;
+                  capturedModel = model;
                   capturedApiKey = apiKey;
                 },
               ),
@@ -42,9 +45,12 @@ void main() {
         await tester.tap(find.text('Claude'));
         await tester.pumpAndSettle();
 
-        // Summoner Name + API Key visible
+        // Summoner Name + API Key visible; model dropdown also shown
         expect(find.byType(TextField), findsNWidgets(2));
         expect(find.text('claude API Key'), findsOneWidget);
+        expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
+        // Default model shown
+        expect(find.text('Haiku 4.5 (Fast)'), findsOneWidget);
 
         await tester.enterText(
           find.widgetWithText(TextField, 'claude API Key'),
@@ -55,7 +61,48 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(capturedProvider, 'claude');
+        expect(capturedModel, 'claude-haiku-4-5-20251001');
         expect(capturedApiKey, 'test-claude-key');
+      },
+    );
+
+    testWidgets(
+      'ConnectionForm_ModelSelected_PassesCorrectModelToCallback',
+      (WidgetTester tester) async {
+        String? capturedModel;
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ConnectionForm(
+                onConnect:
+                    (host, port, summonerName, providerType, model, apiKey) {
+                  capturedModel = model;
+                },
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Claude'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byType(DropdownButtonFormField<String>));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Sonnet 4.6 (Balanced)').last);
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'claude API Key'),
+          'key',
+        );
+        await tester.ensureVisible(find.text('CONNECT'));
+        await tester.tap(find.text('CONNECT'));
+        await tester.pumpAndSettle();
+
+        expect(capturedModel, 'claude-sonnet-4-6');
       },
     );
 
@@ -69,7 +116,8 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: ConnectionForm(
-                onConnect: (host, port, summonerName, providerType, apiKey) {
+                onConnect:
+                    (host, port, summonerName, providerType, model, apiKey) {
                   capturedProvider = providerType;
                   capturedApiKey = apiKey;
                 },

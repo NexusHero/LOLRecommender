@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/models/model_info.dart';
 import 'package:lol_coach/screens/home_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:provider/provider.dart';
@@ -48,10 +49,25 @@ class FakeWsService extends ChangeNotifier implements WsService {
   String get activeProviderType => 'none';
 
   @override
+  String? get activeModel => null;
+
+  @override
+  List<ModelInfo>? get availableModels => null;
+
+  @override
+  String? get availableModelsProvider => null;
+
+  @override
+  bool get isLoadingModels => false;
+
+  @override
   void clearLlmError() {}
 
   @override
   void triggerAnalysis() => triggerAnalysisCalled = true;
+
+  @override
+  void loadModels(String provider, String apiKey) {}
 
   @override
   void connect(
@@ -59,6 +75,7 @@ class FakeWsService extends ChangeNotifier implements WsService {
     int port = 8765,
     String? summonerName,
     String? providerType,
+    String? model,
     String? apiKey,
   }) {}
 

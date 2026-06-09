@@ -1,14 +1,42 @@
 // ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:lol_coach/models/model_info.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+typedef _ModelOption = ({String id, String label});
+
+const _claudeModels = <_ModelOption>[
+  (id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 (Fast)'),
+  (id: 'claude-sonnet-4-6', label: 'Sonnet 4.6 (Balanced)'),
+  (id: 'claude-opus-4-8', label: 'Opus 4.8 (Powerful)'),
+];
+const _openaiModels = <_ModelOption>[
+  (id: 'gpt-4o-mini', label: 'GPT-4o Mini (Fast)'),
+  (id: 'gpt-4o', label: 'GPT-4o (Balanced)'),
+];
+const _geminiModels = <_ModelOption>[
+  (id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash (Fast)'),
+  (id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Powerful)'),
+];
+
+List<_ModelOption> _modelsFor(String provider) => switch (provider) {
+      'claude' => _claudeModels,
+      'openai' => _openaiModels,
+      'gemini' => _geminiModels,
+      _ => const [],
+    };
 
 class ConnectionForm extends StatefulWidget {
   const ConnectionForm({
     required this.onConnect,
     super.key,
+    this.onLoadModels,
+    this.availableModels,
+    this.availableModelsForProvider,
+    this.isLoadingModels = false,
     this.error,
     this.isConnecting = false,
   });
@@ -17,8 +45,13 @@ class ConnectionForm extends StatefulWidget {
     int port,
     String summonerName,
     String providerType,
+    String model,
     String apiKey,
   ) onConnect;
+  final void Function(String provider, String apiKey)? onLoadModels;
+  final List<ModelInfo>? availableModels;
+  final String? availableModelsForProvider;
+  final bool isLoadingModels;
   final String? error;
   final bool isConnecting;
 
@@ -36,6 +69,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
   final _apiKeyCtrl = TextEditingController();
   String? _ipError;
   String _providerType = 'none';
+  String _selectedModel = '';
   bool _showAdvanced = false;
 
   @override
@@ -53,6 +87,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
       _portCtrl.text = prefs.getString('port') ?? '$_defaultPort';
       _summonerCtrl.text = prefs.getString('summonerName') ?? '';
       _providerType = prefs.getString('providerType') ?? 'none';
+      _selectedModel = prefs.getString('selectedModel') ?? '';
       _apiKeyCtrl.text = apiKey;
       // Show advanced fields if user changed them from defaults
       _showAdvanced = host != '127.0.0.1' && host != 'localhost';
@@ -66,6 +101,17 @@ class _ConnectionFormState extends State<ConnectionForm> {
     _summonerCtrl.dispose();
     _apiKeyCtrl.dispose();
     super.dispose();
+  }
+
+  List<_ModelOption> get _currentModels {
+    if (widget.availableModels != null &&
+        widget.availableModelsForProvider == _providerType &&
+        widget.availableModels!.isNotEmpty) {
+      return widget.availableModels!
+          .map((m) => (id: m.id, label: m.displayName))
+          .toList();
+    }
+    return _modelsFor(_providerType);
   }
 
   Future<void> _connect() async {
@@ -92,10 +138,18 @@ class _ConnectionFormState extends State<ConnectionForm> {
     await prefs.setString('port', portString);
     await prefs.setString('summonerName', summonerName);
     await prefs.setString('providerType', _providerType);
+    await prefs.setString('selectedModel', _selectedModel);
     // API key stored in OS keychain, not plain SharedPreferences
     await _secureStorage.write(key: 'apiKey', value: apiKey);
 
-    widget.onConnect(host, port, summonerName, _providerType, apiKey);
+    final models = _currentModels;
+    final effectiveModel =
+        _selectedModel.isNotEmpty && models.any((m) => m.id == _selectedModel)
+            ? _selectedModel
+            : models.isNotEmpty
+                ? models.first.id
+                : '';
+    widget.onConnect(host, port, summonerName, _providerType, effectiveModel, apiKey);
   }
 
   @override
@@ -159,7 +213,46 @@ class _ConnectionFormState extends State<ConnectionForm> {
             selected: {_providerType},
             onSelectionChanged: widget.isConnecting
                 ? null
-                : (val) => setState(() => _providerType = val.first),
+                : (val) => setState(() {
+                      _providerType = val.first;
+                      _selectedModel = '';
+                    }),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
+            child: _providerType != 'none'
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: _ModelDropdown(
+                            models: _currentModels,
+                            selected: _selectedModel,
+                            enabled: !widget.isConnecting &&
+                                !widget.isLoadingModels,
+                            onChanged: (val) =>
+                                setState(() => _selectedModel = val ?? ''),
+                          ),
+                        ),
+                        if (widget.onLoadModels != null) ...[
+                          const SizedBox(width: 4),
+                          _RefreshModelsButton(
+                            isLoading: widget.isLoadingModels,
+                            enabled: !widget.isConnecting &&
+                                _apiKeyCtrl.text.isNotEmpty,
+                            onPressed: () => widget.onLoadModels!(
+                              _providerType,
+                              _apiKeyCtrl.text.trim(),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
@@ -181,6 +274,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
                       ),
                       keyboardType: TextInputType.text,
                       textInputAction: TextInputAction.done,
+                      onChanged: (_) => setState(() {}),
                       onSubmitted: (_) => _connect(),
                     ),
                   )
@@ -317,6 +411,69 @@ class _ConnectionFormState extends State<ConnectionForm> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _RefreshModelsButton extends StatelessWidget {
+  const _RefreshModelsButton({
+    required this.isLoading,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final bool isLoading;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Load available models',
+      icon: isLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.refresh, color: AppColors.textSecondary),
+      onPressed: enabled && !isLoading ? onPressed : null,
+    );
+  }
+}
+
+class _ModelDropdown extends StatelessWidget {
+  const _ModelDropdown({
+    required this.models,
+    required this.selected,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  final List<_ModelOption> models;
+  final String selected;
+  final ValueChanged<String?> onChanged;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveValue =
+        models.any((m) => m.id == selected) ? selected : models.first.id;
+    return DropdownButtonFormField<String>(
+      value: effectiveValue,
+      decoration: const InputDecoration(
+        labelText: 'Model',
+        prefixIcon: Icon(
+          Icons.psychology_outlined,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      items: models
+          .map(
+            (m) => DropdownMenuItem(value: m.id, child: Text(m.label)),
+          )
+          .toList(),
+      onChanged: enabled ? onChanged : null,
     );
   }
 }
