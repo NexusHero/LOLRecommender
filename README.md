@@ -1,5 +1,11 @@
 # LoL Coach
 
+[![CI](https://github.com/NexusHero/LOLRecommender/actions/workflows/ci.yml/badge.svg)](https://github.com/NexusHero/LOLRecommender/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
+[![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+
 An AI-powered in-game coaching assistant for League of Legends. A local Node.js bridge reads live game data from the Riot Games Live Client API and streams real-time recommendations to a Flutter mobile app over WebSocket.
 
 The coaching engine combines a rule-based heuristic (zero latency, no internet) with an optional LLM layer (Claude, OpenAI, or Gemini) that produces role-aware, matchup-specific advice — not generic tips.
@@ -183,4 +189,4 @@ flutter test --update-goldens test/widgets/recommendation_panel_golden_test.dart
 
 ## License
 
-MIT
+[MIT](LICENSE) © 2025 Suhay Sevinc
