@@ -132,12 +132,19 @@ class _MainScreenState extends State<MainScreen> {
       body: ConnectionForm(
         error: ws.status == ConnectionStatus.error ? ws.lastError : null,
         isConnecting: ws.status == ConnectionStatus.connecting,
-        onConnect: (host, port, summonerName, providerType, apiKey) {
+        availableModels: ws.availableModels,
+        availableModelsForProvider: ws.availableModelsProvider,
+        isLoadingModels: ws.isLoadingModels,
+        onLoadModels: ws.isConnected
+            ? (provider, apiKey) => ws.loadModels(provider, apiKey)
+            : null,
+        onConnect: (host, port, summonerName, providerType, model, apiKey) {
           ws.connect(
             host,
             port: port,
             summonerName: summonerName,
             providerType: providerType,
+            model: model,
             apiKey: apiKey,
           );
           setState(() => _currentIndex = 0);

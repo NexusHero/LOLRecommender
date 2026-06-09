@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:lol_coach/models/game_state.dart';
+import 'package:lol_coach/models/model_info.dart';
 import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/models/ws_message.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -36,6 +37,10 @@ class WsService extends ChangeNotifier {
   DateTime? _recommendationTime;
 
   // Reconnect state
+  List<ModelInfo>? _availableModels;
+  String? _availableModelsProvider;
+  bool _isLoadingModels = false;
+
   bool _intentionalDisconnect = false;
   Duration _reconnectDelay = const Duration(seconds: 1);
   static const Duration _maxReconnectDelay = Duration(seconds: 30);
@@ -45,12 +50,17 @@ class WsService extends ChangeNotifier {
   int _lastPort = 8765;
   String? _lastSummonerName;
   String? _lastProviderType;
+  String? _lastModel;
   String? _lastApiKey;
 
   ConnectionStatus get status => _status;
   String? get lastError => _lastError;
   String? get lastLlmError => _lastLlmError;
   String get activeProviderType => _lastProviderType ?? 'none';
+  String? get activeModel => _lastModel;
+  List<ModelInfo>? get availableModels => _availableModels;
+  String? get availableModelsProvider => _availableModelsProvider;
+  bool get isLoadingModels => _isLoadingModels;
   ParsedGameState? get gameState => _gameState;
   ItemRecommendation? get recommendation => _recommendation;
   String get lastEvent => _lastEvent;
@@ -65,6 +75,7 @@ class WsService extends ChangeNotifier {
     int port = 8765,
     String? summonerName,
     String? providerType,
+    String? model,
     String? apiKey,
   }) {
     if (_status == ConnectionStatus.connected ||
@@ -77,6 +88,7 @@ class WsService extends ChangeNotifier {
     _lastPort = port;
     _lastSummonerName = summonerName;
     _lastProviderType = providerType;
+    _lastModel = model;
     _lastApiKey = apiKey;
     _intentionalDisconnect = false;
     _reconnectDelay = const Duration(seconds: 1);
@@ -86,6 +98,7 @@ class WsService extends ChangeNotifier {
       port: port,
       summonerName: summonerName,
       providerType: providerType,
+      model: model,
       apiKey: apiKey,
     );
   }
@@ -110,6 +123,9 @@ class WsService extends ChangeNotifier {
     _isAnalyzing = false;
     _llmFailed = false;
     _recommendationTime = null;
+    _availableModels = null;
+    _availableModelsProvider = null;
+    _isLoadingModels = false;
     notifyListeners();
   }
 
@@ -118,6 +134,7 @@ class WsService extends ChangeNotifier {
     int port = 8765,
     String? summonerName,
     String? providerType,
+    String? model,
     String? apiKey,
   }) {
     _status = ConnectionStatus.connecting;
@@ -142,6 +159,7 @@ class WsService extends ChangeNotifier {
           jsonEncode({
             'event': 'SET_LLM_PROVIDER',
             'provider': providerType,
+            if (model != null) 'model': model,
             'apiKey': apiKey,
           }),
         );
@@ -173,6 +191,19 @@ class WsService extends ChangeNotifier {
     _lastLlmError = null;
     notifyListeners();
     _channel!.sink.add(jsonEncode({'event': 'TRIGGER_ANALYSIS'}));
+  }
+
+  void loadModels(String provider, String apiKey) {
+    if (_channel == null || _status != ConnectionStatus.connected) return;
+    _isLoadingModels = true;
+    _availableModels = null;
+    _availableModelsProvider = null;
+    notifyListeners();
+    _channel!.sink.add(jsonEncode({
+      'event': 'GET_MODELS',
+      'provider': provider,
+      'apiKey': apiKey,
+    }));
   }
 
   void clearLlmError() {
@@ -214,6 +245,21 @@ class WsService extends ChangeNotifier {
           _lastLlmError = msg.error;
           _llmFailed = true;
           _isAnalyzing = false;
+        case 'MODELS_AVAILABLE':
+          final rawModels = json['models'] as List<dynamic>?;
+          final provider = json['provider'] as String?;
+          if (rawModels != null && provider != null) {
+            _availableModels = rawModels
+                .map((m) => ModelInfo.fromJson(m as Map<String, dynamic>))
+                .toList();
+            _availableModelsProvider = provider;
+          }
+          _isLoadingModels = false;
+        case 'MODELS_ERROR':
+          _availableModels = null;
+          _availableModelsProvider = null;
+          _isLoadingModels = false;
+          debugPrint('[WsService] Models error: ${json['error']}');
         default:
           if (msg.gameState != null) {
             _gameState = msg.gameState;
@@ -268,6 +314,7 @@ class WsService extends ChangeNotifier {
         port: _lastPort,
         summonerName: _lastSummonerName,
         providerType: _lastProviderType,
+        model: _lastModel,
         apiKey: _lastApiKey,
       );
     });
