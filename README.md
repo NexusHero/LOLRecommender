@@ -8,6 +8,8 @@
 
 > **Real-time AI coaching overlay for League of Legends — runs entirely on your machine, no account required.**
 
+![LoL Coach — Settings and Coach screens](docs/images/screenshot.png)
+
 An AI-powered in-game coaching assistant for League of Legends. A local Node.js bridge reads live game data from the Riot Games Live Client API and streams real-time recommendations to a Flutter desktop app over WebSocket.
 
 The coaching engine combines a rule-based heuristic (zero latency, no internet) with an optional LLM layer (Claude, OpenAI, or Gemini) that produces role-aware, matchup-specific advice — not generic tips.
