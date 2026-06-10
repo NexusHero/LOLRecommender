@@ -17,5 +17,7 @@ flutter_app/.packages
 .DS_Store
 *.log
 
-# Claude Code local session data
-.claude/
+# Claude Code local session data (settings.local.json etc. bleiben lokal)
+.claude/*
+!.claude/commands/
+!.claude/commands/**

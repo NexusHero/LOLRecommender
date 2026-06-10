@@ -225,7 +225,6 @@ class _ConnectionFormState extends State<ConnectionForm> {
                 ? Padding(
                     padding: const EdgeInsets.only(top: 10),
                     child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
                           child: _ModelDropdown(
@@ -460,7 +459,7 @@ class _ModelDropdown extends StatelessWidget {
     final effectiveValue =
         models.any((m) => m.id == selected) ? selected : models.first.id;
     return DropdownButtonFormField<String>(
-      value: effectiveValue,
+      initialValue: effectiveValue,
       decoration: const InputDecoration(
         labelText: 'Model',
         prefixIcon: Icon(

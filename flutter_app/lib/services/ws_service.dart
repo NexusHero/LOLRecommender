@@ -199,11 +199,13 @@ class WsService extends ChangeNotifier {
     _availableModels = null;
     _availableModelsProvider = null;
     notifyListeners();
-    _channel!.sink.add(jsonEncode({
-      'event': 'GET_MODELS',
-      'provider': provider,
-      'apiKey': apiKey,
-    }));
+    _channel!.sink.add(
+      jsonEncode({
+        'event': 'GET_MODELS',
+        'provider': provider,
+        'apiKey': apiKey,
+      }),
+    );
   }
 
   void clearLlmError() {

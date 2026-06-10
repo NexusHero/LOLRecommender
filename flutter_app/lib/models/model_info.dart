@@ -1,3 +1,6 @@
+import 'package:flutter/foundation.dart';
+
+@immutable
 class ModelInfo {
   const ModelInfo({required this.id, required this.displayName});
 
