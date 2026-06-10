@@ -75,6 +75,54 @@ Flutter Desktop App  (macOS / Windows / Linux)
 - `@yao-pkg/pkg` is the packager (`pkg` alias in scripts) — do not replace with the original `pkg`.
 - LLM cooldown default is 7 minutes (`DEFAULT_LLM_COOLDOWN_MS`).
 
+### Commit Messages
+
+All commit messages must follow **Conventional Commits** and be written in **English**:
+
+```
+<type>(<scope>): <short summary>
+```
+
+Valid types: `feat`, `fix`, `test`, `refactor`, `docs`, `chore`, `perf`, `ci`, `build`.
+Scopes follow the component: `bridge`, `flutter`, `deps`, `ci`, etc.
+
+Examples:
+```
+feat(bridge): add gold-spike event detection
+fix(flutter): resolve deprecated DropdownButtonFormField.value usage
+test(bridge): cover poller retry behaviour with mock server
+```
+
+### Test Naming & Structure
+
+Test names use the **Microsoft naming convention** — three segments separated by underscores:
+
+```
+MethodOrFeatureName_StateUnderTest_ExpectedBehaviour
+```
+
+Examples:
+```
+loadModels_WhenProviderIsNone_DoesNotEmitGetModels
+BridgeModels_AppearInDropdownInsteadOfHardcoded
+Poller_WhenMaxFailuresExceeded_EmitsGameInactive
+```
+
+Test bodies follow the **AAA pattern** with a blank line between each phase:
+
+```ts
+// Arrange
+const ws = new WsService();
+
+// Act
+ws.loadModels('claude', 'sk-ant-test');
+
+// Assert
+expect(emitted).toEqual(['GET_MODELS']);
+```
+
+If a phase is trivially obvious (e.g., a one-liner Act with no setup), the comment may be omitted.
+
 ---
 
 ## Quality Gates

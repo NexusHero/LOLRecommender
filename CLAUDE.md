@@ -22,3 +22,10 @@ Project slash commands live in `.claude/commands/`. Add new commands there to sh
 - No trailing summaries at end of responses — the diff is readable
 - Terse, direct answers preferred
 - No co-author lines in commits unless explicitly requested
+
+## Commits & Tests
+
+Conventions are defined in `AGENTS.md` → **Commit Messages** and **Test Naming & Structure**.
+Apply them automatically — do not wait to be asked:
+- All commits: Conventional Commits format, English
+- All tests: Microsoft naming (`Subject_State_Expected`) + AAA pattern
