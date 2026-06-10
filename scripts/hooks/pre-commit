@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Runs flutter analyze before every commit that touches flutter_app/.
+# Fast (~4s) — aborts the commit if lint issues are found.
+set -euo pipefail
+
+if git diff --cached --name-only | grep -q '^flutter_app/'; then
+  ROOT="$(git rev-parse --show-toplevel)"
+  echo "pre-commit: flutter analyze…"
+  cd "$ROOT/flutter_app"
+  flutter analyze
+fi

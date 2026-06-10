@@ -187,6 +187,51 @@ flutter test --update-goldens test/widgets/recommendation_panel_golden_test.dart
 
 ---
 
+## AI-assisted development
+
+This project is set up for Claude Code with shared project skills and enforced quality gates.
+
+### Project skills (slash commands)
+
+Skills live in `.claude/commands/` and are committed to the repo, so every contributor gets them automatically.
+
+| Skill | What it does |
+|-------|-------------|
+| `/test` | Runs the full suite — `flutter analyze` → flutter tests → bridge tests. Accepts the same flags as `test.sh` (e.g. `/test --flutter-only`). |
+
+### Pre-commit hook
+
+The hook runs `flutter analyze` before every commit that touches `flutter_app/` (~4 s). It mirrors the CI analyze step so lint errors never reach the pipeline.
+
+After a fresh clone, install it once:
+
+```bash
+cp scripts/hooks/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+> The hook is intentionally lightweight. It only runs analyze, not the full test suite, so commits stay fast.
+
+### Conventions (auto-applied by AI assistants)
+
+All rules live in [`AGENTS.md`](AGENTS.md) under **Conventions**. AI assistants apply them without being asked.
+
+| Rule | Detail |
+|------|--------|
+| **Commit messages** | [Conventional Commits](https://www.conventionalcommits.org) in English — `type(scope): summary` |
+| **Test names** | Microsoft naming — `Subject_StateUnderTest_ExpectedBehaviour` |
+| **Test structure** | AAA pattern — Arrange / Act / Assert with a blank line between each phase |
+
+### Agent context files
+
+| File | Purpose |
+|------|---------|
+| [`AGENTS.md`](AGENTS.md) | Vendor-neutral context — architecture, conventions, quality gates. Read by all AI assistants. |
+| [`CLAUDE.md`](CLAUDE.md) | Claude-specific settings — model defaults, response style, commit rules. |
+| [`GEMINI.md`](GEMINI.md) | Gemini-specific overrides. |
+
+---
+
 ## License
 
 [MIT](LICENSE) © 2025 Suhay Sevinc
