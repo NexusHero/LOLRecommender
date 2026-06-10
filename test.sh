@@ -219,6 +219,20 @@ run_flutter() {
 
   info "dir  : $FLUTTER_DIR"
 
+  # ── analyze (mirrors CI) ──────────────────────────────────────────────────
+  local _analyze_exit=0
+  info "cmd  : flutter analyze"
+  [ "$VERBOSITY" -ge 1 ] && echo "" || true
+  run_cmd _analyze_exit "" flutter analyze
+  if [ "$_analyze_exit" -eq 0 ]; then
+    ok "Flutter analyze passed"
+  else
+    fail "Flutter analyze failed (exit $_analyze_exit)"
+    FLUTTER_EXIT=$_analyze_exit
+    cd "$ROOT"
+    return
+  fi
+
   # Update goldens first if requested
   if $UPDATE_GOLDENS; then
     [ "$VERBOSITY" -ge 1 ] && echo "" || true

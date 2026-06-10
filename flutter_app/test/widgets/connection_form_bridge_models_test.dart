@@ -41,10 +41,12 @@ void main() {
           const ModelInfo(id: 'claude-opus-99', displayName: 'Opus 99 (New!)'),
         ];
 
-        await tester.pumpWidget(buildForm(
-          availableModels: bridgeModels,
-          availableModelsForProvider: 'claude',
-        ));
+        await tester.pumpWidget(
+          buildForm(
+            availableModels: bridgeModels,
+            availableModelsForProvider: 'claude',
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Claude'));
@@ -73,10 +75,12 @@ void main() {
           const ModelInfo(id: 'gpt-5', displayName: 'GPT-5 (New!)'),
         ];
 
-        await tester.pumpWidget(buildForm(
-          availableModels: openaiModels,
-          availableModelsForProvider: 'openai',
-        ));
+        await tester.pumpWidget(
+          buildForm(
+            availableModels: openaiModels,
+            availableModelsForProvider: 'openai',
+          ),
+        );
         await tester.pumpAndSettle();
 
         // Select Claude — bridge models are for OpenAI, not Claude
@@ -97,11 +101,13 @@ void main() {
           const ModelInfo(id: 'claude-opus-99', displayName: 'Opus 99'),
         ];
 
-        await tester.pumpWidget(buildForm(
-          availableModels: bridgeModels,
-          availableModelsForProvider: 'claude',
-          onConnect: (_, __, ___, ____, model, _____) => capturedModel = model,
-        ));
+        await tester.pumpWidget(
+          buildForm(
+            availableModels: bridgeModels,
+            availableModelsForProvider: 'claude',
+            onConnect: (_, __, ___, ____, model, _____) => capturedModel = model,
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Claude'));
@@ -127,10 +133,12 @@ void main() {
     testWidgets(
       'LoadingState_ShowsSpinnerInRefreshButton',
       (tester) async {
-        await tester.pumpWidget(buildForm(
-          isLoadingModels: true,
-          onLoadModels: (_, __) {},
-        ));
+        await tester.pumpWidget(
+          buildForm(
+            isLoadingModels: true,
+            onLoadModels: (_, __) {},
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Claude'));
@@ -148,12 +156,14 @@ void main() {
         String? capturedProvider;
         String? capturedKey;
 
-        await tester.pumpWidget(buildForm(
-          onLoadModels: (provider, apiKey) {
-            capturedProvider = provider;
-            capturedKey = apiKey;
-          },
-        ));
+        await tester.pumpWidget(
+          buildForm(
+            onLoadModels: (provider, apiKey) {
+              capturedProvider = provider;
+              capturedKey = apiKey;
+            },
+          ),
+        );
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Claude'));
@@ -176,7 +186,7 @@ void main() {
     testWidgets(
       'NoLoadButton_WhenOnLoadModelsIsNull',
       (tester) async {
-        await tester.pumpWidget(buildForm(onLoadModels: null));
+        await tester.pumpWidget(buildForm());
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Claude'));

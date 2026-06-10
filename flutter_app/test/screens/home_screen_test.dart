@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/models/game_state.dart';
-import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/models/model_info.dart';
+import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/screens/home_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:provider/provider.dart';

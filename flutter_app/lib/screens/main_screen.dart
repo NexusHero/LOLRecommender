@@ -136,7 +136,7 @@ class _MainScreenState extends State<MainScreen> {
         availableModelsForProvider: ws.availableModelsProvider,
         isLoadingModels: ws.isLoadingModels,
         onLoadModels: ws.isConnected
-            ? (provider, apiKey) => ws.loadModels(provider, apiKey)
+            ? ws.loadModels
             : null,
         onConnect: (host, port, summonerName, providerType, model, apiKey) {
           ws.connect(

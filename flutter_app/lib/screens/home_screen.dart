@@ -190,7 +190,7 @@ class _AiModeBannerState extends State<_AiModeBanner>
       child: Row(
         children: [
           if (failed)
-            Icon(
+            const Icon(
               Icons.warning_amber_rounded,
               size: 14,
               color: AppColors.warning,
