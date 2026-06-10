@@ -6,9 +6,40 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 
-An AI-powered in-game coaching assistant for League of Legends. A local Node.js bridge reads live game data from the Riot Games Live Client API and streams real-time recommendations to a Flutter mobile app over WebSocket.
+> **Real-time AI coaching overlay for League of Legends — runs entirely on your machine, no account required.**
+
+An AI-powered in-game coaching assistant for League of Legends. A local Node.js bridge reads live game data from the Riot Games Live Client API and streams real-time recommendations to a Flutter desktop app over WebSocket.
 
 The coaching engine combines a rule-based heuristic (zero latency, no internet) with an optional LLM layer (Claude, OpenAI, or Gemini) that produces role-aware, matchup-specific advice — not generic tips.
+
+---
+
+## Why LoL Coach?
+
+| | LoL Coach | Generic tier-list sites | In-client coach |
+|---|---|---|---|
+| Reads your **live** game state | ✅ | ❌ | ✅ |
+| Role-aware advice | ✅ | ❌ | partial |
+| Lane matchup analysis vs. your actual opponent | ✅ | ❌ | ❌ |
+| Runs **offline** (heuristic mode) | ✅ | ❌ | ✅ |
+| Works on a second screen / phone | ✅ | — | ❌ |
+| Open source, no account | ✅ | ❌ | ❌ |
+
+---
+
+## Quick start
+
+```bash
+# 1. Bridge (run on the same PC as League)
+cd bridge && npm install && npm run dev
+
+# 2. Desktop app (macOS / Windows / Linux)
+cd flutter_app && flutter pub get && flutter run
+```
+
+Open **Settings**, enter your Summoner Name and optionally an LLM API key, then start a game.
+
+---
 
 ---
 
@@ -44,7 +75,7 @@ The coaching engine combines a rule-based heuristic (zero latency, no internet) 
                             │  WebSocket (LAN)
                             ▼
               ┌─────────────────────────┐
-              │   Flutter Mobile App    │
+              │  Flutter Desktop App    │
               │  Live scoreboard        │
               │  Counter-item picks     │
               │  Lane matchup analysis  │
