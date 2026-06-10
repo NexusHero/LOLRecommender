@@ -1,0 +1,39 @@
+name: Champion / item data correction
+description: A champion classification or item mapping is wrong or missing
+labels: ["data", "good first issue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Champion classifications live in `bridge/src/data/champions.json`.
+        Item mappings live in `bridge/src/data/items.json`.
+        This is one of the easiest contributions — no code required!
+
+  - type: input
+    id: champion_or_item
+    attributes:
+      label: Champion or item name
+      placeholder: "e.g. Soraka / Mortal Reminder"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type
+      options:
+        - Champion missing entirely
+        - Champion classification wrong (ap/cc/healer/etc.)
+        - Item missing or wrong name
+    validations:
+      required: true
+
+  - type: textarea
+    id: correction
+    attributes:
+      label: Correct data
+      description: What should the entry look like?
+      placeholder: |
+        "Soraka": { "ap": true, "healer": true, "cc": true }
+    validations:
+      required: true
