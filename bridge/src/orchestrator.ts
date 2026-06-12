@@ -9,6 +9,7 @@ import type { AllGameData, ParsedGameState } from "./types.js";
 export interface OrchestratorConfig {
   summonerName: string;
   llmCooldownMs: number;
+  tokenBudget?: number; // session input token budget; 0 or undefined = unlimited
 }
 
 export class BridgeOrchestrator {
@@ -16,6 +17,8 @@ export class BridgeOrchestrator {
   private lastState: ParsedGameState | null = null;
   private readonly cache = new CacheService();
   private correlationCounter = 0;
+  private sessionInputTokens = 0;
+  private sessionOutputTokens = 0;
 
   constructor(
     private readonly wsServer: BridgeWsServer,
@@ -79,6 +82,18 @@ export class BridgeOrchestrator {
 
     if (!useLlm) return;
 
+    const budget = this.config.tokenBudget ?? 0;
+    if (budget > 0 && this.sessionInputTokens >= budget) {
+      console.warn(`[Orchestrator] Session token budget exhausted (${this.sessionInputTokens}/${budget}). Skipping LLM.`);
+      this.wsServer.broadcast({
+        event: "LLM_BUDGET_EXCEEDED",
+        timestamp: this.clock(),
+        sessionInputTokens: this.sessionInputTokens,
+        budget,
+      });
+      return;
+    }
+
     const heuristicItemIds = heuristicRec.items.map((i) => i.id);
     const cacheKey = this.cache.buildKey(state, heuristicItemIds);
     const cached = this.cache.get(cacheKey);
@@ -90,6 +105,10 @@ export class BridgeOrchestrator {
     } else {
       try {
         llmAnalysis = await this.llmProvider!.getAnalysis(state, heuristicRec);
+        if (llmAnalysis.tokenUsage) {
+          this.sessionInputTokens += llmAnalysis.tokenUsage.input;
+          this.sessionOutputTokens += llmAnalysis.tokenUsage.output;
+        }
         this.cache.set(cacheKey, llmAnalysis);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -118,6 +137,14 @@ export class BridgeOrchestrator {
       gameState: state,
       recommendation: enrichedRec,
       correlationId,
+      tokenUsage: llmAnalysis.tokenUsage
+        ? {
+            lastInput: llmAnalysis.tokenUsage.input,
+            lastOutput: llmAnalysis.tokenUsage.output,
+            sessionInput: this.sessionInputTokens,
+            sessionOutput: this.sessionOutputTokens,
+          }
+        : undefined,
     });
     console.log(`[Rec] llm (Trigger: ${eventType}): ${enrichedRec.items.map((i) => i.name).join(", ")}`);
   }
@@ -135,6 +162,12 @@ export class BridgeOrchestrator {
     this.lastState = null;
     this.cache.clear();
     this.eventDetector.reset();
+    this.sessionInputTokens = 0;
+    this.sessionOutputTokens = 0;
+  }
+
+  setTokenBudget(budget: number): void {
+    this.config.tokenBudget = budget;
   }
 
   setSummonerName(name: string): void {

@@ -79,6 +79,8 @@ class HomeScreen extends StatelessWidget {
           recommendation: ws.recommendation,
           lastEvent: ws.lastEvent,
           recommendationTime: ws.recommendationTime,
+          tokenUsage: ws.lastTokenUsage,
+          isBudgetExceeded: ws.isBudgetExceeded,
         );
     }
   }

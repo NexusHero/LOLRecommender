@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/models/model_info.dart';
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/models/token_usage.dart';
 import 'package:lol_coach/screens/home_screen.dart';
 import 'package:lol_coach/services/ws_service.dart';
 import 'package:provider/provider.dart';
@@ -70,6 +71,27 @@ class FakeWsService extends ChangeNotifier implements WsService {
   void loadModels(String provider, String apiKey) {}
 
   @override
+  bool get isValidatingKey => false;
+
+  @override
+  bool? get keyValidationResult => null;
+
+  @override
+  String? get keyValidationError => null;
+
+  @override
+  TokenUsage? get lastTokenUsage => null;
+
+  @override
+  bool get isBudgetExceeded => false;
+
+  @override
+  void validateKey(String provider, String apiKey) {}
+
+  @override
+  void clearKeyValidation() {}
+
+  @override
   void connect(
     String host, {
     int port = 8765,
@@ -77,6 +99,7 @@ class FakeWsService extends ChangeNotifier implements WsService {
     String? providerType,
     String? model,
     String? apiKey,
+    int tokenBudget = 0,
   }) {}
 
   @override

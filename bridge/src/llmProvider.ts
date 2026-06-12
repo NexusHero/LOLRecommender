@@ -36,10 +36,17 @@ Adjust analysis based on the player's role:
 
 Be specific. Reference actual numbers (CS difference, kill lead, vision score, gold gap). Do not give generic advice.`;
 
+export interface TokenUsage {
+  input: number;
+  output: number;
+  cacheHit?: number;
+}
+
 export interface LlmAnalysis {
   reasoning: string;
   strategy: Strategy;
   situationalItems?: RecommendedItem[];
+  tokenUsage?: TokenUsage;
 }
 
 export interface ModelInfo {

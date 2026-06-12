@@ -14,11 +14,12 @@ jest.mock("../llmProvider", () => ({
 
 import { createLlmProvider, friendlyApiError } from "../llmProvider";
 
-function makeOrchestrator(): jest.Mocked<Pick<BridgeOrchestrator, "setSummonerName" | "triggerManualAnalysis" | "setLlmProvider">> {
+function makeOrchestrator(): jest.Mocked<Pick<BridgeOrchestrator, "setSummonerName" | "triggerManualAnalysis" | "setLlmProvider" | "setTokenBudget">> {
   return {
     setSummonerName: jest.fn(),
     triggerManualAnalysis: jest.fn().mockResolvedValue(undefined),
     setLlmProvider: jest.fn(),
+    setTokenBudget: jest.fn(),
   };
 }
 
@@ -177,6 +178,78 @@ describe("MessageRouter", () => {
       const sent = JSON.parse((ws.send as jest.Mock).mock.calls[0][0]);
       expect(sent.event).toBe("MODELS_ERROR");
       expect(sent.error).toBe("unauthorized");
+    });
+  });
+
+  describe("handle — VALIDATE_KEY", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      (createLlmProvider as jest.Mock).mockResolvedValue({
+        name: "mock-provider",
+        listModels: jest.fn().mockResolvedValue([]),
+      });
+      (friendlyApiError as jest.Mock).mockImplementation((err: unknown) =>
+        err instanceof Error ? err.message : String(err),
+      );
+    });
+
+    it("handle_ValidateKeyWithValidKey_SendsKeyValid", async () => {
+      const ws = makeWs();
+      const router = new MessageRouter(makeOrchestrator() as any);
+
+      await router.handle(ws, { event: "VALIDATE_KEY", provider: "claude", apiKey: "sk-valid" });
+
+      expect(ws.send).toHaveBeenCalledTimes(1);
+      const sent = JSON.parse((ws.send as jest.Mock).mock.calls[0][0]);
+      expect(sent.event).toBe("KEY_VALID");
+      expect(sent.provider).toBe("claude");
+    });
+
+    it("handle_ValidateKeyWithValidKey_DoesNotSetLlmProviderOnOrchestrator", async () => {
+      const orchestrator = makeOrchestrator();
+      const router = new MessageRouter(orchestrator as any);
+      const ws = makeWs();
+
+      await router.handle(ws, { event: "VALIDATE_KEY", provider: "claude", apiKey: "sk-valid" });
+
+      expect(orchestrator.setLlmProvider).not.toHaveBeenCalled();
+    });
+
+    it("handle_ValidateKeyListModelsThrows_SendsKeyInvalidWithError", async () => {
+      (createLlmProvider as jest.Mock).mockResolvedValue({
+        name: "mock-provider",
+        listModels: jest.fn().mockRejectedValue(new Error("401 · Invalid API key")),
+      });
+      const ws = makeWs();
+      const router = new MessageRouter(makeOrchestrator() as any);
+
+      await router.handle(ws, { event: "VALIDATE_KEY", provider: "openai", apiKey: "bad-key" });
+
+      const sent = JSON.parse((ws.send as jest.Mock).mock.calls[0][0]);
+      expect(sent.event).toBe("KEY_INVALID");
+      expect(sent.provider).toBe("openai");
+      expect(sent.error).toBe("401 · Invalid API key");
+    });
+
+    it("handle_ValidateKeyWithoutApiKey_SendsKeyInvalid", async () => {
+      const ws = makeWs();
+      const router = new MessageRouter(makeOrchestrator() as any);
+
+      await router.handle(ws, { event: "VALIDATE_KEY", provider: "claude" });
+
+      const sent = JSON.parse((ws.send as jest.Mock).mock.calls[0][0]);
+      expect(sent.event).toBe("KEY_INVALID");
+      expect(typeof sent.error).toBe("string");
+    });
+
+    it("handle_ValidateKeyWithoutProvider_SendsKeyInvalid", async () => {
+      const ws = makeWs();
+      const router = new MessageRouter(makeOrchestrator() as any);
+
+      await router.handle(ws, { event: "VALIDATE_KEY", apiKey: "sk-key" });
+
+      const sent = JSON.parse((ws.send as jest.Mock).mock.calls[0][0]);
+      expect(sent.event).toBe("KEY_INVALID");
     });
   });
 
