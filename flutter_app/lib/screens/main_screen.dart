@@ -135,17 +135,20 @@ class _MainScreenState extends State<MainScreen> {
         availableModels: ws.availableModels,
         availableModelsForProvider: ws.availableModelsProvider,
         isLoadingModels: ws.isLoadingModels,
-        onLoadModels: ws.isConnected
-            ? ws.loadModels
-            : null,
-        onConnect: (host, port, summonerName, providerType, model, apiKey) {
+        onLoadModels: ws.isConnected ? ws.loadModels : null,
+        onValidateKey: ws.isConnected ? ws.validateKey : null,
+        isValidatingKey: ws.isValidatingKey,
+        keyValidationResult: ws.keyValidationResult,
+        keyValidationError: ws.keyValidationError,
+        onConnect: (req) {
           ws.connect(
-            host,
-            port: port,
-            summonerName: summonerName,
-            providerType: providerType,
-            model: model,
-            apiKey: apiKey,
+            req.host,
+            port: req.port,
+            summonerName: req.summonerName,
+            providerType: req.providerType,
+            model: req.model,
+            apiKey: req.apiKey,
+            tokenBudget: req.tokenBudget,
           );
           setState(() => _currentIndex = 0);
         },
