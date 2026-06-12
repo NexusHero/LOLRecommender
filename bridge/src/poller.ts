@@ -11,6 +11,15 @@ export const MAX_POLL_FAILURES = 3;
 
 export type DataFetcher = () => Promise<unknown>;
 
+export function isLocalhostUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return hostname === "127.0.0.1" || hostname === "localhost";
+  } catch {
+    return false;
+  }
+}
+
 // Supports both https:// (real Riot API, self-signed cert accepted) and
 // http:// (local mock-lol-server for development).
 // URL is read lazily so LIVE_CLIENT_URL env var set after module load is picked up.
@@ -18,7 +27,14 @@ function createDefaultFetcher(): DataFetcher {
   const url = process.env.LIVE_CLIENT_URL ?? DEFAULT_URL;
   const isHttps = url.startsWith("https://");
   const lib: typeof https = isHttps ? https : (http as unknown as typeof https);
-  const agent = isHttps ? new https.Agent({ rejectUnauthorized: false }) : undefined;
+
+  // Riot's Live Client API (127.0.0.1:2999) uses a self-signed cert from their
+  // internal CA. Validation is skipped only for loopback addresses where MITM
+  // is impossible — any non-localhost HTTPS target uses standard validation.
+  const agent =
+    isHttps && isLocalhostUrl(url)
+      ? new https.Agent({ rejectUnauthorized: false })
+      : undefined;
 
   return () =>
     new Promise((resolve, reject) => {

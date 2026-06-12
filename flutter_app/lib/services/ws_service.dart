@@ -1,17 +1,35 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/models/model_info.dart';
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/models/token_usage.dart';
 import 'package:lol_coach/models/ws_message.dart';
+import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-typedef WebSocketChannelFactory = WebSocketChannel Function(Uri uri);
+typedef WebSocketChannelFactory = WebSocketChannel Function(
+  Uri uri, {
+  Map<String, dynamic>? headers,
+});
 
-WebSocketChannel _defaultChannelFactory(Uri uri) =>
-    WebSocketChannel.connect(uri);
+WebSocketChannel _defaultChannelFactory(
+  Uri uri, {
+  Map<String, dynamic>? headers,
+}) =>
+    IOWebSocketChannel.connect(uri, headers: headers);
+
+String? _loadBridgeSecret() {
+  final home =
+      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+  if (home == null) return null;
+  final file = File('$home/.lolcoach/.secret');
+  if (!file.existsSync()) return null;
+  return file.readAsStringSync().trim();
+}
 
 enum ConnectionStatus { disconnected, connecting, connected, error }
 
@@ -41,6 +59,15 @@ class WsService extends ChangeNotifier {
   String? _availableModelsProvider;
   bool _isLoadingModels = false;
 
+  // Key validation state
+  bool _isValidatingKey = false;
+  bool? _keyValidationResult;
+  String? _keyValidationError;
+
+  // Token tracking
+  TokenUsage? _lastTokenUsage;
+  bool _isBudgetExceeded = false;
+
   bool _intentionalDisconnect = false;
   Duration _reconnectDelay = const Duration(seconds: 1);
   static const Duration _maxReconnectDelay = Duration(seconds: 30);
@@ -52,6 +79,7 @@ class WsService extends ChangeNotifier {
   String? _lastProviderType;
   String? _lastModel;
   String? _lastApiKey;
+  int _lastTokenBudget = 0;
 
   ConnectionStatus get status => _status;
   String? get lastError => _lastError;
@@ -61,6 +89,11 @@ class WsService extends ChangeNotifier {
   List<ModelInfo>? get availableModels => _availableModels;
   String? get availableModelsProvider => _availableModelsProvider;
   bool get isLoadingModels => _isLoadingModels;
+  bool get isValidatingKey => _isValidatingKey;
+  bool? get keyValidationResult => _keyValidationResult;
+  String? get keyValidationError => _keyValidationError;
+  TokenUsage? get lastTokenUsage => _lastTokenUsage;
+  bool get isBudgetExceeded => _isBudgetExceeded;
   ParsedGameState? get gameState => _gameState;
   ItemRecommendation? get recommendation => _recommendation;
   String get lastEvent => _lastEvent;
@@ -77,6 +110,7 @@ class WsService extends ChangeNotifier {
     String? providerType,
     String? model,
     String? apiKey,
+    int tokenBudget = 0,
   }) {
     if (_status == ConnectionStatus.connected ||
         _status == ConnectionStatus.connecting) {
@@ -90,6 +124,7 @@ class WsService extends ChangeNotifier {
     _lastProviderType = providerType;
     _lastModel = model;
     _lastApiKey = apiKey;
+    _lastTokenBudget = tokenBudget;
     _intentionalDisconnect = false;
     _reconnectDelay = const Duration(seconds: 1);
 
@@ -100,6 +135,7 @@ class WsService extends ChangeNotifier {
       providerType: providerType,
       model: model,
       apiKey: apiKey,
+      tokenBudget: tokenBudget,
     );
   }
 
@@ -126,6 +162,11 @@ class WsService extends ChangeNotifier {
     _availableModels = null;
     _availableModelsProvider = null;
     _isLoadingModels = false;
+    _isValidatingKey = false;
+    _keyValidationResult = null;
+    _keyValidationError = null;
+    _lastTokenUsage = null;
+    _isBudgetExceeded = false;
     notifyListeners();
   }
 
@@ -136,14 +177,19 @@ class WsService extends ChangeNotifier {
     String? providerType,
     String? model,
     String? apiKey,
+    int tokenBudget = 0,
   }) {
     _status = ConnectionStatus.connecting;
     _lastError = null;
     notifyListeners();
 
+    final secret = _loadBridgeSecret();
+    final headers =
+        secret != null ? {'Authorization': 'Bearer $secret'} : null;
+
     final uri = Uri.parse('ws://$host:$port');
     try {
-      _channel = _channelFactory(uri);
+      _channel = _channelFactory(uri, headers: headers);
 
       if (summonerName != null && summonerName.isNotEmpty) {
         _channel!.sink.add(
@@ -161,6 +207,7 @@ class WsService extends ChangeNotifier {
             'provider': providerType,
             if (model != null) 'model': model,
             'apiKey': apiKey,
+            if (tokenBudget > 0) 'tokenBudget': tokenBudget,
           }),
         );
       } else if (providerType == 'none') {
@@ -214,6 +261,28 @@ class WsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  void validateKey(String provider, String apiKey) {
+    if (_channel == null || _status != ConnectionStatus.connected) return;
+    _isValidatingKey = true;
+    _keyValidationResult = null;
+    _keyValidationError = null;
+    notifyListeners();
+    _channel!.sink.add(
+      jsonEncode({
+        'event': 'VALIDATE_KEY',
+        'provider': provider,
+        'apiKey': apiKey,
+      }),
+    );
+  }
+
+  void clearKeyValidation() {
+    if (_keyValidationResult == null && _keyValidationError == null) return;
+    _keyValidationResult = null;
+    _keyValidationError = null;
+    notifyListeners();
+  }
+
   void _onData(dynamic raw) {
     try {
       final json = jsonDecode(raw as String) as Map<String, dynamic>;
@@ -241,6 +310,7 @@ class WsService extends ChangeNotifier {
         case 'RECOMMENDATION_UPDATE':
           _recommendation = msg.recommendation ?? _recommendation;
           if (msg.gameState != null) _gameState = msg.gameState;
+          if (msg.tokenUsage != null) _lastTokenUsage = msg.tokenUsage;
           _llmFailed = false;
           _isAnalyzing = false;
         case 'LLM_ERROR':
@@ -262,6 +332,16 @@ class WsService extends ChangeNotifier {
           _availableModelsProvider = null;
           _isLoadingModels = false;
           debugPrint('[WsService] Models error: ${json['error']}');
+        case 'KEY_VALID':
+          _isValidatingKey = false;
+          _keyValidationResult = true;
+          _keyValidationError = null;
+        case 'KEY_INVALID':
+          _isValidatingKey = false;
+          _keyValidationResult = false;
+          _keyValidationError = json['error'] as String?;
+        case 'LLM_BUDGET_EXCEEDED':
+          _isBudgetExceeded = true;
         default:
           if (msg.gameState != null) {
             _gameState = msg.gameState;
@@ -318,6 +398,7 @@ class WsService extends ChangeNotifier {
         providerType: _lastProviderType,
         model: _lastModel,
         apiKey: _lastApiKey,
+        tokenBudget: _lastTokenBudget,
       );
     });
   }

@@ -1,4 +1,5 @@
 import "dotenv/config";
+import type { IncomingMessage } from "http";
 import { WebSocketServer } from "ws";
 import { LiveClientPoller } from "./poller.js";
 import { EventDetector } from "./eventDetector.js";
@@ -7,6 +8,7 @@ import { BridgeOrchestrator } from "./orchestrator.js";
 import { MessageRouter } from "./messageRouter.js";
 import { createLlmProvider } from "./llmProvider.js";
 import { ddragon } from "./ddragonService.js";
+import { loadOrCreateSecret, secretFilePath } from "./secretManager.js";
 
 // DDragon im Hintergrund initialisieren — kein blocking start
 ddragon.init().catch((err) => console.error("[Main] DDragon init error:", err));
@@ -40,12 +42,20 @@ if (parentPidArg) {
   }
 }
 
+const secret = loadOrCreateSecret();
+console.log(`[Main] Bridge secret stored at: ${secretFilePath()}`);
+
 // Closure trick: wsServer needs orchestrator reference before orchestrator is constructed
 let orchestrator: BridgeOrchestrator;
 let messageRouter: MessageRouter;
 
 const wsServer = new BridgeWsServer(
-  new WebSocketServer({ host: "0.0.0.0", port: WS_PORT }),
+  new WebSocketServer({
+    host: "127.0.0.1",
+    port: WS_PORT,
+    verifyClient: ({ req }: { req: IncomingMessage }) =>
+      req.headers["authorization"] === `Bearer ${secret}`,
+  }),
   (_ws, message) => messageRouter.handle(_ws, message),
 );
 
