@@ -1,4 +1,4 @@
-import { LiveClientPoller, MAX_POLL_FAILURES } from "../poller";
+import { LiveClientPoller, MAX_POLL_FAILURES, isLocalhostUrl } from "../poller";
 import { makeRawGameData } from "./fixtures";
 
 afterEach(() => {
@@ -149,5 +149,27 @@ describe("LiveClientPoller", () => {
       expect(onStatusChange).not.toHaveBeenCalledWith(false);
       poller.stop();
     });
+  });
+});
+
+describe("isLocalhostUrl", () => {
+  it("isLocalhostUrl_127001_ReturnsTrue", () => {
+    expect(isLocalhostUrl("https://127.0.0.1:2999/path")).toBe(true);
+  });
+
+  it("isLocalhostUrl_LocalhostHostname_ReturnsTrue", () => {
+    expect(isLocalhostUrl("https://localhost:2999/path")).toBe(true);
+  });
+
+  it("isLocalhostUrl_RemoteHost_ReturnsFalse", () => {
+    expect(isLocalhostUrl("https://example.com/path")).toBe(false);
+  });
+
+  it("isLocalhostUrl_InvalidUrl_ReturnsFalse", () => {
+    expect(isLocalhostUrl("not-a-url")).toBe(false);
+  });
+
+  it("isLocalhostUrl_HttpLocalhost_ReturnsTrue", () => {
+    expect(isLocalhostUrl("http://localhost:2999/path")).toBe(true);
   });
 });
