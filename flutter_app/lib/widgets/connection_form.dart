@@ -8,6 +8,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 typedef _ModelOption = ({String id, String label});
 
+typedef ConnectRequest = ({
+  String host,
+  int port,
+  String summonerName,
+  String providerType,
+  String model,
+  String apiKey,
+  int tokenBudget,
+});
+
 const _claudeModels = <_ModelOption>[
   (id: 'claude-haiku-4-5-20251001', label: 'Haiku 4.5 (Fast)'),
   (id: 'claude-sonnet-4-6', label: 'Sonnet 4.6 (Balanced)'),
@@ -34,24 +44,25 @@ class ConnectionForm extends StatefulWidget {
     required this.onConnect,
     super.key,
     this.onLoadModels,
+    this.onValidateKey,
     this.availableModels,
     this.availableModelsForProvider,
     this.isLoadingModels = false,
+    this.isValidatingKey = false,
+    this.keyValidationResult,
+    this.keyValidationError,
     this.error,
     this.isConnecting = false,
   });
-  final void Function(
-    String host,
-    int port,
-    String summonerName,
-    String providerType,
-    String model,
-    String apiKey,
-  ) onConnect;
+  final void Function(ConnectRequest) onConnect;
   final void Function(String provider, String apiKey)? onLoadModels;
+  final void Function(String provider, String apiKey)? onValidateKey;
   final List<ModelInfo>? availableModels;
   final String? availableModelsForProvider;
   final bool isLoadingModels;
+  final bool isValidatingKey;
+  final bool? keyValidationResult;
+  final String? keyValidationError;
   final String? error;
   final bool isConnecting;
 
@@ -67,6 +78,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
   final _portCtrl = TextEditingController(text: '$_defaultPort');
   final _summonerCtrl = TextEditingController();
   final _apiKeyCtrl = TextEditingController();
+  final _tokenBudgetCtrl = TextEditingController();
   String? _ipError;
   String _providerType = 'none';
   String _selectedModel = '';
@@ -89,6 +101,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
       _providerType = prefs.getString('providerType') ?? 'none';
       _selectedModel = prefs.getString('selectedModel') ?? '';
       _apiKeyCtrl.text = apiKey;
+      final budget = prefs.getInt('tokenBudget') ?? 0;
+      _tokenBudgetCtrl.text = budget > 0 ? '$budget' : '';
       // Show advanced fields if user changed them from defaults
       _showAdvanced = host != '127.0.0.1' && host != 'localhost';
     });
@@ -100,6 +114,7 @@ class _ConnectionFormState extends State<ConnectionForm> {
     _portCtrl.dispose();
     _summonerCtrl.dispose();
     _apiKeyCtrl.dispose();
+    _tokenBudgetCtrl.dispose();
     super.dispose();
   }
 
@@ -139,6 +154,8 @@ class _ConnectionFormState extends State<ConnectionForm> {
     await prefs.setString('summonerName', summonerName);
     await prefs.setString('providerType', _providerType);
     await prefs.setString('selectedModel', _selectedModel);
+    final tokenBudget = int.tryParse(_tokenBudgetCtrl.text.trim()) ?? 0;
+    await prefs.setInt('tokenBudget', tokenBudget);
     // API key stored in OS keychain, not plain SharedPreferences
     await _secureStorage.write(key: 'apiKey', value: apiKey);
 
@@ -149,7 +166,17 @@ class _ConnectionFormState extends State<ConnectionForm> {
             : models.isNotEmpty
                 ? models.first.id
                 : '';
-    widget.onConnect(host, port, summonerName, _providerType, effectiveModel, apiKey);
+    widget.onConnect(
+      (
+        host: host,
+        port: port,
+        summonerName: summonerName,
+        providerType: _providerType,
+        model: effectiveModel,
+        apiKey: apiKey,
+        tokenBudget: tokenBudget,
+      ),
+    );
   }
 
   @override
@@ -259,22 +286,75 @@ class _ConnectionFormState extends State<ConnectionForm> {
             child: _providerType != 'none'
                 ? Padding(
                     padding: const EdgeInsets.only(top: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _apiKeyCtrl,
+                                enabled: !widget.isConnecting,
+                                obscureText: true,
+                                decoration: InputDecoration(
+                                  labelText: '$_providerType API Key',
+                                  hintText: 'Enter your API key',
+                                  prefixIcon: const Icon(
+                                    Icons.vpn_key_outlined,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                                keyboardType: TextInputType.text,
+                                textInputAction: TextInputAction.done,
+                                onChanged: (_) => setState(() {}),
+                                onSubmitted: (_) => _connect(),
+                              ),
+                            ),
+                            if (widget.onValidateKey != null) ...[
+                              const SizedBox(width: 4),
+                              _ValidateKeyButton(
+                                isLoading: widget.isValidatingKey,
+                                enabled: !widget.isConnecting &&
+                                    _apiKeyCtrl.text.isNotEmpty,
+                                onPressed: () => widget.onValidateKey!(
+                                  _providerType,
+                                  _apiKeyCtrl.text.trim(),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (widget.keyValidationResult != null) ...[
+                          const SizedBox(height: 6),
+                          _KeyValidationBadge(
+                            valid: widget.keyValidationResult!,
+                            error: widget.keyValidationError,
+                          ),
+                        ],
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: _providerType != 'none'
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 12),
                     child: TextField(
-                      controller: _apiKeyCtrl,
+                      controller: _tokenBudgetCtrl,
                       enabled: !widget.isConnecting,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: '$_providerType API Key',
-                        hintText: 'Enter your API key',
-                        prefixIcon: const Icon(
-                          Icons.vpn_key_outlined,
+                      decoration: const InputDecoration(
+                        labelText: 'Session Token Budget',
+                        hintText: '0 = unlimited (e.g. 50000)',
+                        prefixIcon: Icon(
+                          Icons.token_outlined,
                           color: AppColors.textSecondary,
                         ),
                       ),
-                      keyboardType: TextInputType.text,
+                      keyboardType: TextInputType.number,
                       textInputAction: TextInputAction.done,
-                      onChanged: (_) => setState(() {}),
-                      onSubmitted: (_) => _connect(),
                     ),
                   )
                 : const SizedBox.shrink(),
@@ -410,6 +490,68 @@ class _ConnectionFormState extends State<ConnectionForm> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _ValidateKeyButton extends StatelessWidget {
+  const _ValidateKeyButton({
+    required this.isLoading,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final bool isLoading;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Test API key',
+      icon: isLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.verified_outlined, color: AppColors.textSecondary),
+      onPressed: enabled && !isLoading ? onPressed : null,
+    );
+  }
+}
+
+class _KeyValidationBadge extends StatelessWidget {
+  const _KeyValidationBadge({required this.valid, this.error});
+
+  final bool valid;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) {
+    if (valid) {
+      return Row(
+        children: [
+          const Icon(Icons.check_circle_outline, size: 14, color: AppColors.gold),
+          const SizedBox(width: 6),
+          Text(
+            'API key is valid',
+            style: AppTextStyles.caption.copyWith(color: AppColors.gold),
+          ),
+        ],
+      );
+    }
+    return Row(
+      children: [
+        const Icon(Icons.error_outline, size: 14, color: AppColors.errorLight),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            error ?? 'Invalid API key',
+            style: AppTextStyles.caption.copyWith(color: AppColors.errorLight),
+          ),
+        ),
+      ],
     );
   }
 }

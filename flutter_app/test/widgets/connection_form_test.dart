@@ -22,11 +22,10 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: ConnectionForm(
-                onConnect:
-                    (host, port, summonerName, providerType, model, apiKey) {
-                  capturedProvider = providerType;
-                  capturedModel = model;
-                  capturedApiKey = apiKey;
+                onConnect: (req) {
+                  capturedProvider = req.providerType;
+                  capturedModel = req.model;
+                  capturedApiKey = req.apiKey;
                 },
               ),
             ),
@@ -45,8 +44,8 @@ void main() {
         await tester.tap(find.text('Claude'));
         await tester.pumpAndSettle();
 
-        // Summoner Name + API Key visible; model dropdown also shown
-        expect(find.byType(TextField), findsNWidgets(2));
+        // Summoner Name + API Key + Token Budget visible
+        expect(find.byType(TextField), findsNWidgets(3));
         expect(find.text('claude API Key'), findsOneWidget);
         expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
         // Default model shown
@@ -75,9 +74,8 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: ConnectionForm(
-                onConnect:
-                    (host, port, summonerName, providerType, model, apiKey) {
-                  capturedModel = model;
+                onConnect: (req) {
+                  capturedModel = req.model;
                 },
               ),
             ),
@@ -116,10 +114,9 @@ void main() {
           MaterialApp(
             home: Scaffold(
               body: ConnectionForm(
-                onConnect:
-                    (host, port, summonerName, providerType, model, apiKey) {
-                  capturedProvider = providerType;
-                  capturedApiKey = apiKey;
+                onConnect: (req) {
+                  capturedProvider = req.providerType;
+                  capturedApiKey = req.apiKey;
                 },
               ),
             ),

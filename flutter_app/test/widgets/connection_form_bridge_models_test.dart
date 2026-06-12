@@ -17,13 +17,12 @@ void main() {
     String? availableModelsForProvider,
     bool isLoadingModels = false,
     void Function(String provider, String apiKey)? onLoadModels,
-    void Function(String, int, String, String, String, String)? onConnect,
+    void Function(ConnectRequest)? onConnect,
   }) =>
       MaterialApp(
         home: Scaffold(
           body: ConnectionForm(
-            onConnect: onConnect ??
-                (_, __, ___, ____, _____, ______) {},
+            onConnect: onConnect ?? (_) {},
             availableModels: availableModels,
             availableModelsForProvider: availableModelsForProvider,
             isLoadingModels: isLoadingModels,
@@ -105,7 +104,9 @@ void main() {
           buildForm(
             availableModels: bridgeModels,
             availableModelsForProvider: 'claude',
-            onConnect: (_, __, ___, ____, model, _____) => capturedModel = model,
+            onConnect: (req) {
+              capturedModel = req.model;
+            },
           ),
         );
         await tester.pumpAndSettle();
