@@ -148,8 +148,11 @@ A change is considered done when:
 
 - No secrets or API keys in source files or committed `.env` files.
 - Input from the Riot API and from WebSocket clients must be validated with Zod before use.
-- TLS verification is intentionally disabled only for the local Riot endpoint (localhost).
+- TLS verification is intentionally disabled only for the local Riot endpoint (localhost); `isLocalhostUrl()` in `poller.ts` enforces this guard — do not widen it.
 - Dependency additions require explicit justification — prefer the already-vendored SDKs.
+- The WebSocket server binds to `127.0.0.1` only — never `0.0.0.0`; the bridge is not reachable from other machines by design.
+- **Shared secret auth**: on first run, bridge auto-generates `~/.lolcoach/.secret` (mode 0600, 64 hex chars) via `secretManager.ts`. Flutter reads the same file and sends it as `Authorization: Bearer <secret>` on every WS upgrade; `verifyClient` rejects any connection with a missing or incorrect token. Never store or log the secret value.
+- **Token budget**: `OrchestratorConfig.tokenBudget` caps cumulative session input tokens. When the running total reaches the cap, the orchestrator broadcasts `LLM_BUDGET_EXCEEDED` and skips the LLM call; the heuristic recommendation still fires. `0` (default) means unlimited. The cap resets with `resetDetector()`.
 
 ---
 

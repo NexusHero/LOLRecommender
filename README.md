@@ -144,6 +144,8 @@ Settings are persisted locally via `shared_preferences`. Once connected the app 
 4. **State minification** — Before calling the LLM, `StateMinifier` distils the game snapshot to CS, vision score, KDA, position, gold and live status for every player — minimising token cost while keeping all coaching-relevant data.
 5. **Role-aware LLM analysis** — The LLM receives the minified state, the player's role, their lane opponent's stats, and role-specific instructions. It returns a structured JSON with `winCondition`, `immediateAction`, `lateGamePlan`, `laneMatchupAnalysis` and `counterPlay`.
 6. **WebSocket broadcast** — Events and recommendations are pushed to all connected Flutter clients as JSON.
+7. **Session token budget** — An optional input-token cap (*Session Token Budget* in Settings; default: unlimited) guards against runaway API spend. Once the cumulative session input-token count reaches the cap, the bridge emits `LLM_BUDGET_EXCEEDED`, heuristic recommendations continue to fire, and the token-usage progress bar in the Recommendation panel turns red. The budget resets when a new game session starts.
+8. **Local-only security** — The bridge binds to `127.0.0.1` and verifies every WebSocket upgrade with a shared secret auto-generated at `~/.lolcoach/.secret`. The Flutter app reads the same file from disk; connections from other machines or without the correct token are rejected.
 
 ---
 
