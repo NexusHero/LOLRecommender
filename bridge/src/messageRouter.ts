@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import type { BridgeOrchestrator } from "./orchestrator.js";
+
 import { createLlmProvider, friendlyApiError } from "./llmProvider.js";
 import type { ProviderType } from "./llmProvider.js";
 
@@ -22,6 +23,10 @@ export class MessageRouter {
     if (message.event === "GET_MODELS") {
       await this.handleGetModels(ws, message);
     }
+
+    if (message.event === "VALIDATE_KEY") {
+      await this.handleValidateKey(ws, message);
+    }
   }
 
   private async handleGetModels(ws: WebSocket, message: Record<string, unknown>): Promise<void> {
@@ -42,10 +47,31 @@ export class MessageRouter {
     }
   }
 
+  private async handleValidateKey(ws: WebSocket, message: Record<string, unknown>): Promise<void> {
+    const providerType = message.provider as ProviderType | undefined;
+    const apiKey = message.apiKey as string | undefined;
+
+    if (!providerType || !apiKey) {
+      ws.send(JSON.stringify({ event: "KEY_INVALID", error: "Provider and API key are required" }));
+      return;
+    }
+
+    try {
+      const provider = await createLlmProvider(providerType, apiKey);
+      await provider.listModels();
+      ws.send(JSON.stringify({ event: "KEY_VALID", provider: providerType }));
+    } catch (err) {
+      ws.send(JSON.stringify({ event: "KEY_INVALID", provider: providerType, error: friendlyApiError(err) }));
+    }
+  }
+
   private async handleSetLlmProvider(message: Record<string, unknown>): Promise<void> {
     const providerType = message.provider as ProviderType | undefined;
     const apiKey = message.apiKey as string | undefined;
     const model = message.model as string | undefined;
+    const tokenBudget = typeof message.tokenBudget === "number" ? message.tokenBudget : 0;
+
+    this.orchestrator.setTokenBudget(tokenBudget);
 
     if (!providerType || !apiKey) {
       console.log("[MessageRouter] LLM provider disabled.");

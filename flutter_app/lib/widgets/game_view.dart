@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/models/token_usage.dart';
 import 'package:lol_coach/widgets/game_top_bar.dart';
 import 'package:lol_coach/widgets/local_player_card.dart';
 import 'package:lol_coach/widgets/recommendation_panel.dart';
@@ -14,11 +15,17 @@ class GameView extends StatelessWidget {
     super.key,
     this.recommendation,
     this.recommendationTime,
+    this.tokenUsage,
+    this.tokenBudget = 0,
+    this.isBudgetExceeded = false,
   });
   final ParsedGameState gameState;
   final ItemRecommendation? recommendation;
   final String lastEvent;
   final DateTime? recommendationTime;
+  final TokenUsage? tokenUsage;
+  final int tokenBudget;
+  final bool isBudgetExceeded;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +49,9 @@ class GameView extends StatelessWidget {
                   RecommendationPanel(
                     recommendation: recommendation!,
                     recommendationTime: recommendationTime,
+                    tokenUsage: tokenUsage,
+                    tokenBudget: tokenBudget,
+                    isBudgetExceeded: isBudgetExceeded,
                   ),
                 ],
                 const SizedBox(height: 10),

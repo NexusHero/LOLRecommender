@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { LlmProvider, LlmAnalysis, ModelInfo } from "../llmProvider.js";
+import type { LlmProvider, LlmAnalysis, ModelInfo, TokenUsage } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse, friendlyApiError } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
@@ -41,11 +41,15 @@ export class OpenAiProvider implements LlmProvider {
       const text = response.choices[0]?.message?.content;
       if (!text) return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
 
+      const tokenUsage: TokenUsage = {
+        input: response.usage?.prompt_tokens ?? 0,
+        output: response.usage?.completion_tokens ?? 0,
+      };
       console.log(
-        `[LLM:OpenAI] Tokens: ${response.usage?.prompt_tokens ?? "?"} in, ${response.usage?.completion_tokens ?? "?"} out`,
+        `[LLM:OpenAI] Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out`,
       );
 
-      return parseAnalysisResponse(text, heuristicRec);
+      return { ...parseAnalysisResponse(text, heuristicRec), tokenUsage };
     } catch (err) {
       throw new Error(`OpenAI: ${friendlyApiError(err)}`);
     }

@@ -88,6 +88,13 @@ export type GameEvent =
 
 // --- WebSocket Message Schema (an Flutter gesendet) ---
 
+export interface WsTokenUsage {
+  lastInput: number;
+  lastOutput: number;
+  sessionInput: number;
+  sessionOutput: number;
+}
+
 export interface WsMessage {
   event: string;
   timestamp: number;
@@ -95,6 +102,9 @@ export interface WsMessage {
   recommendation?: ItemRecommendation;
   error?: string;
   correlationId?: string;
+  tokenUsage?: WsTokenUsage;
+  sessionInputTokens?: number;
+  budget?: number;
 }
 
 export interface Strategy {

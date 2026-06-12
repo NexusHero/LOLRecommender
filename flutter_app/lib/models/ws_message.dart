@@ -1,5 +1,6 @@
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/models/token_usage.dart';
 
 class WsMessage {
   const WsMessage({
@@ -8,6 +9,9 @@ class WsMessage {
     this.gameState,
     this.recommendation,
     this.error,
+    this.tokenUsage,
+    this.sessionInputTokens,
+    this.budget,
   });
 
   factory WsMessage.fromJson(Map<String, dynamic> json) => WsMessage(
@@ -24,10 +28,19 @@ class WsMessage {
               )
             : null,
         error: json['error'] as String?,
+        tokenUsage: json['tokenUsage'] != null
+            ? TokenUsage.fromJson(json['tokenUsage'] as Map<String, dynamic>)
+            : null,
+        sessionInputTokens: json['sessionInputTokens'] as int?,
+        budget: json['budget'] as int?,
       );
+
   final String event;
   final int timestamp;
   final ParsedGameState? gameState;
   final ItemRecommendation? recommendation;
   final String? error;
+  final TokenUsage? tokenUsage;
+  final int? sessionInputTokens;
+  final int? budget;
 }

@@ -72,7 +72,7 @@ void main() {
 
     setUp(() {
       fakeChannel = FakeWebSocketChannel();
-      service = WsService(channelFactory: (_) => fakeChannel);
+      service = WsService(channelFactory: (_, {headers}) => fakeChannel);
     });
 
     tearDown(() {

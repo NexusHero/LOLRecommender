@@ -1,5 +1,5 @@
 import { Anthropic } from "@anthropic-ai/sdk";
-import type { LlmProvider, LlmAnalysis, ModelInfo } from "../llmProvider.js";
+import type { LlmProvider, LlmAnalysis, ModelInfo, TokenUsage } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse, friendlyApiError } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
@@ -47,11 +47,17 @@ export class ClaudeProvider implements LlmProvider {
       const block = response.content[0];
       if (block.type !== "text") return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
 
+      const cacheHit = (response.usage as unknown as Record<string, unknown>).cache_read_input_tokens as number ?? 0;
+      const tokenUsage: TokenUsage = {
+        input: response.usage.input_tokens,
+        output: response.usage.output_tokens,
+        cacheHit,
+      };
       console.log(
-        `[LLM:Claude] Input tokens: ${response.usage.input_tokens} (cache hit: ${(response.usage as unknown as Record<string, unknown>).cache_read_input_tokens ?? 0}), output tokens: ${response.usage.output_tokens}`,
+        `[LLM:Claude] Input tokens: ${tokenUsage.input} (cache hit: ${cacheHit}), output tokens: ${tokenUsage.output}`,
       );
 
-      return parseAnalysisResponse(block.text, heuristicRec);
+      return { ...parseAnalysisResponse(block.text, heuristicRec), tokenUsage };
     } catch (err) {
       throw new Error(`Claude: ${friendlyApiError(err)}`);
     }

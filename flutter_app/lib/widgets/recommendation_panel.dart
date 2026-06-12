@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' hide Badge;
 import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/models/strategy.dart';
+import 'package:lol_coach/models/token_usage.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/shared_widgets.dart';
@@ -10,9 +11,15 @@ class RecommendationPanel extends StatelessWidget {
     required this.recommendation,
     super.key,
     this.recommendationTime,
+    this.tokenUsage,
+    this.tokenBudget = 0,
+    this.isBudgetExceeded = false,
   });
   final ItemRecommendation recommendation;
   final DateTime? recommendationTime;
+  final TokenUsage? tokenUsage;
+  final int tokenBudget;
+  final bool isBudgetExceeded;
 
   String _timeAgo() {
     if (recommendationTime == null) return '';
@@ -141,6 +148,14 @@ class RecommendationPanel extends StatelessWidget {
           if (recommendation.strategy != null) ...[
             const SizedBox(height: 12),
             _StrategyCard(strategy: recommendation.strategy!),
+          ],
+          if (tokenUsage != null || isBudgetExceeded) ...[
+            const SizedBox(height: 10),
+            _TokenUsageRow(
+              usage: tokenUsage,
+              budget: tokenBudget,
+              exceeded: isBudgetExceeded,
+            ),
           ],
         ],
       ),
@@ -285,6 +300,76 @@ class _StrategyRow extends StatelessWidget {
         Badge(label, bg: AppColors.surfaceDark, fg: AppColors.textSecondary),
         const SizedBox(width: 6),
         Expanded(child: Text(text, style: AppTextStyles.caption)),
+      ],
+    );
+  }
+}
+
+class _TokenUsageRow extends StatelessWidget {
+  const _TokenUsageRow({this.usage, this.budget = 0, this.exceeded = false});
+
+  final TokenUsage? usage;
+  final int budget;
+  final bool exceeded;
+
+  String _fmt(int n) {
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '$n';
+  }
+
+  double? get _budgetFraction {
+    if (budget <= 0 || usage == null) return null;
+    return (usage!.sessionInput / budget).clamp(0.0, 1.0);
+  }
+
+  Color get _color {
+    if (exceeded) return AppColors.error;
+    final f = _budgetFraction;
+    if (f != null && f >= 0.8) return AppColors.warning;
+    return AppColors.textSecondary;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fraction = _budgetFraction;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(color: AppColors.border, height: 1),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Icon(Icons.token_outlined, size: 12, color: _color),
+            const SizedBox(width: 5),
+            if (exceeded)
+              Text(
+                'Token budget exhausted — using heuristic',
+                style: AppTextStyles.caption.copyWith(color: _color),
+              )
+            else if (usage != null)
+              Expanded(
+                child: Text(
+                  'Session: ${_fmt(usage!.sessionInput)} in'
+                  ' / ${_fmt(usage!.sessionOutput)} out'
+                  '${budget > 0 ? ' · ${_fmt(usage!.sessionInput)}'
+                      '/${_fmt(budget)}' : ''}',
+                  style: AppTextStyles.caption.copyWith(color: _color),
+                ),
+              ),
+          ],
+        ),
+        if (fraction != null) ...[
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 3,
+              backgroundColor: AppColors.border,
+              valueColor: AlwaysStoppedAnimation<Color>(_color),
+            ),
+          ),
+        ],
       ],
     );
   }

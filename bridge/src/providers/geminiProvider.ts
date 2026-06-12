@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import type { LlmProvider, LlmAnalysis, ModelInfo } from "../llmProvider.js";
+import type { LlmProvider, LlmAnalysis, ModelInfo, TokenUsage } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse, friendlyApiError } from "../llmProvider.js";
 import type { ParsedGameState, ItemRecommendation } from "../types.js";
 
@@ -55,9 +55,14 @@ export class GeminiProvider implements LlmProvider {
       const text = result.response.text();
       if (!text) return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
 
-      console.log(`[LLM:Gemini] Response received (${text.length} chars)`);
+      const meta = result.response.usageMetadata;
+      const tokenUsage: TokenUsage = {
+        input: meta?.promptTokenCount ?? 0,
+        output: meta?.candidatesTokenCount ?? 0,
+      };
+      console.log(`[LLM:Gemini] Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out`);
 
-      return parseAnalysisResponse(text, heuristicRec);
+      return { ...parseAnalysisResponse(text, heuristicRec), tokenUsage };
     } catch (err) {
       throw new Error(`Gemini: ${friendlyApiError(err)}`);
     }
