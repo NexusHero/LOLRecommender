@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build:
-    name: Bundle bridge with webpack
+    name: Bundle core with webpack
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -24,19 +24,20 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: bridge/package-lock.json
+          cache-dependency-path: core/package-lock.json
 
       - name: Install dependencies
         run: npm ci
-        working-directory: bridge
+        working-directory: core
 
       - name: Bundle with webpack
         run: npm run bundle
-        working-directory: bridge
+        working-directory: core
 
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v7
         with:
-          name: bridge-bundle
-          path: bridge/dist/bundle.js
+          name: core-bundle
+          path: core/dist/bundle.js
           retention-days: 7
+

@@ -10,7 +10,7 @@
 
 ![LoL Coach — Settings and Coach screens](docs/images/screenshot.png)
 
-An AI-powered in-game coaching assistant for League of Legends. A local Node.js bridge reads live game data from the Riot Games Live Client API and streams real-time recommendations to a Flutter desktop app over WebSocket.
+An AI-powered in-game coaching assistant for League of Legends. A local Node.js core backend reads live game data from the Riot Games Live Client API and streams real-time recommendations to a Flutter desktop app over WebSocket.
 
 The coaching engine combines a rule-based heuristic (zero latency, no internet) with an optional LLM layer (Claude, OpenAI, or Gemini) that produces role-aware, matchup-specific advice — not generic tips.
 
@@ -19,7 +19,7 @@ The coaching engine combines a rule-based heuristic (zero latency, no internet) 
 ## Why LoL Coach?
 
 | | LoL Coach | Generic tier-list sites | In-client coach |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Reads your **live** game state | ✅ | ❌ | ✅ |
 | Role-aware advice | ✅ | ❌ | partial |
 | Lane matchup analysis vs. your actual opponent | ✅ | ❌ | ❌ |
@@ -32,11 +32,11 @@ The coaching engine combines a rule-based heuristic (zero latency, no internet) 
 ## Quick start
 
 ```bash
-# 1. Bridge (run on the same PC as League)
-cd bridge && npm install && npm run dev
+# 1. Core (run on the same PC as League)
+cd core && npm install && npm run dev
 
 # 2. Desktop app (macOS / Windows / Linux)
-cd flutter_app && flutter pub get && flutter run
+cd app && flutter pub get && flutter run
 ```
 
 Open **Settings**, enter your Summoner Name and optionally an LLM API key, then start a game.
@@ -65,7 +65,7 @@ Open **Settings**, enter your Summoner Name and optionally an LLM API key, then 
 │  LoL Client  ──►  Riot Live Client API (port 2999)       │
 │                            │                             │
 │                            ▼                             │
-│              Node.js Bridge (TypeScript)                 │
+│              Node.js Core (TypeScript)                   │
 │          ┌─────────────────────────────────┐             │
 │          │  Poller → Parser → EventDetector│             │
 │          │  Heuristic Engine               │             │
@@ -88,9 +88,9 @@ Open **Settings**, enter your Summoner Name and optionally an LLM API key, then 
 
 | Component | Tech |
 |-----------|------|
-| Bridge | Node.js 18+, TypeScript, Zod, ws, @anthropic-ai/sdk, openai, @google/genai |
+| Core | Node.js 18+, TypeScript, Zod, ws, @anthropic-ai/sdk, openai, @google/genai |
 | Mobile app | Flutter 3.x, Dart, Provider, web_socket_channel, shared_preferences |
-| Tests | Jest + ts-jest (bridge), flutter_test (app) |
+| Tests | Jest + ts-jest (core), flutter_test (app) |
 
 ---
 
@@ -98,38 +98,38 @@ Open **Settings**, enter your Summoner Name and optionally an LLM API key, then 
 
 - Node.js 18+
 - Flutter SDK 3.4+
-- League of Legends installed (the bridge reads from the local Live Client API)
+- League of Legends installed (the core backend reads from the local Live Client API)
 
 ---
 
 ## Setup
 
-### 1. Bridge
+### 1. Core
 
 ```bash
-cd bridge
+cd core
 npm install
 ```
 
-Start the bridge:
+Start the core backend:
 ```bash
 npm run dev        # development (watch mode)
 npm start          # production (requires npm run build first)
 ```
 
-The bridge waits for an active game. Once detected it starts pushing game state and recommendations over WebSocket.
+The core backend waits for an active game. Once detected it starts pushing game state and recommendations over WebSocket.
 
 ### 2. Flutter app
 
 ```bash
-cd flutter_app
+cd app
 flutter pub get
 flutter run
 ```
 
 In the **Settings** tab configure:
 - Your Summoner Name
-- The Bridge IP and Port (default `127.0.0.1:8765`)
+- The Core IP and Port (default `127.0.0.1:8765`)
 - Your LLM Provider (None, Claude, OpenAI, or Gemini) and API Key
 
 Settings are persisted locally via `shared_preferences`. Once connected the app switches to the **Coach** tab automatically.
@@ -138,14 +138,14 @@ Settings are persisted locally via `shared_preferences`. Once connected the app 
 
 ## How it works
 
-1. **Polling** — The bridge polls `https://127.0.0.1:2999/liveclientdata/allgamedata` every second.
+1. **Polling** — The core polls `https://127.0.0.1:2999/liveclientdata/allgamedata` every second.
 2. **Event detection** — `EventDetector` compares consecutive snapshots and emits typed events.
 3. **Heuristic recommendations** — On each trigger event, `buildCompProfile` analyses the enemy team across 170+ categorised champions and recommends counter-items instantly.
 4. **State minification** — Before calling the LLM, `StateMinifier` distils the game snapshot to CS, vision score, KDA, position, gold and live status for every player — minimising token cost while keeping all coaching-relevant data.
 5. **Role-aware LLM analysis** — The LLM receives the minified state, the player's role, their lane opponent's stats, and role-specific instructions. It returns a structured JSON with `winCondition`, `immediateAction`, `lateGamePlan`, `laneMatchupAnalysis` and `counterPlay`.
 6. **WebSocket broadcast** — Events and recommendations are pushed to all connected Flutter clients as JSON.
-7. **Session token budget** — An optional input-token cap (*Session Token Budget* in Settings; default: unlimited) guards against runaway API spend. Once the cumulative session input-token count reaches the cap, the bridge emits `LLM_BUDGET_EXCEEDED`, heuristic recommendations continue to fire, and the token-usage progress bar in the Recommendation panel turns red. The budget resets when a new game session starts.
-8. **Local-only security** — The bridge binds to `127.0.0.1` and verifies every WebSocket upgrade with a shared secret auto-generated at `~/.lolcoach/.secret`. The Flutter app reads the same file from disk; connections from other machines or without the correct token are rejected.
+7. **Session token budget** — An optional input-token cap (*Session Token Budget* in Settings; default: unlimited) guards against runaway API spend. Once the cumulative session input-token count reaches the cap, the core emits `LLM_BUDGET_EXCEEDED`, heuristic recommendations continue to fire, and the token-usage progress bar in the Recommendation panel turns red. The budget resets when a new game session starts.
+8. **Local-only security** — The core binds to `127.0.0.1` and verifies every WebSocket upgrade with a shared secret auto-generated at `~/.lolcoach/.secret`. The Flutter app reads the same file from disk; connections from other machines or without the correct token are rejected.
 
 ---
 
@@ -153,7 +153,7 @@ Settings are persisted locally via `shared_preferences`. Once connected the app 
 
 ```
 lolclient/
-├── bridge/                   # Backend (Node.js/TypeScript)
+├── core/                     # Backend (Node.js/TypeScript)
 │   ├── src/
 │   │   ├── types.ts          # Zod schemas + TypeScript types
 │   │   ├── poller.ts         # Live Client API polling
@@ -170,13 +170,18 @@ lolclient/
 │   │   └── index.ts          # Entry point / DI wiring
 │   └── src/__tests__/        # Jest unit + integration + E2E tests
 │
-├── flutter_app/              # UI (Flutter)
+├── app/                      # UI (Flutter)
 │   ├── lib/
 │   │   ├── models/           # Data models (Strategy, ItemRecommendation, …)
 │   │   ├── services/         # WsService (ChangeNotifier)
 │   │   ├── screens/          # MainScreen, HomeScreen (Coach tab)
 │   │   └── widgets/          # RecommendationPanel, GameView, ConnectionForm
 │   └── test/                 # Widget, unit and golden tests
+│
+├── skills/                   # Agent Skills
+│   ├── lolcoach-agents/      # Primary vendor-neutral skill
+│   ├── lolcoach-claude/      # Claude-specific rules
+│   └── lolcoach-gemini/      # Gemini-specific rules
 │
 └── deployment/               # Build & packaging scripts
     ├── build_unix.sh         # macOS + Linux build script
@@ -190,41 +195,41 @@ lolclient/
 ### All-in-one script (`test.sh`)
 
 ```bash
-./test.sh                    # bridge + flutter (goldens excluded)
-./test.sh --coverage         # bridge tests with coverage report
-./test.sh --goldens          # include flutter golden pixel tests
+./test.sh                    # core + app (goldens excluded)
+./test.sh --coverage         # core tests with coverage report
+./test.sh --goldens          # include app golden pixel tests
 ./test.sh --update-goldens   # regenerate golden baselines, then run all
-./test.sh --bridge-only      # skip flutter
-./test.sh --flutter-only     # skip bridge
-./test.sh --watch            # jest watch mode (flutter skipped)
+./test.sh --core-only        # skip app
+./test.sh --app-only         # skip core
+./test.sh --watch            # jest watch mode (app skipped)
 ```
 
 
 #### Mutation testing (Stryker)
 
 ```bash
-cd bridge
+cd core
 npx stryker run
-# Report: bridge/reports/mutation/report.html
+# Report: core/reports/mutation/report.html
 ```
 
 ### Flutter only
 
 ```bash
-cd flutter_app
+cd app
 flutter test                                              # unit + widget tests
 flutter test --update-goldens test/widgets/recommendation_panel_golden_test.dart
                                                           # regenerate golden baselines
 ```
 
-> **Golden tests** require a baseline PNG committed under `flutter_app/test/goldens/`.
+> **Golden tests** require a baseline PNG committed under `app/test/goldens/`.
 > Run `--update-goldens` once and commit the generated files before golden tests will pass.
 
 ---
 
 ## AI-assisted development
 
-This project is set up for Claude Code with shared project skills and enforced quality gates.
+This project is set up with agent skills to enforce architecture and quality rules for all AI assistants.
 
 ### Project skills (slash commands)
 
@@ -232,11 +237,11 @@ Skills live in `.claude/commands/` and are committed to the repo, so every contr
 
 | Skill | What it does |
 |-------|-------------|
-| `/test` | Runs the full suite — `flutter analyze` → flutter tests → bridge tests. Accepts the same flags as `test.sh` (e.g. `/test --flutter-only`). |
+| `/test` | Runs the full suite — `flutter analyze` → app tests → core tests. Accepts the same flags as `test.sh` (e.g. `/test --app-only`). |
 
 ### Pre-commit hook
 
-The hook runs `flutter analyze` before every commit that touches `flutter_app/` (~4 s). It mirrors the CI analyze step so lint errors never reach the pipeline.
+The hook runs `flutter analyze` before every commit that touches `app/` (~4 s). It mirrors the CI analyze step so lint errors never reach the pipeline.
 
 After a fresh clone, install it once:
 
@@ -249,7 +254,7 @@ chmod +x .git/hooks/pre-commit
 
 ### Conventions (auto-applied by AI assistants)
 
-All rules live in [`AGENTS.md`](AGENTS.md) under **Conventions**. AI assistants apply them without being asked.
+All rules live in the [`lolcoach-agents` skill](skills/lolcoach-agents/SKILL.md) under **Conventions**. AI assistants apply them without being asked.
 
 | Rule | Detail |
 |------|--------|
@@ -257,13 +262,13 @@ All rules live in [`AGENTS.md`](AGENTS.md) under **Conventions**. AI assistants 
 | **Test names** | Microsoft naming — `Subject_StateUnderTest_ExpectedBehaviour` |
 | **Test structure** | AAA pattern — Arrange / Act / Assert with a blank line between each phase |
 
-### Agent context files
+### Agent context skills
 
 | File | Purpose |
 |------|---------|
-| [`AGENTS.md`](AGENTS.md) | Vendor-neutral context — architecture, conventions, quality gates. Read by all AI assistants. |
-| [`CLAUDE.md`](CLAUDE.md) | Claude-specific settings — model defaults, response style, commit rules. |
-| [`GEMINI.md`](GEMINI.md) | Gemini-specific overrides. |
+| [`lolcoach-agents`](skills/lolcoach-agents/SKILL.md) | Vendor-neutral context — architecture, conventions, quality gates. Read by all AI assistants. |
+| [`lolcoach-claude`](skills/lolcoach-claude/SKILL.md) | Claude-specific settings — model defaults, response style, commit rules. |
+| [`lolcoach-gemini`](skills/lolcoach-gemini/SKILL.md) | Gemini-specific overrides. |
 
 ---
 

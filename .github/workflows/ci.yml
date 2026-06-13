@@ -10,9 +10,9 @@ permissions:
   contents: read
 
 jobs:
-  # ── Bridge (Node.js / TypeScript) ─────────────────────────────────────────
-  bridge:
-    name: Bridge — Node.js
+  # ── core (Node.js / TypeScript) ─────────────────────────────────────────
+  core:
+    name: core — Node.js
     runs-on: ubuntu-latest
 
     steps:
@@ -23,15 +23,15 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: bridge/package-lock.json
+          cache-dependency-path: core/package-lock.json
 
       - name: Install dependencies
         run: npm ci
-        working-directory: bridge
+        working-directory: core
 
       - name: Run tests
         run: npm test
-        working-directory: bridge
+        working-directory: core
 
   # ── Flutter app (Dart) ────────────────────────────────────────────────────
   flutter:
@@ -52,12 +52,13 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get
-        working-directory: flutter_app
+        working-directory: app
 
       - name: Analyze
         run: flutter analyze
-        working-directory: flutter_app
+        working-directory: app
 
       - name: Run tests
         run: flutter test --exclude-tags=golden
-        working-directory: flutter_app
+        working-directory: app
+

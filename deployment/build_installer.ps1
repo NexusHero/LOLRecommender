@@ -4,20 +4,20 @@ Set-Location (Join-Path $PSScriptRoot "..")
 
 Write-Host "Building LoL Coach Installer..." -ForegroundColor Cyan
 
-# 1. Build the Node.js Bridge
-Write-Host "`n--- Step 1: Building Bridge (.exe) ---" -ForegroundColor Yellow
-Set-Location .\bridge
+# 1. Build the Node.js core
+Write-Host "`n--- Step 1: Building core (.exe) ---" -ForegroundColor Yellow
+Set-Location .\core
 # We assume 'npm install' was already run at some point
 npm run build:exe:windows
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Failed to build the Bridge." -ForegroundColor Red
+    Write-Host "Failed to build the core." -ForegroundColor Red
     exit $LASTEXITCODE
 }
 Set-Location ..
 
 # 2. Build the Flutter App
 Write-Host "`n--- Step 2: Building Flutter App (Windows) ---" -ForegroundColor Yellow
-Set-Location .\flutter_app
+Set-Location .\app
 flutter build windows --release
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Failed to build the Flutter app." -ForegroundColor Red
@@ -28,19 +28,19 @@ Set-Location ..
 # 3. Create the MSIX Package
 Write-Host "`n--- Step 3: Generating MSIX Package ---" -ForegroundColor Yellow
 
-$releaseDir = ".\flutter_app\build\windows\x64\runner\Release"
-$bridgeExe = ".\bridge\dist\bridge.exe"
+$releaseDir = ".\app\build\windows\x64\runner\Release"
+$bridgeExe = ".\core\dist\core.exe"
 
 if (-not (Test-Path $releaseDir)) {
     Write-Host "Flutter release directory not found. Did the build fail?" -ForegroundColor Red
     exit 1
 }
 
-# Copy bridge.exe into the flutter release folder so it gets bundled into the MSIX
-Write-Host "Copying bridge.exe to Flutter release directory..."
+# Copy core.exe into the flutter release folder so it gets bundled into the MSIX
+Write-Host "Copying core.exe to Flutter release directory..."
 Copy-Item $bridgeExe -Destination $releaseDir -Force
 
-Set-Location .\flutter_app
+Set-Location .\app
 Write-Host "Running msix:create..."
 dart run msix:create
 if ($LASTEXITCODE -ne 0) {
@@ -63,3 +63,4 @@ if (Test-Path $msixSource) {
     Write-Host "Could not find the generated MSIX file at $msixSource." -ForegroundColor Red
     exit 1
 }
+
