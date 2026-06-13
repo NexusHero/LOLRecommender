@@ -5,8 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Champion classifications live in `bridge/src/data/champions.json`.
-        Item mappings live in `bridge/src/data/items.json`.
+        Champion classifications live in `core/src/data/champions.json`.
+        Item mappings live in `core/src/data/items.json`.
         This is one of the easiest contributions — no code required!
 
   - type: input
@@ -37,3 +37,4 @@ body:
         "Soraka": { "ap": true, "healer": true, "cc": true }
     validations:
       required: true
+

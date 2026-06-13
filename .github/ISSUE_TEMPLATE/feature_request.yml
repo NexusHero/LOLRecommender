@@ -23,7 +23,7 @@ body:
     attributes:
       label: Affected component
       options:
-        - Bridge (Node.js) — heuristic / event detection / LLM
+        - core (Node.js) — heuristic / event detection / LLM
         - Flutter app — UI / widgets
         - Both
         - New component
@@ -42,3 +42,4 @@ body:
       label: Contribution
       options:
         - label: I'd be willing to open a PR for this
+

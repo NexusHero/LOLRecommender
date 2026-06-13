@@ -15,8 +15,8 @@ else
     exit 1
 fi
 
-echo -e "\n--- Step 1: Building Bridge ---"
-cd bridge
+echo -e "\n--- Step 1: Building core ---"
+cd core
 if [[ "$OS_NAME" == "macos" ]]; then
     npm run build:exe:macos
 else
@@ -25,7 +25,7 @@ fi
 cd ..
 
 echo -e "\n--- Step 2: Building Flutter App ---"
-cd flutter_app
+cd app
 if [[ "$OS_NAME" == "macos" ]]; then
     flutter build macos --release
 else
@@ -38,20 +38,21 @@ DIST_DIR="$(pwd)/dist"
 mkdir -p "$DIST_DIR"
 
 if [[ "$OS_NAME" == "macos" ]]; then
-    # Copy bridge into the .app bundle
-    cp bridge/dist/bridge flutter_app/build/macos/Build/Products/Release/lol_coach.app/Contents/MacOS/
+    # Copy core into the .app bundle
+    cp core/dist/core app/build/macos/Build/Products/Release/lol_coach.app/Contents/MacOS/
     # Zip the .app
-    cd flutter_app/build/macos/Build/Products/Release
+    cd app/build/macos/Build/Products/Release
     zip -r "$DIST_DIR/LoLCoach-Mac.zip" lol_coach.app
     cd -
     echo "Created $DIST_DIR/LoLCoach-Mac.zip"
 elif [[ "$OS_NAME" == "linux" ]]; then
-    # Copy bridge into the bundle directory
-    # Flutter linux build outputs to flutter_app/build/linux/x64/release/bundle
-    cp bridge/dist/bridge flutter_app/build/linux/x64/release/bundle/
+    # Copy core into the bundle directory
+    # Flutter linux build outputs to app/build/linux/x64/release/bundle
+    cp core/dist/core app/build/linux/x64/release/bundle/
     # Tar it
-    cd flutter_app/build/linux/x64/release
+    cd app/build/linux/x64/release
     tar -czvf "$DIST_DIR/LoLCoach-Linux.tar.gz" bundle/
     cd -
     echo "Created $DIST_DIR/LoLCoach-Linux.tar.gz"
 fi
+

@@ -11,19 +11,19 @@ Thanks for taking the time to contribute!
 
 Look for the [`good first issue`](https://github.com/NexusHero/LOLRecommender/labels/good%20first%20issue) label. Good starting points:
 
-- Adding a champion or item to `bridge/src/data/champions.json` / `items.json`
-- Improving a heuristic rule in `bridge/src/heuristic.ts`
-- Adding a widget test in `flutter_app/test/`
+- Adding a champion or item to `core/src/data/champions.json` / `items.json`
+- Improving a heuristic rule in `core/src/heuristic.ts`
+- Adding a widget test in `app/test/`
 - Improving error messages or UI copy
 
 ## Setup
 
 ```bash
-# Bridge
-cd bridge && npm install
+# Core backend
+cd core && npm install
 
 # Flutter app
-cd flutter_app && flutter pub get
+cd app && flutter pub get
 
 # Install pre-commit hook (runs flutter analyze before every commit)
 cp scripts/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
@@ -46,7 +46,7 @@ Run the full test suite before opening a PR:
 
 ```
 feat(heuristic): add Mortal Reminder recommendation for heavy-heal comps
-fix(bridge): prevent double-fire on PLAYER_DIED within 500 ms
+fix(core): prevent double-fire on PLAYER_DIED within 500 ms
 docs(readme): add demo GIF
 ```
 
@@ -54,7 +54,7 @@ Types: `feat` · `fix` · `docs` · `test` · `refactor` · `chore` · `ci`
 
 ## Champion / item data
 
-Champion classifications live in `bridge/src/data/champions.json`. Each champion entry looks like:
+Champion classifications live in `core/src/data/champions.json`. Each champion entry looks like:
 
 ```json
 "Soraka": { "ap": true, "healer": true, "cc": true }

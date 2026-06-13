@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# test.sh — run all tests for bridge (Node/Jest) and flutter_app side-by-side
+# test.sh — run all tests for core (Node/Jest) and app side-by-side
 #
 # Usage:
-#   ./test.sh                  run all tests (flutter goldens excluded)
-#   ./test.sh --coverage       bridge tests with coverage report
-#   ./test.sh --mock-server    start mock LoL server before bridge tests (guaranteed stop)
-#   ./test.sh --goldens        include flutter golden tests
+#   ./test.sh                  run all tests (app goldens excluded)
+#   ./test.sh --coverage       core tests with coverage report
+#   ./test.sh --mock-server    start mock LoL server before core tests (guaranteed stop)
+#   ./test.sh --goldens        include app golden tests
 #   ./test.sh --update-goldens regenerate golden baselines then run all
-#   ./test.sh --bridge-only    skip flutter
-#   ./test.sh --flutter-only   skip bridge
-#   ./test.sh --watch          bridge jest --watch (flutter skipped)
+#   ./test.sh --core-only      skip app
+#   ./test.sh --app-only       skip core
+#   ./test.sh --watch          core jest --watch (app skipped)
 #
 # Verbosity:
 #   -q / --quiet    only the final summary (no test output, no dir/cmd info)
@@ -27,8 +27,8 @@ BOLD='\033[1m'
 RESET='\033[0m'
 
 # ── flags ────────────────────────────────────────────────────────────────────
-RUN_BRIDGE=true
-RUN_FLUTTER=true
+RUN_CORE=true
+RUN_APP=true
 COVERAGE=false
 GOLDENS=false
 UPDATE_GOLDENS=false
@@ -42,9 +42,9 @@ for arg in "$@"; do
     --mock-server)    WITH_MOCK_SERVER=true ;;
     --goldens)        GOLDENS=true ;;
     --update-goldens) UPDATE_GOLDENS=true; GOLDENS=true ;;
-    --bridge-only)    RUN_FLUTTER=false ;;
-    --flutter-only)   RUN_BRIDGE=false ;;
-    --watch)          WATCH=true; RUN_FLUTTER=false ;;
+    --core-only)      RUN_APP=false ;;
+    --app-only)       RUN_CORE=false ;;
+    --watch)          WATCH=true; RUN_APP=false ;;
     -q|--quiet)       VERBOSITY=0 ;;
     -v|--verbose)     VERBOSITY=2 ;;
     --help|-h)
@@ -59,11 +59,11 @@ for arg in "$@"; do
 done
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-BRIDGE_DIR="$ROOT/bridge"
-FLUTTER_DIR="$ROOT/flutter_app"
+CORE_DIR="$ROOT/core"
+APP_DIR="$ROOT/app"
 
-BRIDGE_EXIT=0
-FLUTTER_EXIT=0
+CORE_EXIT=0
+APP_EXIT=0
 MOCK_PID=""
 MOCK_PORT=29990
 
@@ -135,8 +135,8 @@ start_mock_server() {
   info "cmd  : npx tsx src/mock-lol-server.ts"
   [ "$VERBOSITY" -ge 1 ] && echo "" || true
 
-  MOCK_LOL_PORT=$MOCK_PORT npx --prefix "$BRIDGE_DIR" tsx \
-    "$BRIDGE_DIR/src/mock-lol-server.ts" >/tmp/mock-lol.log 2>&1 &
+  MOCK_LOL_PORT=$MOCK_PORT npx --prefix "$CORE_DIR" tsx \
+    "$CORE_DIR/src/mock-lol-server.ts" >/tmp/mock-lol.log 2>&1 &
   MOCK_PID=$!
 
   # Wait until the server responds (max 5s)
@@ -162,16 +162,16 @@ start_mock_server() {
   fi
 }
 
-# ── bridge ───────────────────────────────────────────────────────────────────
-run_bridge() {
-  section "Bridge — Node.js / Jest"
+# ── core ───────────────────────────────────────────────────────────────────
+run_core() {
+  section "Core — Node.js / Jest"
 
-  if ! check_tool node "bridge"; then
-    BRIDGE_EXIT=1
+  if ! check_tool node "core"; then
+    CORE_EXIT=1
     return
   fi
 
-  cd "$BRIDGE_DIR"
+  cd "$CORE_DIR"
 
   local jest_args=""
 
@@ -186,7 +186,7 @@ run_bridge() {
     jest_args="$jest_args --silent"
   fi
 
-  info "dir  : $BRIDGE_DIR"
+  info "dir  : $CORE_DIR"
   info "cmd  : npm test -- $jest_args"
   if [ -n "${LIVE_CLIENT_URL:-}" ]; then
     info "env  : LIVE_CLIENT_URL=$LIVE_CLIENT_URL"
@@ -194,30 +194,30 @@ run_bridge() {
   [ "$VERBOSITY" -ge 1 ] && echo "" || true
 
   # shellcheck disable=SC2086
-  run_cmd BRIDGE_EXIT "" npm test -- $jest_args
+  run_cmd CORE_EXIT "" npm test -- $jest_args
 
-  if [ "$BRIDGE_EXIT" -eq 0 ]; then
-    ok "Bridge tests passed"
+  if [ "$CORE_EXIT" -eq 0 ]; then
+    ok "Core tests passed"
   else
-    fail "Bridge tests failed (exit $BRIDGE_EXIT)"
+    fail "Core tests failed (exit $CORE_EXIT)"
   fi
 
   cd "$ROOT"
 }
 
-# ── flutter ───────────────────────────────────────────────────────────────────
-run_flutter() {
-  section "Flutter App"
+# ── app ───────────────────────────────────────────────────────────────────
+run_app() {
+  section "App (Flutter)"
 
   if ! check_tool flutter "flutter"; then
     warn "  Install Flutter SDK and add it to PATH to run Flutter tests."
-    FLUTTER_EXIT=1
+    APP_EXIT=1
     return
   fi
 
-  cd "$FLUTTER_DIR"
+  cd "$APP_DIR"
 
-  info "dir  : $FLUTTER_DIR"
+  info "dir  : $APP_DIR"
 
   # ── analyze (mirrors CI) ──────────────────────────────────────────────────
   local _analyze_exit=0
@@ -228,7 +228,7 @@ run_flutter() {
     ok "Flutter analyze passed"
   else
     fail "Flutter analyze failed (exit $_analyze_exit)"
-    FLUTTER_EXIT=$_analyze_exit
+    APP_EXIT=$_analyze_exit
     cd "$ROOT"
     return
   fi
@@ -245,7 +245,7 @@ run_flutter() {
       ok "Goldens updated"
     else
       fail "Golden update failed"
-      FLUTTER_EXIT=1
+      APP_EXIT=1
       cd "$ROOT"
       return
     fi
@@ -271,12 +271,12 @@ run_flutter() {
   [ "$VERBOSITY" -ge 1 ] && echo "" || true
 
   # Lines starting with [ are console logs from app code (e.g. [WsService] …)
-  run_cmd FLUTTER_EXIT "^\[" flutter test "${test_dirs[@]}"
+  run_cmd APP_EXIT "^\[" flutter test "${test_dirs[@]}"
 
-  if [ "$FLUTTER_EXIT" -eq 0 ]; then
-    ok "Flutter tests passed"
+  if [ "$APP_EXIT" -eq 0 ]; then
+    ok "App tests passed"
   else
-    fail "Flutter tests failed (exit $FLUTTER_EXIT)"
+    fail "App tests failed (exit $APP_EXIT)"
   fi
 
   cd "$ROOT"
@@ -293,31 +293,31 @@ print_summary() {
     echo "     Mock LoL server stopped (guaranteed)"
   fi
 
-  if $RUN_BRIDGE; then
-    if [ $BRIDGE_EXIT -eq 0 ]; then
-      ok "  Bridge  passed"
+  if $RUN_CORE; then
+    if [ $CORE_EXIT -eq 0 ]; then
+      ok "  Core passed"
     else
-      fail "  Bridge  FAILED"
+      fail "  Core FAILED"
     fi
   else
-    echo "     Bridge  (skipped)"
+    echo "     Core (skipped)"
   fi
 
-  if $RUN_FLUTTER; then
-    if [ $FLUTTER_EXIT -eq 0 ]; then
-      ok "  Flutter passed"
+  if $RUN_APP; then
+    if [ $APP_EXIT -eq 0 ]; then
+      ok "  App  passed"
     else
-      fail "  Flutter FAILED"
+      fail "  App  FAILED"
     fi
   else
-    echo "     Flutter (skipped)"
+    echo "     App  (skipped)"
   fi
 
   echo ""
 
   local overall=0
-  $RUN_BRIDGE  && [ $BRIDGE_EXIT  -ne 0 ] && overall=1
-  $RUN_FLUTTER && [ $FLUTTER_EXIT -ne 0 ] && overall=1
+  $RUN_CORE  && [ $CORE_EXIT -ne 0 ] && overall=1
+  $RUN_APP && [ $APP_EXIT -ne 0 ] && overall=1
 
   if [ $overall -eq 0 ]; then
     echo -e "${GREEN}${BOLD}  All tests passed.${RESET}"
@@ -330,9 +330,9 @@ print_summary() {
 }
 
 # ── main ──────────────────────────────────────────────────────────────────────
-$WITH_MOCK_SERVER && $RUN_BRIDGE && start_mock_server
+$WITH_MOCK_SERVER && $RUN_CORE && start_mock_server
 
-$RUN_BRIDGE  && run_bridge
-$RUN_FLUTTER && run_flutter
+$RUN_CORE  && run_core
+$RUN_APP && run_app
 
 print_summary

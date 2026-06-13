@@ -14,3 +14,4 @@ mv "${TMP%.md}.pdf" docs/arc42.pdf
 
 rm -f "$TMP"
 echo "Done: docs/arc42.pdf"
+

@@ -1,1 +1,0 @@
-enum ItemPriority { core, situational }
