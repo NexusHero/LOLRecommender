@@ -1,0 +1,52 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.EventDetector = exports.HIGH_GOLD_THRESHOLD = void 0;
+const TICK_INTERVAL_SEC = 30;
+exports.HIGH_GOLD_THRESHOLD = 1000;
+class EventDetector {
+    lastState = null;
+    detect(current) {
+        const events = [];
+        const prev = this.lastState;
+        if (!prev) {
+            events.push({ type: "GAME_STARTED", state: current });
+            this.lastState = current;
+            return events;
+        }
+        for (const enemy of current.enemies) {
+            const prevEnemy = prev.enemies.find((p) => p.summonerName === enemy.summonerName);
+            if (!prevEnemy)
+                continue;
+            const prevItemIds = new Set(prevEnemy.items.map((i) => i.itemID));
+            if (enemy.items.some((i) => !prevItemIds.has(i.itemID))) {
+                events.push({ type: "ITEM_PURCHASED", player: enemy, state: current });
+            }
+        }
+        if (current.localPlayer.level > prev.localPlayer.level) {
+            events.push({
+                type: "LEVEL_UP",
+                player: current.localPlayer,
+                newLevel: current.localPlayer.level,
+                state: current,
+            });
+        }
+        const prevTick = Math.floor(prev.gameTime / TICK_INTERVAL_SEC);
+        const currTick = Math.floor(current.gameTime / TICK_INTERVAL_SEC);
+        if (currTick > prevTick) {
+            events.push({ type: "GAME_TICK", state: current });
+        }
+        if (!prev.localPlayer.isDead && current.localPlayer.isDead) {
+            events.push({ type: "PLAYER_DIED", state: current });
+        }
+        if (prev.activePlayer.currentGold < exports.HIGH_GOLD_THRESHOLD &&
+            current.activePlayer.currentGold >= exports.HIGH_GOLD_THRESHOLD) {
+            events.push({ type: "HIGH_GOLD_REACHED", state: current });
+        }
+        this.lastState = current;
+        return events;
+    }
+    reset() {
+        this.lastState = null;
+    }
+}
+exports.EventDetector = EventDetector;

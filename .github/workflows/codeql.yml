@@ -1,0 +1,56 @@
+name: "CodeQL Advanced"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '30 1 * * 0'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: macos-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'javascript', 'typescript' ]
+        # wir entfernen 'ruby' und 'swift', da das Flutter-Projekt keine reinen Ruby-Sourcen enthält
+        # und Swift einen Flutter-Build (xcodebuild) erfordert, den CodeQL ohne Setup nicht durchführen kann.
+        # Falls du Swift (iOS/macOS Native) scannen möchtest, musst du hier 'swift' hinzufügen
+        # und unten die auskommentierten Flutter-Setup-Schritte aktivieren.
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # -- Aktiviere dies nur, wenn du 'swift' scannen möchtest --
+    # - name: Setup Flutter
+    #   uses: subosito/flutter-action@v2
+    #   with:
+    #     channel: 'stable'
+    # - name: Install Dependencies & Build macOS
+    #   run: |
+    #     cd app
+    #     flutter pub get
+    #     flutter build macos --debug
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v3
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+      with:
+        category: "/language:${{matrix.language}}"
+

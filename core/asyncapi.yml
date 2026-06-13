@@ -1,0 +1,295 @@
+asyncapi: '2.6.0'
+
+info:
+  title: LoL Coach Bridge API
+  version: '1.0.0'
+  description: |
+    WebSocket API that streams live League of Legends game state and
+    AI-powered item recommendations to the Flutter coaching app.
+
+    The bridge connects to the Riot Games Live Client API (port 2999)
+    running on the same machine as the game. Clients connect over
+    WebSocket and receive typed events whenever game state changes.
+  contact:
+    name: NexusHero
+    url: https://github.com/NexusHero/LOLRecommender
+  license:
+    name: MIT
+
+servers:
+  local:
+    url: ws://localhost:{port}
+    protocol: ws
+    description: Local bridge server — both devices must be on the same network
+    variables:
+      port:
+        default: '8765'
+        description: Configurable via the WS_PORT environment variable
+
+channels:
+  /:
+    description: Single channel for all game events and recommendations
+    subscribe:
+      operationId: receiveGameEvent
+      summary: Receive game events and item recommendations
+      message:
+        oneOf:
+          - $ref: '#/components/messages/Connected'
+          - $ref: '#/components/messages/GameStarted'
+          - $ref: '#/components/messages/ItemPurchased'
+          - $ref: '#/components/messages/LevelUp'
+          - $ref: '#/components/messages/GameTick'
+          - $ref: '#/components/messages/GameInactive'
+          - $ref: '#/components/messages/Recommendation'
+
+components:
+  messages:
+    Connected:
+      name: CONNECTED
+      title: Client connected
+      summary: Sent immediately after a client establishes a WebSocket connection.
+      payload:
+        $ref: '#/components/schemas/BaseMessage'
+
+    GameStarted:
+      name: GAME_STARTED
+      title: Game started
+      summary: >
+        Emitted once when the bridge detects a live game for the first time
+        (or after a reset). Triggers the initial item recommendation.
+      payload:
+        $ref: '#/components/schemas/GameStateMessage'
+
+    ItemPurchased:
+      name: ITEM_PURCHASED
+      title: Enemy purchased an item
+      summary: >
+        Emitted whenever an enemy champion buys a new item.
+        Triggers a fresh item recommendation.
+      payload:
+        $ref: '#/components/schemas/GameStateMessage'
+
+    LevelUp:
+      name: LEVEL_UP
+      title: Local player leveled up
+      summary: Emitted when the tracked player gains a level.
+      payload:
+        $ref: '#/components/schemas/GameStateMessage'
+
+    GameTick:
+      name: GAME_TICK
+      title: Periodic game state update
+      summary: Emitted every 30 seconds to keep the UI in sync.
+      payload:
+        $ref: '#/components/schemas/GameStateMessage'
+
+    GameInactive:
+      name: GAME_INACTIVE
+      title: No active game
+      summary: >
+        Emitted when the Live Client API stops responding (game ended or
+        client closed). Clients should reset their UI.
+      payload:
+        $ref: '#/components/schemas/BaseMessage'
+
+    Recommendation:
+      name: RECOMMENDATION
+      title: Item recommendation
+      summary: >
+        Contains computed counter-item suggestions. The source field indicates
+        whether the recommendation came from the heuristic engine ("heuristic")
+        or Claude ("llm").
+      payload:
+        $ref: '#/components/schemas/RecommendationMessage'
+
+  schemas:
+    BaseMessage:
+      type: object
+      required: [event, timestamp]
+      properties:
+        event:
+          type: string
+          description: Event type identifier
+          enum:
+            - CONNECTED
+            - GAME_STARTED
+            - ITEM_PURCHASED
+            - LEVEL_UP
+            - GAME_TICK
+            - GAME_INACTIVE
+            - RECOMMENDATION
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds (Date.now())
+        error:
+          type: string
+          description: Optional error message
+
+    GameStateMessage:
+      allOf:
+        - $ref: '#/components/schemas/BaseMessage'
+        - type: object
+          required: [gameState]
+          properties:
+            gameState:
+              $ref: '#/components/schemas/ParsedGameState'
+
+    RecommendationMessage:
+      allOf:
+        - $ref: '#/components/schemas/GameStateMessage'
+        - type: object
+          required: [recommendation]
+          properties:
+            recommendation:
+              $ref: '#/components/schemas/ItemRecommendation'
+
+    ParsedGameState:
+      type: object
+      required: [gameTime, gameMode, localPlayer, allies, enemies, activePlayer]
+      properties:
+        gameTime:
+          type: number
+          description: Elapsed game time in seconds
+        gameMode:
+          type: string
+          example: CLASSIC
+        localPlayer:
+          $ref: '#/components/schemas/Player'
+        allies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+        enemies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+        activePlayer:
+          $ref: '#/components/schemas/ActivePlayer'
+
+    Player:
+      type: object
+      required: [championName, isBot, isDead, items, level, position, scores, summonerName, team]
+      properties:
+        championName:
+          type: string
+          example: Ahri
+        isBot:
+          type: boolean
+        isDead:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        level:
+          type: integer
+          minimum: 1
+          maximum: 18
+        position:
+          type: string
+          example: MID
+        scores:
+          $ref: '#/components/schemas/PlayerScores'
+        summonerName:
+          type: string
+        team:
+          type: string
+          enum: [ORDER, CHAOS]
+
+    PlayerScores:
+      type: object
+      required: [kills, deaths, assists, creepScore, wardScore]
+      properties:
+        kills:
+          type: integer
+        deaths:
+          type: integer
+        assists:
+          type: integer
+        creepScore:
+          type: integer
+        wardScore:
+          type: number
+
+    Item:
+      type: object
+      required: [itemID, displayName, slot, price, count, canUse, consumable]
+      properties:
+        itemID:
+          type: integer
+        displayName:
+          type: string
+        slot:
+          type: integer
+          minimum: 0
+          maximum: 6
+        price:
+          type: integer
+        count:
+          type: integer
+        canUse:
+          type: boolean
+        consumable:
+          type: boolean
+
+    ActivePlayer:
+      type: object
+      required: [summonerName, level, currentGold, championStats]
+      properties:
+        summonerName:
+          type: string
+        level:
+          type: integer
+        currentGold:
+          type: number
+        championStats:
+          type: object
+          properties:
+            abilityPower:
+              type: number
+            armor:
+              type: number
+            attackDamage:
+              type: number
+            critChance:
+              type: number
+            healthMax:
+              type: number
+            magicResist:
+              type: number
+
+    ItemRecommendation:
+      type: object
+      required: [items, reasoning, source]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendedItem'
+        reasoning:
+          type: string
+          description: Human-readable explanation of the recommendation
+        source:
+          type: string
+          enum: [heuristic, llm]
+          description: >
+            "heuristic" = rule-based engine (always available),
+            "llm" = Claude-generated explanation (requires API key)
+
+    RecommendedItem:
+      type: object
+      required: [id, name, reason, priority]
+      properties:
+        id:
+          type: integer
+          description: Riot item ID (matches Data Dragon)
+        name:
+          type: string
+          example: Mortal Reminder
+        reason:
+          type: string
+          description: Short explanation of why this item counters the enemy comp
+        priority:
+          type: string
+          enum: [core, situational]
