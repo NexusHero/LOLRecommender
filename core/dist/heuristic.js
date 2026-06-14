@@ -13,7 +13,7 @@ const AP_CHAMPIONS = new Set(champions_json_1.default.ap);
 const CC_CHAMPIONS = new Set(champions_json_1.default.cc);
 const HEALER_CHAMPIONS = new Set(champions_json_1.default.healers);
 const ITEM_NAMES = Object.fromEntries(Object.entries(items_json_1.default).map(([k, v]) => [Number(k), v]));
-const { healScoreForGW, apRatioForBanshee, ccScoreForQSS, adRatioForRanduin, } = champions_json_1.default.thresholds;
+const { healScoreForGW, apRatioForBanshee, ccScoreForQSS } = champions_json_1.default.thresholds;
 function buildCompProfile(enemies) {
     let apCount = 0;
     let ccCount = 0;
@@ -67,10 +67,16 @@ function buildHeuristicStrategy(state, profile, myChampion) {
     }
     return { winCondition, summary, immediateAction, lateGamePlan };
 }
+/**
+ * Returns a minimal set of universally applicable counter items.
+ * Role-specific build paths (mythics, class items) are handled by the LLM.
+ */
 function getHeuristicRecommendations(profile, myChampion, state) {
     const recommended = [];
+    const isApChamp = AP_CHAMPIONS.has(myChampion);
+    // Grievous Wounds — universally effective vs heavy healing
     if (profile.healScore >= healScoreForGW) {
-        const id = myChampion && AP_CHAMPIONS.has(myChampion) ? 3165 : 3033;
+        const id = isApChamp ? 3165 : 3033;
         recommended.push({
             id,
             name: ITEM_NAMES[id] ?? "Grievous Wounds Item",
@@ -78,27 +84,21 @@ function getHeuristicRecommendations(profile, myChampion, state) {
             priority: "core",
         });
     }
-    if (profile.apRatio >= apRatioForBanshee) {
+    // Banshee's Veil — spell shield for AP champs vs AP-heavy comps
+    if (isApChamp && profile.apRatio >= apRatioForBanshee) {
         recommended.push({
             id: 3102,
             name: "Banshee's Veil",
-            reason: `${Math.round(profile.apRatio * 100)}% AP-heavy composition`,
+            reason: `${Math.round(profile.apRatio * 100)}% AP comp — blocks key initiation spell`,
             priority: "core",
         });
     }
+    // QSS — removes hard CC, effective for any champion
     if (profile.ccScore >= ccScoreForQSS) {
         recommended.push({
             id: 3140,
             name: "Quicksilver Sash",
-            reason: `High CC score (${profile.ccScore} CC champions)`,
-            priority: "situational",
-        });
-    }
-    if (profile.adRatio >= adRatioForRanduin) {
-        recommended.push({
-            id: 3143,
-            name: "Randuin's Omen",
-            reason: "Enemies are primarily AD",
+            reason: `${profile.ccScore} CC champions — removes disables in fights`,
             priority: "situational",
         });
     }
@@ -106,6 +106,7 @@ function getHeuristicRecommendations(profile, myChampion, state) {
         items: recommended,
         reasoning: formatReasoning(profile),
         source: "heuristic",
+        provider: "heuristic",
         strategy: buildHeuristicStrategy(state, profile, myChampion),
     };
 }

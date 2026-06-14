@@ -65,20 +65,28 @@ describe("getHeuristicRecommendations", () => {
         const rec = (0, heuristic_1.getHeuristicRecommendations)(profile, "Caitlyn", (0, fixtures_1.makeGameState)());
         expect(rec.items.some((i) => i.id === 3033)).toBe(true);
     });
-    it("getHeuristicRecommendations_ApHeavyComp_IncludesBansheesVeil", () => {
+    it("getHeuristicRecommendations_ApHeavyComp_ApChampGetsBansheesVeil", () => {
+        const profile = { apRatio: 0.8, adRatio: 0.2, ccScore: 0, healScore: 0 };
+        const rec = (0, heuristic_1.getHeuristicRecommendations)(profile, "Ahri", (0, fixtures_1.makeGameState)());
+        expect(rec.items.some((i) => i.id === 3102)).toBe(true);
+    });
+    it("getHeuristicRecommendations_ApHeavyComp_AdChampGetsNoHeuristicItem", () => {
         const profile = { apRatio: 0.8, adRatio: 0.2, ccScore: 0, healScore: 0 };
         const rec = (0, heuristic_1.getHeuristicRecommendations)(profile, "Caitlyn", (0, fixtures_1.makeGameState)());
-        expect(rec.items.some((i) => i.id === 3102)).toBe(true);
+        // AD champs vs AP-heavy: no heuristic item — LLM handles build recommendation
+        expect(rec.items.some((i) => i.id === 3102)).toBe(false);
+        expect(rec.items.some((i) => i.id === 3143)).toBe(false);
+    });
+    it("getHeuristicRecommendations_AdHeavyComp_NoRanduinsForAnyone", () => {
+        const profile = { apRatio: 0.1, adRatio: 0.9, ccScore: 0, healScore: 0 };
+        const rec = (0, heuristic_1.getHeuristicRecommendations)(profile, "Caitlyn", (0, fixtures_1.makeGameState)());
+        // AD-heavy counters are role-specific — handled by LLM, not heuristic
+        expect(rec.items.some((i) => i.id === 3143)).toBe(false);
     });
     it("getHeuristicRecommendations_ThreePlusCcChampions_IncludesQss", () => {
         const profile = { apRatio: 0.4, adRatio: 0.6, ccScore: 3, healScore: 0 };
         const rec = (0, heuristic_1.getHeuristicRecommendations)(profile, "Caitlyn", (0, fixtures_1.makeGameState)());
         expect(rec.items.some((i) => i.id === 3140)).toBe(true);
-    });
-    it("getHeuristicRecommendations_AdHeavyComp_IncludesRanduinsOmen", () => {
-        const profile = { apRatio: 0.1, adRatio: 0.9, ccScore: 0, healScore: 0 };
-        const rec = (0, heuristic_1.getHeuristicRecommendations)(profile, "Malphite", (0, fixtures_1.makeGameState)());
-        expect(rec.items.some((i) => i.id === 3143)).toBe(true);
     });
     it("getHeuristicRecommendations_BalancedCompNoThreats_ReturnsEmptyItems", () => {
         const profile = { apRatio: 0.5, adRatio: 0.5, ccScore: 1, healScore: 1 };

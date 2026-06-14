@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const events_1 = require("events");
 const ws_1 = require("ws");
 const wsServer_1 = require("../wsServer");
+jest.mock("../logger.js");
 class MockWss extends events_1.EventEmitter {
     close = jest.fn();
     address = jest.fn().mockReturnValue({ port: 8765 });

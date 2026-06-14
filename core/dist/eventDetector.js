@@ -1,8 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventDetector = exports.HIGH_GOLD_THRESHOLD = void 0;
+const config_js_1 = require("./config.js");
 const TICK_INTERVAL_SEC = 30;
-exports.HIGH_GOLD_THRESHOLD = 1000;
+exports.HIGH_GOLD_THRESHOLD = config_js_1.config.game.highGoldThreshold;
 class EventDetector {
     lastState = null;
     detect(current) {

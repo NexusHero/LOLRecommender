@@ -121,3 +121,20 @@ describe("LiveClientPoller", () => {
         });
     });
 });
+describe("isLocalhostUrl", () => {
+    it("isLocalhostUrl_127001_ReturnsTrue", () => {
+        expect((0, poller_1.isLocalhostUrl)("https://127.0.0.1:2999/path")).toBe(true);
+    });
+    it("isLocalhostUrl_LocalhostHostname_ReturnsTrue", () => {
+        expect((0, poller_1.isLocalhostUrl)("https://localhost:2999/path")).toBe(true);
+    });
+    it("isLocalhostUrl_RemoteHost_ReturnsFalse", () => {
+        expect((0, poller_1.isLocalhostUrl)("https://example.com/path")).toBe(false);
+    });
+    it("isLocalhostUrl_InvalidUrl_ReturnsFalse", () => {
+        expect((0, poller_1.isLocalhostUrl)("not-a-url")).toBe(false);
+    });
+    it("isLocalhostUrl_HttpLocalhost_ReturnsTrue", () => {
+        expect((0, poller_1.isLocalhostUrl)("http://localhost:2999/path")).toBe(true);
+    });
+});

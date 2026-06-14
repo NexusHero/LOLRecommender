@@ -32,12 +32,12 @@ describe("BridgeOrchestrator", () => {
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
             expect(broadcasts.map((b) => b.event)).toContain("GAME_STARTED");
         });
-        it("handleGameData_FirstCall_BroadcastsRecommendation", async () => {
+        it("handleGameData_FirstCall_BroadcastsRecommendationUpdate", async () => {
             const { orchestrator, broadcasts } = setup();
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
-            expect(broadcasts.map((b) => b.event)).toContain("RECOMMENDATION");
+            expect(broadcasts.map((b) => b.event)).toContain("RECOMMENDATION_UPDATE");
         });
-        it("handleGameData_EnemyBuysItem_BroadcastsItemPurchasedAndRecommendation", async () => {
+        it("handleGameData_EnemyBuysItem_BroadcastsItemPurchasedNoRecommendation", async () => {
             const enemy = (0, fixtures_1.makePlayer)({ summonerName: "Enemy1", team: "CHAOS" });
             const { orchestrator, broadcasts } = setup();
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)([(0, fixtures_1.makePlayer)(), enemy]));
@@ -46,7 +46,7 @@ describe("BridgeOrchestrator", () => {
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)([(0, fixtures_1.makePlayer)(), enemyWithItem]));
             const events = broadcasts.map((b) => b.event);
             expect(events).toContain("ITEM_PURCHASED");
-            expect(events).toContain("RECOMMENDATION");
+            expect(events).not.toContain("RECOMMENDATION_UPDATE");
         });
         it("handleGameData_GameTickCrossed_DoesNotBroadcastRecommendation", async () => {
             const { orchestrator, broadcasts } = setup();
@@ -59,7 +59,7 @@ describe("BridgeOrchestrator", () => {
             await orchestrator.handleGameData(raw2);
             const events = broadcasts.map((b) => b.event);
             expect(events).toContain("GAME_TICK");
-            expect(events).not.toContain("RECOMMENDATION");
+            expect(events).not.toContain("RECOMMENDATION_UPDATE");
         });
         it("handleGameData_LocalPlayerLevelsUp_DoesNotBroadcastRecommendation", async () => {
             const { orchestrator, broadcasts } = setup();
@@ -68,7 +68,7 @@ describe("BridgeOrchestrator", () => {
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)([(0, fixtures_1.makePlayer)({ level: 2 })]));
             const events = broadcasts.map((b) => b.event);
             expect(events).toContain("LEVEL_UP");
-            expect(events).not.toContain("RECOMMENDATION");
+            expect(events).not.toContain("RECOMMENDATION_UPDATE");
         });
         it("handleGameData_FirstCall_BroadcastIncludesGameState", async () => {
             const { orchestrator, broadcasts } = setup();
@@ -79,19 +79,31 @@ describe("BridgeOrchestrator", () => {
         });
     });
     describe("sendRecommendation", () => {
-        it("sendRecommendation_NoLlmProvider_UsesHeuristicSource", async () => {
+        it("sendRecommendation_NoLlmProvider_NoRecommendationFires", async () => {
             const { orchestrator, broadcasts } = setup({ hasLlm: false });
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-            expect(rec?.recommendation?.source).toBe("heuristic");
+            expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
         });
         it("sendRecommendation_LlmProviderSetGameStarted_UsesLlmSource", async () => {
             const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
             expect(rec?.recommendation?.source).toBe("llm");
         });
-        it("sendRecommendation_ItemPurchasedEvent_AlwaysUsesHeuristic", async () => {
+        it("sendRecommendation_LlmProviderSet_BroadcastsOnlyRecommendationUpdate", async () => {
+            const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
+            await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
+            const events = broadcasts.map((b) => b.event);
+            expect(events).not.toContain("RECOMMENDATION");
+            expect(events).toContain("RECOMMENDATION_UPDATE");
+        });
+        it("sendRecommendation_LlmProviderSet_RecommendationUpdateHasCorrelationId", async () => {
+            const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
+            await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
+            const update = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
+            expect(update?.correlationId).toBeDefined();
+        });
+        it("sendRecommendation_ItemPurchasedEvent_SkipsLlm", async () => {
             const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
             const enemy = (0, fixtures_1.makePlayer)({ summonerName: "Enemy1", team: "CHAOS" });
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)([(0, fixtures_1.makePlayer)(), enemy]));
@@ -99,15 +111,13 @@ describe("BridgeOrchestrator", () => {
             broadcasts.length = 0;
             const enemyWithItem = { ...enemy, items: [(0, fixtures_1.makeItem)({ itemID: 3102 })] };
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)([(0, fixtures_1.makePlayer)(), enemyWithItem]));
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-            expect(rec?.recommendation?.source).toBe("heuristic");
+            expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
             expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
         });
-        it("sendRecommendation_NoClientsConnected_SkipsLlmUsesHeuristic", async () => {
+        it("sendRecommendation_NoClientsConnected_SkipsLlm", async () => {
             const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 0 });
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-            expect(rec?.recommendation?.source).toBe("heuristic");
+            expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
             expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
         });
     });
@@ -120,7 +130,7 @@ describe("BridgeOrchestrator", () => {
             const raw2 = (0, fixtures_1.makeRawGameData)([(0, fixtures_1.makePlayer)({ isDead: true })]);
             raw2.activePlayer = (0, fixtures_1.makeActivePlayer)({ currentGold: 50 });
             await orchestrator.handleGameData(raw2);
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
             expect(rec?.recommendation?.source).toBe("llm");
             expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
         });
@@ -136,9 +146,20 @@ describe("BridgeOrchestrator", () => {
             broadcasts.length = 0;
             now = 102_000;
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)([(0, fixtures_1.makePlayer)({ isDead: true })]));
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+            // LLM analysis is served (from cache or fresh — both valid), source must be "llm"
+            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
             expect(rec?.recommendation?.source).toBe("llm");
-            expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
+        });
+        it("sendRecommendation_CacheHit_SkipsLlmCallButStillBroadcastsUpdate", async () => {
+            const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
+            await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
+            llmProvider.getAnalysis.mockClear();
+            broadcasts.length = 0;
+            // Same state again via triggerManualAnalysis → cache hit
+            await orchestrator.triggerManualAnalysis();
+            expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
+            const update = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
+            expect(update?.recommendation?.source).toBe("llm");
         });
     });
     describe("triggerManualAnalysis", () => {
@@ -147,30 +168,28 @@ describe("BridgeOrchestrator", () => {
             await orchestrator.triggerManualAnalysis();
             expect(broadcasts).toHaveLength(0);
         });
-        it("triggerManualAnalysis_GameStateAvailable_BroadcastsRecommendation", async () => {
-            const { orchestrator, broadcasts } = setup({ hasLlm: false, clientCount: 1 });
+        it("triggerManualAnalysis_LlmProviderSet_BroadcastsRecommendationUpdate", async () => {
+            const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
             broadcasts.length = 0;
             await orchestrator.triggerManualAnalysis();
-            expect(broadcasts.find((b) => b.event === "RECOMMENDATION")).toBeDefined();
+            expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeDefined();
         });
         it("triggerManualAnalysis_LlmProviderSet_UsesLlm", async () => {
-            const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
+            const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
-            llmProvider.getAnalysis.mockClear();
             broadcasts.length = 0;
             await orchestrator.triggerManualAnalysis();
-            expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+            // LLM analysis served (fresh call or cache) — source must be "llm"
+            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
             expect(rec?.recommendation?.source).toBe("llm");
         });
-        it("triggerManualAnalysis_NoLlmProvider_UsesHeuristic", async () => {
+        it("triggerManualAnalysis_NoLlmProvider_NoRecommendationFires", async () => {
             const { orchestrator, broadcasts } = setup({ hasLlm: false, clientCount: 1 });
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)());
             broadcasts.length = 0;
             await orchestrator.triggerManualAnalysis();
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-            expect(rec?.recommendation?.source).toBe("heuristic");
+            expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
         });
         it("triggerManualAnalysis_AfterResetDetector_BroadcastsNothing", async () => {
             const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
@@ -201,7 +220,7 @@ describe("BridgeOrchestrator", () => {
             broadcasts.length = 0;
             orchestrator.setSummonerName("Player2");
             await orchestrator.handleGameData((0, fixtures_1.makeRawGameData)([player1, player2, enemy]));
-            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+            const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
             expect(rec?.gameState?.localPlayer.summonerName).toBe("Player2");
             expect(rec?.gameState?.localPlayer.championName).toBe("Garen");
         });

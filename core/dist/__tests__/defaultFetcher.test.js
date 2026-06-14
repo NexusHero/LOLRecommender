@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const http_1 = __importDefault(require("http"));
 const poller_js_1 = require("../poller.js");
 const fixtures_js_1 = require("./fixtures.js");
+const config_js_1 = require("../config.js");
 // Integration test: verifies createDefaultFetcher makes a real HTTP request
 // and the poller processes the response through the full Zod validation chain.
 // The inline server is self-contained — no external process needed.
@@ -13,22 +14,19 @@ describe("LiveClientPoller — createDefaultFetcher integration", () => {
     let server;
     let originalUrl;
     beforeEach(async () => {
-        originalUrl = process.env.LIVE_CLIENT_URL;
+        originalUrl = config_js_1.config.riot.liveClientUrl;
         server = http_1.default.createServer((_req, res) => {
             res.writeHead(200, { "Content-Type": "application/json" });
             res.end(JSON.stringify((0, fixtures_js_1.makeRawGameData)()));
         });
         await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
         const { port } = server.address();
-        process.env.LIVE_CLIENT_URL =
+        config_js_1.config.riot.liveClientUrl =
             `http://127.0.0.1:${port}/liveclientdata/allgamedata`;
     });
     afterEach(async () => {
         if (originalUrl !== undefined) {
-            process.env.LIVE_CLIENT_URL = originalUrl;
-        }
-        else {
-            delete process.env.LIVE_CLIENT_URL;
+            config_js_1.config.riot.liveClientUrl = originalUrl;
         }
         await new Promise((resolve) => server.close(() => resolve()));
     });
@@ -38,8 +36,11 @@ describe("LiveClientPoller — createDefaultFetcher integration", () => {
         const onStatus = jest.fn();
         const poller = new poller_js_1.LiveClientPoller(onData, onStatus);
         // Act — start fires initial poll immediately; real HTTP I/O needed
+        let waitResolve;
+        const waitPromise = new Promise((r) => (waitResolve = r));
+        onData.mockImplementation(() => waitResolve());
         poller.start();
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        await waitPromise;
         poller.stop();
         // Assert — onData called with Zod-validated AllGameData shape
         expect(onData).toHaveBeenCalled();
@@ -58,9 +59,15 @@ describe("LiveClientPoller — createDefaultFetcher integration", () => {
         });
         const onData = jest.fn();
         const poller = new poller_js_1.LiveClientPoller(onData, jest.fn());
+        let waitResolve;
+        const waitPromise = new Promise((r) => (waitResolve = r));
+        // Hook into internal fetcher resolution if possible, or just wait longer.
+        // Since it's invalid JSON, onData is not called. We'll wait 300ms.
         poller.start();
         await new Promise((resolve) => setTimeout(resolve, 300));
         poller.stop();
+        // small extra wait to let pending promises flush
+        await new Promise((resolve) => setTimeout(resolve, 50));
         expect(onData).not.toHaveBeenCalled();
     }, 10_000);
 });

@@ -21,6 +21,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const http_1 = __importDefault(require("http"));
+const logger_js_1 = require("./logger.js");
 const PORT = parseInt(process.env.MOCK_LOL_PORT ?? "2999");
 const PATH = "/liveclientdata/allgamedata";
 // ── ANSI colours ────────────────────────────────────────────────────────────
@@ -35,7 +36,7 @@ const C = {
 };
 function log(icon, msg) {
     const ts = new Date().toISOString().slice(11, 23);
-    console.log(`${C.dim}${ts}${C.reset}  ${icon}  ${msg}`);
+    logger_js_1.Logger.info(`${C.dim}${ts}${C.reset}  ${icon}  ${msg}`);
 }
 function player(summonerName, championName, team, overrides = {}) {
     return {
@@ -247,21 +248,24 @@ const server = http_1.default.createServer((req, res) => {
     res.end(JSON.stringify(frame.data));
     frameIndex++;
 });
+function printHeader() {
+    logger_js_1.Logger.info("");
+    logger_js_1.Logger.info(`${C.cyan}${C.bold}  LoL Mock Server${C.reset}  http://localhost:${PORT}`);
+    logger_js_1.Logger.info("");
+    logger_js_1.Logger.info(`  ${C.dim}Set this env var before starting the bridge:${C.reset}`);
+    logger_js_1.Logger.info(`  ${C.yellow}LIVE_CLIENT_URL=http://localhost:${PORT}${PATH}${C.reset}`);
+    logger_js_1.Logger.info(`  ${C.yellow}SUMMONER_NAME=TestPlayer${C.reset}`);
+    logger_js_1.Logger.info("");
+    logger_js_1.Logger.info(`  Scenario: ${C.bold}${FRAMES.length} frames${C.reset} — covers GAME_STARTED, GAME_TICK, ITEM_PURCHASED,`);
+    logger_js_1.Logger.info(`            LEVEL_UP, PLAYER_DIED, HIGH_GOLD_REACHED`);
+    logger_js_1.Logger.info("");
+    logger_js_1.Logger.info(`  ${C.dim}Press Ctrl-C to stop.${C.reset}`);
+    logger_js_1.Logger.info("");
+}
 server.listen(PORT, "127.0.0.1", () => {
-    console.log();
-    console.log(`${C.cyan}${C.bold}  LoL Mock Server${C.reset}  http://localhost:${PORT}`);
-    console.log();
-    console.log(`  ${C.dim}Set this env var before starting the bridge:${C.reset}`);
-    console.log(`  ${C.yellow}LIVE_CLIENT_URL=http://localhost:${PORT}${PATH}${C.reset}`);
-    console.log(`  ${C.yellow}SUMMONER_NAME=TestPlayer${C.reset}`);
-    console.log();
-    console.log(`  Scenario: ${C.bold}${FRAMES.length} frames${C.reset} — covers GAME_STARTED, GAME_TICK, ITEM_PURCHASED,`);
-    console.log(`            LEVEL_UP, PLAYER_DIED, HIGH_GOLD_REACHED`);
-    console.log();
-    console.log(`  ${C.dim}Press Ctrl-C to stop.${C.reset}`);
-    console.log();
+    printHeader();
 });
 process.on("SIGINT", () => {
-    console.log(`\n${C.dim}Mock server stopped.${C.reset}`);
+    logger_js_1.Logger.info(`\n${C.dim}Mock server stopped.${C.reset}`);
     server.close(() => process.exit(0));
 });

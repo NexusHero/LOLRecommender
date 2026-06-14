@@ -1,27 +1,35 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.parseGameState = parseGameState;
+const logger_js_1 = require("./logger.js");
+const result_js_1 = require("./utils/result.js");
 function parseGameState(raw, localSummonerName) {
     // activePlayer.summonerName is always the local player per Riot API contract.
     // We use it to find the matching entry in allPlayers (which has champion/items/team).
     // The user-configured localSummonerName is only a fallback for spectator mode where
     // activePlayer is absent.
+    if (!raw.activePlayer || !raw.allPlayers) {
+        return (0, result_js_1.err)(new Error("Missing activePlayer or allPlayers in game data."));
+    }
     const activeName = raw.activePlayer.summonerName;
     const localPlayer = raw.allPlayers.find((p) => p.summonerName === activeName) ??
         raw.allPlayers.find((p) => p.summonerName === localSummonerName);
     if (!localPlayer) {
-        console.warn(`[Parser] Local player not found (activePlayer='${activeName}', configured='${localSummonerName}') — falling back to first player.`);
+        logger_js_1.Logger.warn(`[Parser] Local player not found (activePlayer='${activeName}', configured='${localSummonerName}') — falling back to first player.`);
     }
     const player = localPlayer ?? raw.allPlayers[0];
+    if (!player) {
+        return (0, result_js_1.err)(new Error("No players found in game data."));
+    }
     const localTeam = player.team;
     const allies = raw.allPlayers.filter((p) => p.team === localTeam && p.summonerName !== player.summonerName);
     const enemies = raw.allPlayers.filter((p) => p.team !== localTeam);
-    return {
-        gameTime: raw.gameData.gameTime,
-        gameMode: raw.gameData.gameMode,
+    return (0, result_js_1.ok)({
+        gameTime: Math.floor(raw.gameData?.gameTime ?? 0),
+        gameMode: raw.gameData?.gameMode ?? "UNKNOWN",
         localPlayer: player,
         allies,
         enemies,
         activePlayer: raw.activePlayer,
-    };
+    });
 }

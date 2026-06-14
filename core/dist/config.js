@@ -1,0 +1,20 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.config = void 0;
+exports.config = {
+    riot: {
+        liveClientUrl: process.env.LIVE_CLIENT_URL || "https://127.0.0.1:2999/liveclientdata/allgamedata",
+        maxPollFailures: parseInt(process.env.MAX_POLL_FAILURES || "3", 10),
+    },
+    game: {
+        highGoldThreshold: parseInt(process.env.HIGH_GOLD_THRESHOLD || "1000", 10),
+    },
+    llm: {
+        defaultCooldownMs: parseInt(process.env.DEFAULT_LLM_COOLDOWN_MS || String(7 * 60 * 1000), 10),
+        defaultTokenBudget: parseInt(process.env.DEFAULT_TOKEN_BUDGET || "0", 10),
+    },
+    ws: {
+        port: parseInt(process.env.PORT || "8765", 10),
+        host: process.env.WS_HOST || "127.0.0.1",
+    },
+};
