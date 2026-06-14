@@ -1,24 +1,35 @@
 {
     "ap": [
-        "Ahri", "Annie", "Azir", "Brand", "Cassiopeia", "Ekko", "Elise", "Evelynn",
-        "Fiddlesticks", "Fizz", "Heimerdinger", "Karthus", "Kassadin", "Katarina",
-        "Kennen", "LeBlanc", "Lissandra", "Lux", "Malzahar", "Morgana", "Nami",
-        "Nidalee", "Orianna", "Rumble", "Ryze", "Seraphine", "Singed", "Swain",
-        "Syndra", "Taliyah", "Twisted Fate", "Veigar", "Vel'Koz", "Viktor",
-        "Vladimir", "Xerath", "Zoe", "Zyra", "Soraka", "Zilean"
+        "Ahri", "Akali", "Amumu", "Anivia", "Annie", "Aurelion Sol", "Azir",
+        "Bard", "Brand", "Cassiopeia", "Cho'Gath", "Corki", "Diana", "Ekko",
+        "Elise", "Evelynn", "Fiddlesticks", "Fizz", "Galio", "Gragas", "Gwen",
+        "Heimerdinger", "Hwei", "Ivern", "Janna", "Karma", "Karthus", "Kassadin",
+        "Katarina", "Kayle", "Kennen", "LeBlanc", "Lillia", "Lissandra", "Lulu",
+        "Lux", "Malphite", "Malzahar", "Maokai", "Milio", "Mordekaiser", "Morgana",
+        "Nami", "Neeko", "Nidalee", "Nunu & Willump", "Orianna", "Rakan",
+        "Renata Glasc", "Rumble", "Ryze", "Seraphine", "Singed", "Smolder",
+        "Sona", "Soraka", "Swain", "Sylas", "Syndra", "Tahm Kench", "Taliyah",
+        "Taric", "Teemo", "Twisted Fate", "Veigar", "Vel'Koz", "Vex", "Viktor",
+        "Vladimir", "Xerath", "Yuumi", "Zac", "Ziggs", "Zilean", "Zoe", "Zyra"
     ],
     "cc": [
-        "Amumu", "Blitzcrank", "Galio", "Leona", "Lissandra", "Malphite",
-        "Nautilus", "Sejuani", "Skarner", "Thresh", "Zac"
+        "Alistar", "Amumu", "Ashe", "Blitzcrank", "Braum", "Camille", "Cho'Gath",
+        "Elise", "Fiddlesticks", "Galio", "Gragas", "Janna", "Jarvan IV", "Kennen",
+        "Leona", "Lissandra", "Lulu", "Malphite", "Malzahar", "Maokai", "Morgana",
+        "Nami", "Nautilus", "Neeko", "Nunu & Willump", "Orianna", "Pantheon",
+        "Poppy", "Rakan", "Rammus", "Rell", "Renekton", "Sejuani", "Sion",
+        "Skarner", "Syndra", "Tahm Kench", "Thresh", "Twisted Fate", "Vi",
+        "Volibear", "Wukong", "Xin Zhao", "Zac", "Ziggs"
     ],
     "healers": [
-        "Aatrox", "Dr. Mundo", "Fiora", "Nasus", "Olaf", "Soraka", "Swain",
-        "Vladimir", "Warwick", "Yuumi", "Sylas"
+        "Aatrox", "Bard", "Briar", "Dr. Mundo", "Fiora", "Gragas", "Illaoi",
+        "Ivern", "Janna", "Kayn", "Milio", "Nami", "Renekton", "Rengar",
+        "Seraphine", "Sona", "Soraka", "Swain", "Sylas", "Taric", "Vladimir",
+        "Volibear", "Warwick", "Xin Zhao", "Yuumi"
     ],
     "thresholds": {
         "healScoreForGW": 2,
         "apRatioForBanshee": 0.6,
-        "ccScoreForQSS": 3,
-        "adRatioForRanduin": 0.7
+        "ccScoreForQSS": 3
     }
 }

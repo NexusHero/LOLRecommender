@@ -1,76 +1,118 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const geminiProvider_1 = require("../providers/geminiProvider");
-const fixtures_1 = require("./fixtures");
-const generative_ai_1 = require("@google/generative-ai");
-jest.mock("@google/generative-ai");
-const baseRec = (0, fixtures_1.makeBaseRec)();
-const validJsonResponse = JSON.stringify({
-    itemReasoning: "LLM reasoning text",
-    strategy: {
-        winCondition: "late",
-        summary: "You scale hard — be patient.",
-        immediateAction: "Farm and avoid fights.",
-        lateGamePlan: "Dominate with full build in late game.",
-    },
-});
+const genai_1 = require("@google/genai");
+const llmProviderContract_1 = require("./llmProviderContract");
+jest.mock("@google/genai");
 describe("GeminiProvider", () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
-    function mockGeminiResponse(content = validJsonResponse, throwError = false) {
+    function mockGeminiResponse(content = llmProviderContract_1.validJsonResponse, throwError = false, customErr) {
         const mockGenerateContent = jest.fn();
         if (throwError) {
-            mockGenerateContent.mockRejectedValue(new Error("API unavailable"));
+            mockGenerateContent.mockRejectedValue(customErr ?? new Error("API unavailable"));
         }
         else {
-            mockGenerateContent.mockResolvedValue({ response: { text: () => content } });
+            mockGenerateContent.mockResolvedValue({ text: content, usageMetadata: {} });
         }
-        const mockGetGenerativeModel = jest.fn().mockReturnValue({ generateContent: mockGenerateContent });
-        generative_ai_1.GoogleGenerativeAI.mockImplementation(() => ({
-            getGenerativeModel: mockGetGenerativeModel,
+        genai_1.GoogleGenAI.mockImplementation(() => ({
+            models: { generateContent: mockGenerateContent },
         }));
         return mockGenerateContent;
     }
-    it("getAnalysis_ValidApiKey_ReturnsLlmReasoningAndStrategy", async () => {
-        mockGeminiResponse();
-        const provider = new geminiProvider_1.GeminiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("LLM reasoning text");
-        expect(result.strategy.winCondition).toBe("late");
+    (0, llmProviderContract_1.runLlmProviderContract)({
+        providerName: "Gemini",
+        createProvider: (key, model) => new geminiProvider_1.GeminiProvider(key, model),
+        mockSuccess: (json) => mockGeminiResponse(json),
+        mockFailure: (err) => mockGeminiResponse(null, true, err),
+        mockInvalidJson: (json) => mockGeminiResponse(json),
+        mockEmptyContent: () => mockGeminiResponse(""),
+        assertStandardRequest: (mockApi) => {
+            const callArg = mockApi.mock.calls[0][0];
+            const userContent = callArg.contents;
+            expect(userContent).toContain("Lux");
+            expect(userContent).toContain("Soraka");
+        },
+        expectedDefaultModel: "gemini-2.5-flash",
+        expectedCustomModel: "gemini-1.5-pro",
+        assertModelPassed: (mockApi, model) => {
+            expect(mockApi.mock.calls[0][0].model).toBe(model);
+        },
     });
-    it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockGeminiResponse(null, true);
+    it("getAnalysis_RateLimitError_ShowsFriendlyMessageWithRetryDelay", async () => {
+        const rateLimitErr = Object.assign(new Error('[429 Too Many Requests] quota exceeded. Please retry in 7.77s. [{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"7s"}]'), { status: 429 });
+        const mockGenerateContent = jest.fn().mockRejectedValue(rateLimitErr);
+        genai_1.GoogleGenAI.mockImplementation(() => ({
+            models: { generateContent: mockGenerateContent },
+        }));
         const provider = new geminiProvider_1.GeminiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
+        const { makeGameState } = require("./fixtures");
+        await expect(provider.getAnalysis(makeGameState())).rejects.toThrow("Gemini: 429 · Rate limit exceeded");
     });
-    it("getAnalysis_EmptyContent_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockGeminiResponse("");
+    it("listModels_ValidKey_ReturnsOnlyGenerativeModelsWithStrippedPrefix", async () => {
+        const mockFetch = jest.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                models: [
+                    { name: "models/gemini-2.0-flash", displayName: "Gemini 2.0 Flash", supportedGenerationMethods: ["generateContent", "countTokens"] },
+                    { name: "models/gemini-1.5-pro", displayName: "Gemini 1.5 Pro", supportedGenerationMethods: ["generateContent"] },
+                    { name: "models/embedding-001", displayName: "Embedding 001", supportedGenerationMethods: ["embedContent"] },
+                    { name: "models/aqa", displayName: "AQA", supportedGenerationMethods: ["generateAnswer"] },
+                ],
+            }),
+        });
+        global.fetch = mockFetch;
         const provider = new geminiProvider_1.GeminiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
+        const models = await provider.listModels();
+        const ids = models.map((m) => m.id);
+        expect(ids).toContain("gemini-2.0-flash");
+        expect(ids).toContain("gemini-1.5-pro");
+        expect(ids).not.toContain("embedding-001");
+        expect(ids).not.toContain("aqa");
+        expect(models[0].displayName).toBe("Gemini 2.0 Flash");
     });
-    it("getAnalysis_InvalidJson_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockGeminiResponse("plain text not json");
-        const provider = new geminiProvider_1.GeminiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
+    it("listModels_ApiKeyPassedInUrl", async () => {
+        const mockFetch = jest.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ models: [] }),
+        });
+        global.fetch = mockFetch;
+        const provider = new geminiProvider_1.GeminiProvider("my-secret-key");
+        await provider.listModels();
+        const calledUrl = mockFetch.mock.calls[0][0];
+        expect(calledUrl).toContain("key=my-secret-key");
     });
-    it("getAnalysis_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
+    it("listModels_NonOkResponse_ThrowsError", async () => {
+        global.fetch = jest.fn().mockResolvedValue({ ok: false, status: 403 });
+        const provider = new geminiProvider_1.GeminiProvider("bad-key");
+        await expect(provider.listModels()).rejects.toThrow("403");
+    });
+    it("getAnalysis_StandardRequest_PassesSystemInstructionToGetGenerativeModel", async () => {
         const mockGenerateContent = mockGeminiResponse();
         const provider = new geminiProvider_1.GeminiProvider("test-key");
-        const state = (0, fixtures_1.makeGameState)({
-            localPlayer: { ...(0, fixtures_1.makeGameState)().localPlayer, championName: "Lux" },
-            enemies: [{ ...(0, fixtures_1.makeGameState)().localPlayer, championName: "Soraka", team: "CHAOS" }],
-        });
-        await provider.getAnalysis(state, baseRec);
+        const { makeGameState } = require("./fixtures");
+        await provider.getAnalysis(makeGameState());
+        const modelConfig = mockGenerateContent.mock.calls[0][0];
+        expect(typeof modelConfig.config.systemInstruction).toBe("string");
+        expect(modelConfig.config.systemInstruction.length).toBeGreaterThan(0);
+    });
+    it("getAnalysis_StandardRequest_SetsJsonResponseMimeTypeAndMaxTokens", async () => {
+        const mockGenerateContent = mockGeminiResponse();
+        const provider = new geminiProvider_1.GeminiProvider("test-key");
+        const { makeGameState } = require("./fixtures");
+        await provider.getAnalysis(makeGameState());
         const callArg = mockGenerateContent.mock.calls[0][0];
-        const userContent = callArg.contents[0].parts[0].text;
-        expect(userContent).toContain("Lux");
-        expect(userContent).toContain("Soraka");
+        expect(callArg.config?.responseMimeType).toBe("application/json");
+        expect(callArg.config?.maxOutputTokens).toBe(700);
+    });
+    it("getAnalysis_StandardRequest_SendsUserRoleWithTextPart", async () => {
+        const mockGenerateContent = mockGeminiResponse();
+        const provider = new geminiProvider_1.GeminiProvider("test-key");
+        const { makeGameState } = require("./fixtures");
+        await provider.getAnalysis(makeGameState());
+        const callArg = mockGenerateContent.mock.calls[0][0];
+        expect(typeof callArg.contents).toBe("string");
+        expect(callArg.contents.length).toBeGreaterThan(0);
     });
 });

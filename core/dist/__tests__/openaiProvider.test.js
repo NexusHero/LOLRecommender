@@ -4,27 +4,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const openaiProvider_1 = require("../providers/openaiProvider");
-const fixtures_1 = require("./fixtures");
 const openai_1 = __importDefault(require("openai"));
+const llmProviderContract_1 = require("./llmProviderContract");
 jest.mock("openai");
-const baseRec = (0, fixtures_1.makeBaseRec)();
-const validJsonResponse = JSON.stringify({
-    itemReasoning: "LLM reasoning text",
-    strategy: {
-        winCondition: "early",
-        summary: "Press your lead now.",
-        immediateAction: "Take towers and objectives.",
-        lateGamePlan: "Close out via Baron and mid push.",
-    },
-});
 describe("OpenAiProvider", () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
-    function mockOpenAIResponse(content = validJsonResponse, throwError = false) {
+    function mockOpenAIResponse(content = llmProviderContract_1.validJsonResponse, throwError = false, customErr) {
         const mockCreate = jest.fn();
         if (throwError) {
-            mockCreate.mockRejectedValue(new Error("API unavailable"));
+            mockCreate.mockRejectedValue(customErr ?? new Error("API unavailable"));
         }
         else {
             mockCreate.mockResolvedValue({
@@ -37,45 +27,62 @@ describe("OpenAiProvider", () => {
         }));
         return mockCreate;
     }
-    it("getAnalysis_ValidApiKey_ReturnsLlmReasoningAndStrategy", async () => {
-        mockOpenAIResponse();
-        const provider = new openaiProvider_1.OpenAiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("LLM reasoning text");
-        expect(result.strategy.winCondition).toBe("early");
+    (0, llmProviderContract_1.runLlmProviderContract)({
+        providerName: "OpenAI",
+        createProvider: (key, model) => new openaiProvider_1.OpenAiProvider(key, model),
+        mockSuccess: (json) => mockOpenAIResponse(json),
+        mockFailure: (err) => mockOpenAIResponse(null, true, err),
+        mockInvalidJson: (json) => mockOpenAIResponse(json),
+        mockEmptyContent: () => mockOpenAIResponse(null),
+        assertStandardRequest: (mockApi) => {
+            const callArg = mockApi.mock.calls[0][0];
+            const userContent = callArg.messages[1].content;
+            expect(userContent).toContain("Lux");
+            expect(userContent).toContain("Soraka");
+        },
+        expectedDefaultModel: "gpt-4o-mini",
+        expectedCustomModel: "gpt-4o",
+        assertModelPassed: (mockApi, model) => {
+            expect(mockApi.mock.calls[0][0].model).toBe(model);
+        },
     });
-    it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockOpenAIResponse(null, true);
-        const provider = new openaiProvider_1.OpenAiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
-    });
-    it("getAnalysis_NullContent_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockOpenAIResponse(null);
-        const provider = new openaiProvider_1.OpenAiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
-    });
-    it("getAnalysis_InvalidJson_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockOpenAIResponse("not valid json at all");
-        const provider = new openaiProvider_1.OpenAiProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
-    });
-    it("getAnalysis_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
-        const mockCreate = mockOpenAIResponse();
-        const provider = new openaiProvider_1.OpenAiProvider("test-key");
-        const state = (0, fixtures_1.makeGameState)({
-            localPlayer: { ...(0, fixtures_1.makeGameState)().localPlayer, championName: "Lux" },
-            enemies: [{ ...(0, fixtures_1.makeGameState)().localPlayer, championName: "Soraka", team: "CHAOS" }],
+    it("listModels_ValidKey_ReturnsOnlyChatModels", async () => {
+        const mockList = jest.fn().mockResolvedValue({
+            data: [
+                { id: "gpt-4o", created: 1700000002, object: "model" },
+                { id: "gpt-4o-mini", created: 1700000001, object: "model" },
+                { id: "text-embedding-ada-002", created: 1700000000, object: "model" },
+                { id: "whisper-1", created: 1699000000, object: "model" },
+                { id: "ft:gpt-4:company:name:abc123", created: 1700000003, object: "model" },
+            ],
         });
-        await provider.getAnalysis(state, baseRec);
-        const callArg = mockCreate.mock.calls[0][0];
-        const userContent = callArg.messages[1].content;
-        expect(userContent).toContain("Lux");
-        expect(userContent).toContain("Soraka");
+        openai_1.default.mockImplementation(() => ({
+            chat: { completions: { create: jest.fn() } },
+            models: { list: mockList },
+        }));
+        const provider = new openaiProvider_1.OpenAiProvider("test-key");
+        const models = await provider.listModels();
+        const ids = models.map((m) => m.id);
+        expect(ids).toContain("gpt-4o");
+        expect(ids).toContain("gpt-4o-mini");
+        expect(ids).not.toContain("text-embedding-ada-002");
+        expect(ids).not.toContain("whisper-1");
+        expect(ids).not.toContain("ft:gpt-4:company:name:abc123");
+    });
+    it("listModels_ValidKey_ReturnsSortedNewestFirst", async () => {
+        const mockList = jest.fn().mockResolvedValue({
+            data: [
+                { id: "gpt-4o-mini", created: 1700000001, object: "model" },
+                { id: "gpt-4o", created: 1700000002, object: "model" },
+            ],
+        });
+        openai_1.default.mockImplementation(() => ({
+            chat: { completions: { create: jest.fn() } },
+            models: { list: mockList },
+        }));
+        const provider = new openaiProvider_1.OpenAiProvider("test-key");
+        const models = await provider.listModels();
+        expect(models[0].id).toBe("gpt-4o");
+        expect(models[1].id).toBe("gpt-4o-mini");
     });
 });

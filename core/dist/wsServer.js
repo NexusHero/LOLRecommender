@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BridgeWsServer = void 0;
 const ws_1 = require("ws");
+const logger_js_1 = require("./logger.js");
 class BridgeWsServer {
     wss;
     onMessage;
@@ -15,11 +16,11 @@ class BridgeWsServer {
         this.wss.on("listening", () => {
             const addr = this.wss.address();
             const port = typeof addr === "object" && addr ? addr.port : "?";
-            console.log(`[WS] Server listening on ws://0.0.0.0:${port}`);
+            logger_js_1.Logger.info(`[WS] Server listening on ws://0.0.0.0:${port}`);
         });
         this.wss.on("connection", (ws, req) => {
             const ip = req.socket.remoteAddress ?? "unbekannt";
-            console.log(`[WS] Client connected: ${ip} (${this.clients.size + 1} total)`);
+            logger_js_1.Logger.info(`[WS] Client connected: ${ip} (${this.clients.size + 1} total)`);
             this.clients.add(ws);
             ws.on("message", (data) => {
                 try {
@@ -29,21 +30,21 @@ class BridgeWsServer {
                     }
                 }
                 catch (err) {
-                    console.warn(`[WS] Failed to parse message from ${ip}`, err);
+                    logger_js_1.Logger.warn(`[WS] Failed to parse message from ${ip}`, err);
                 }
             });
             ws.on("close", () => {
                 this.clients.delete(ws);
-                console.log(`[WS] Client disconnected: ${ip} (${this.clients.size} remaining)`);
+                logger_js_1.Logger.info(`[WS] Client disconnected: ${ip} (${this.clients.size} remaining)`);
             });
             ws.on("error", (err) => {
-                console.error(`[WS] Client error (${ip}):`, err.message);
+                logger_js_1.Logger.error(`[WS] Client error (${ip}):`, err.message);
                 this.clients.delete(ws);
             });
             this.sendTo(ws, { event: "CONNECTED", timestamp: Date.now() });
         });
         this.wss.on("error", (err) => {
-            console.error("[WS] Server error:", err);
+            logger_js_1.Logger.error("[WS] Server error:", err);
         });
     }
     broadcast(message) {

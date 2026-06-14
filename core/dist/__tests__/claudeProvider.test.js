@@ -4,26 +4,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const claudeProvider_1 = require("../providers/claudeProvider");
-const fixtures_1 = require("./fixtures");
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
+const llmProviderContract_1 = require("./llmProviderContract");
 jest.mock("@anthropic-ai/sdk");
-const baseRec = (0, fixtures_1.makeBaseRec)();
-const validJsonResponse = JSON.stringify({
-    itemReasoning: "LLM reasoning text",
-    strategy: {
-        winCondition: "mid",
-        summary: "Scale into mid game.",
-        immediateAction: "Farm safely.",
-        lateGamePlan: "Fight with full build.",
-    },
-});
 describe("ClaudeProvider", () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
     function mockAnthropicResponse(contentOverride = {}) {
         const mockCreate = jest.fn().mockResolvedValue({
-            content: [{ type: "text", text: validJsonResponse }],
+            content: [{ type: "text", text: llmProviderContract_1.validJsonResponse }],
             usage: { input_tokens: 100, output_tokens: 50 },
             ...contentOverride,
         });
@@ -32,58 +22,80 @@ describe("ClaudeProvider", () => {
         }));
         return mockCreate;
     }
-    it("getAnalysis_ValidApiKey_ReturnsLlmReasoningAndStrategy", async () => {
-        mockAnthropicResponse();
-        const provider = new claudeProvider_1.ClaudeProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("LLM reasoning text");
-        expect(result.strategy.winCondition).toBe("mid");
-        expect(result.strategy.immediateAction).toBe("Farm safely.");
+    (0, llmProviderContract_1.runLlmProviderContract)({
+        providerName: "Claude",
+        createProvider: (key, model) => new claudeProvider_1.ClaudeProvider(key, model),
+        mockSuccess: (json) => mockAnthropicResponse({ content: [{ type: "text", text: json }] }),
+        mockFailure: (err) => {
+            const mockCreate = jest.fn().mockRejectedValue(err);
+            sdk_1.default.mockImplementation(() => ({
+                messages: { create: mockCreate },
+            }));
+            return mockCreate;
+        },
+        mockInvalidJson: (json) => mockAnthropicResponse({ content: [{ type: "text", text: json }], usage: { input_tokens: 0, output_tokens: 0 } }),
+        mockEmptyContent: () => mockAnthropicResponse({ content: [], usage: { input_tokens: 0, output_tokens: 0 } }),
+        assertStandardRequest: (mockApi) => {
+            const callArg = mockApi.mock.calls[0][0];
+            const userContent = callArg.messages[0].content;
+            expect(userContent).toContain("Lux");
+            expect(userContent).toContain("Soraka");
+        },
+        expectedDefaultModel: "claude-haiku-4-5-20251001",
+        expectedCustomModel: "claude-sonnet-4-6",
+        assertModelPassed: (mockApi, model) => {
+            expect(mockApi.mock.calls[0][0].model).toBe(model);
+        },
     });
-    it("getAnalysis_ClientThrows_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        sdk_1.default.mockImplementation(() => ({
-            messages: { create: jest.fn().mockRejectedValue(new Error("API unavailable")) },
-        }));
-        const provider = new claudeProvider_1.ClaudeProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
-    });
-    it("getAnalysis_EmptyContentArray_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockAnthropicResponse({ content: [], usage: { input_tokens: 0, output_tokens: 0 } });
-        const provider = new claudeProvider_1.ClaudeProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
-    });
-    it("getAnalysis_NonTextContentBlock_FallsBackToHeuristicReasoningAndStrategy", async () => {
+    it("getAnalysis_NonTextContentBlock_ReturnsEmptyReasoning", async () => {
         mockAnthropicResponse({
             content: [{ type: "tool_use", id: "x", name: "test", input: {} }],
             usage: { input_tokens: 0, output_tokens: 0 },
         });
+        const { makeGameState } = require("./fixtures");
         const provider = new claudeProvider_1.ClaudeProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
+        const result = await provider.getAnalysis(makeGameState());
+        expect(result.reasoning).toBe("");
     });
-    it("getAnalysis_InvalidJson_FallsBackToHeuristicReasoningAndStrategy", async () => {
-        mockAnthropicResponse({ content: [{ type: "text", text: "not valid json" }], usage: { input_tokens: 0, output_tokens: 0 } });
-        const provider = new claudeProvider_1.ClaudeProvider("test-key");
-        const result = await provider.getAnalysis((0, fixtures_1.makeGameState)(), baseRec);
-        expect(result.reasoning).toBe("heuristic reasoning");
-        expect(result.strategy).toEqual(baseRec.strategy);
-    });
-    it("getAnalysis_StandardRequest_IncludesChampionAndEnemyInPayload", async () => {
-        const mockCreate = mockAnthropicResponse();
-        const provider = new claudeProvider_1.ClaudeProvider("test-key");
-        const state = (0, fixtures_1.makeGameState)({
-            localPlayer: { ...(0, fixtures_1.makeGameState)().localPlayer, championName: "Lux" },
-            enemies: [{ ...(0, fixtures_1.makeGameState)().localPlayer, championName: "Soraka", team: "CHAOS" }],
+    it("listModels_ValidKey_ReturnsMappedModelInfoList", async () => {
+        const mockList = jest.fn().mockResolvedValue({
+            data: [
+                { id: "claude-opus-4-8", display_name: "Claude Opus 4.8" },
+                { id: "claude-sonnet-4-6", display_name: "Claude Sonnet 4.6" },
+                { id: "claude-haiku-4-5-20251001", display_name: "Claude Haiku 4.5" },
+            ],
         });
-        await provider.getAnalysis(state, baseRec);
-        const callArg = mockCreate.mock.calls[0][0];
-        const userContent = callArg.messages[0].content;
-        expect(userContent).toContain("Lux");
-        expect(userContent).toContain("Soraka");
+        sdk_1.default.mockImplementation(() => ({
+            messages: { create: jest.fn() },
+            models: { list: mockList },
+        }));
+        const provider = new claudeProvider_1.ClaudeProvider("test-key");
+        const models = await provider.listModels();
+        expect(models).toHaveLength(3);
+        expect(models[0]).toEqual({ id: "claude-opus-4-8", displayName: "Claude Opus 4.8" });
+        expect(models[1]).toEqual({ id: "claude-sonnet-4-6", displayName: "Claude Sonnet 4.6" });
+    });
+    it("listModels_ApiError_PropagatesError", async () => {
+        sdk_1.default.mockImplementation(() => ({
+            messages: { create: jest.fn() },
+            models: { list: jest.fn().mockRejectedValue(new Error("unauthorized")) },
+        }));
+        const provider = new claudeProvider_1.ClaudeProvider("bad-key");
+        await expect(provider.listModels()).rejects.toThrow("unauthorized");
+    });
+    it("getAnalysis_CreditBalanceError_ShowsHumanReadableMessage", async () => {
+        const apiError = Object.assign(new Error("credit error"), {
+            status: 400,
+            error: {
+                type: "invalid_request_error",
+                message: "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.",
+            },
+        });
+        sdk_1.default.mockImplementation(() => ({
+            messages: { create: jest.fn().mockRejectedValue(apiError) },
+        }));
+        const provider = new claudeProvider_1.ClaudeProvider("test-key");
+        const { makeGameState } = require("./fixtures");
+        await expect(provider.getAnalysis(makeGameState())).rejects.toThrow("Claude: Your credit balance is too low to access the Anthropic API.");
     });
 });

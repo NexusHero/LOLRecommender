@@ -147,17 +147,30 @@ describe("Integration: Match Progressions", () => {
         expect(getLatestLlmCallArg(llmProvider).localPlayer.scores.kills).toBe(15);
     });
     it("handleGameData_ThreeConsecutiveDeaths_EachDeathTriggersLlmWithoutCooldown", async () => {
+        // Each death uses a different gold amount so cache keys differ → fresh LLM call each time
         const { orchestrator, llmProvider } = setup();
-        await orchestrator.handleGameData((0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: false })]));
+        const raw1 = (0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: false })]);
+        raw1.activePlayer = (0, fixtures_js_1.makeActivePlayer)({ currentGold: 500 });
+        await orchestrator.handleGameData(raw1);
         expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
-        await orchestrator.handleGameData((0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: true })]));
+        const raw2 = (0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: true })]);
+        raw2.activePlayer = (0, fixtures_js_1.makeActivePlayer)({ currentGold: 1100 });
+        await orchestrator.handleGameData(raw2);
         expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(2);
-        await orchestrator.handleGameData((0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: false })]));
+        const raw3 = (0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: false })]);
+        raw3.activePlayer = (0, fixtures_js_1.makeActivePlayer)({ currentGold: 1100 });
+        await orchestrator.handleGameData(raw3);
         expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(2);
-        await orchestrator.handleGameData((0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: true })]));
+        const raw4 = (0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: true })]);
+        raw4.activePlayer = (0, fixtures_js_1.makeActivePlayer)({ currentGold: 1700 });
+        await orchestrator.handleGameData(raw4);
         expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(3);
-        await orchestrator.handleGameData((0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: false })]));
-        await orchestrator.handleGameData((0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: true })]));
+        const raw5 = (0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: false })]);
+        raw5.activePlayer = (0, fixtures_js_1.makeActivePlayer)({ currentGold: 1700 });
+        await orchestrator.handleGameData(raw5);
+        const raw6 = (0, fixtures_js_1.makeRawGameData)([(0, fixtures_js_1.makePlayer)({ championName: "Yasuo", isDead: true })]);
+        raw6.activePlayer = (0, fixtures_js_1.makeActivePlayer)({ currentGold: 2300 });
+        await orchestrator.handleGameData(raw6);
         expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(4);
     });
     it("triggerManualAnalysis_MidGame_BroadcastsCorrectChampionState", async () => {
@@ -167,14 +180,13 @@ describe("Integration: Match Progressions", () => {
             makeEnemy("Malphite", 1, 3, 10),
         ]));
         expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
-        llmProvider.getAnalysis.mockClear();
         broadcasts.length = 0;
         await orchestrator.triggerManualAnalysis();
-        expect(llmProvider.getAnalysis).toHaveBeenCalledTimes(1);
-        const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-        expect(rec).toBeDefined();
-        expect(rec?.recommendation?.source).toBe("llm");
-        expect(rec?.gameState?.localPlayer.championName).toBe("Jinx");
+        // Cache serves the result (same state) — LLM update is still broadcast
+        const update = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
+        expect(update).toBeDefined();
+        expect(update?.recommendation?.source).toBe("llm");
+        expect(update?.gameState?.localPlayer.championName).toBe("Jinx");
     });
     it("triggerManualAnalysis_BeforeGameStart_BroadcastsNothing", async () => {
         const { orchestrator, broadcasts, llmProvider } = setup();

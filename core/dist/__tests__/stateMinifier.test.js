@@ -30,10 +30,10 @@ describe("minifyGameState", () => {
         });
         const result = (0, stateMinifier_js_1.minifyGameState)(state);
         expect(result).toContain("Time: 2:05");
-        expect(result).toContain("Me: Ahri (Lvl 6, Gold: 1300, KDA: 2/1/0)");
+        expect(result).toContain("Me: Ahri [MID] (Lvl 6, Gold: 1300, KDA: 2/1/0, CS: 30)");
         expect(result).toContain("My Items: Lost Chapter");
-        expect(result).toContain("Allies: Lee Sin (Lvl 5, KDA: 1/0/2)");
-        expect(result).toContain("Enemies: Zed (Lvl 6, KDA: 3/0/0)");
+        expect(result).toContain("Allies: Lee Sin [MID] (Lvl 5, KDA: 1/0/2, CS: 20)");
+        expect(result).toContain("Enemies: Zed [MID] (Lvl 6, KDA: 3/0/0, CS: 35)");
     });
     it("minifyGameState_EmptyItemsAndTeams_ShowsNonePlaceholders", () => {
         const state = (0, fixtures_js_1.makeGameState)({
@@ -63,7 +63,7 @@ describe("minifyGameState", () => {
             });
             const result = (0, stateMinifier_js_1.minifyGameState)(state);
             expect(result).toContain("Time: 0:30");
-            expect(result).toContain("Me: Lux (Lvl 1, Gold: 500, KDA: 0/0/0)");
+            expect(result).toContain("Me: Lux [MID] (Lvl 1, Gold: 500, KDA: 0/0/0, CS: 0)");
             expect(result).toContain("My Items: None");
         });
     });
@@ -84,7 +84,7 @@ describe("minifyGameState", () => {
             });
             const result = (0, stateMinifier_js_1.minifyGameState)(state);
             expect(result).toContain("Time: 15:00");
-            expect(result).toContain("Me: Yasuo (Lvl 11, Gold: 850, KDA: 5/2/1)");
+            expect(result).toContain("Me: Yasuo [MID] (Lvl 11, Gold: 850, KDA: 5/2/1, CS: 120, Vision: 5)");
             expect(result).toContain("My Items: Berserker's Greaves, Kraken Slayer");
         });
     });
@@ -102,7 +102,7 @@ describe("minifyGameState", () => {
             });
             const result = (0, stateMinifier_js_1.minifyGameState)(state);
             expect(result).toContain("Time: 40:00");
-            expect(result).toContain("Me: Vayne (Lvl 18, Gold: 3200, KDA: 15/4/8)");
+            expect(result).toContain("Me: Vayne [MID] (Lvl 18, Gold: 3200, KDA: 15/4/8, CS: 350, Vision: 12)");
             expect(result).toContain("Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge, Infinity Edge");
         });
         it("minifyGameState_HighKdaAndMassiveGoldLead_FormatsSnowballScenario", () => {
@@ -117,7 +117,7 @@ describe("minifyGameState", () => {
                 activePlayer: (0, fixtures_js_1.makeActivePlayer)({ currentGold: 10500 }),
             });
             const result = (0, stateMinifier_js_1.minifyGameState)(state);
-            expect(result).toContain("Me: Draven (Lvl 14, Gold: 10500, KDA: 20/0/5)");
+            expect(result).toContain("Me: Draven [MID] (Lvl 14, Gold: 10500, KDA: 20/0/5, CS: 200, Vision: 2)");
         });
     });
     describe("edge cases", () => {
@@ -134,7 +134,7 @@ describe("minifyGameState", () => {
             });
             const result = (0, stateMinifier_js_1.minifyGameState)(state);
             expect(result).toContain("Time: 0:00");
-            expect(result).toContain("Me: Zilean (Lvl 30, Gold: -500, KDA: 999/999/999)");
+            expect(result).toContain("Me: Zilean [MID] (Lvl 30, Gold: -500, KDA: 999/999/999, CS: 999, Vision: 999)");
         });
     });
 });
