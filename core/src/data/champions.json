@@ -30,7 +30,6 @@
   "thresholds": {
     "healScoreForGW": 2,
     "apRatioForBanshee": 0.6,
-    "ccScoreForQSS": 3,
-    "adRatioForRanduin": 0.7
+    "ccScoreForQSS": 3
   }
 }
