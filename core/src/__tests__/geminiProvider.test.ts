@@ -55,8 +55,8 @@ describe("GeminiProvider", () => {
     }));
     const provider = new GeminiProvider("test-key");
 
-    const { makeGameState, makeBaseRec } = require("./fixtures");
-    await expect(provider.getAnalysis(makeGameState(), makeBaseRec())).rejects.toThrow(
+    const { makeGameState } = require("./fixtures");
+    await expect(provider.getAnalysis(makeGameState())).rejects.toThrow(
       "Gemini: 429 · Rate limit exceeded",
     );
   });
@@ -113,8 +113,8 @@ describe("GeminiProvider", () => {
     const mockGenerateContent = mockGeminiResponse();
     const provider = new GeminiProvider("test-key");
 
-    const { makeGameState, makeBaseRec } = require("./fixtures");
-    await provider.getAnalysis(makeGameState(), makeBaseRec());
+    const { makeGameState } = require("./fixtures");
+    await provider.getAnalysis(makeGameState());
 
     const modelConfig = mockGenerateContent.mock.calls[0][0];
     expect(typeof modelConfig.config.systemInstruction).toBe("string");
@@ -125,20 +125,20 @@ describe("GeminiProvider", () => {
     const mockGenerateContent = mockGeminiResponse();
     const provider = new GeminiProvider("test-key");
 
-    const { makeGameState, makeBaseRec } = require("./fixtures");
-    await provider.getAnalysis(makeGameState(), makeBaseRec());
+    const { makeGameState } = require("./fixtures");
+    await provider.getAnalysis(makeGameState());
 
     const callArg = mockGenerateContent.mock.calls[0][0];
     expect(callArg.config?.responseMimeType).toBe("application/json");
-    expect(callArg.config?.maxOutputTokens).toBe(400);
+    expect(callArg.config?.maxOutputTokens).toBe(700);
   });
 
   it("getAnalysis_StandardRequest_SendsUserRoleWithTextPart", async () => {
     const mockGenerateContent = mockGeminiResponse();
     const provider = new GeminiProvider("test-key");
 
-    const { makeGameState, makeBaseRec } = require("./fixtures");
-    await provider.getAnalysis(makeGameState(), makeBaseRec());
+    const { makeGameState } = require("./fixtures");
+    await provider.getAnalysis(makeGameState());
 
     const callArg = mockGenerateContent.mock.calls[0][0];
     expect(typeof callArg.contents).toBe("string");

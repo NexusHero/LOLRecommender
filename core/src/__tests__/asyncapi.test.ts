@@ -9,7 +9,8 @@ import type { WsMessage } from "../types";
 const BaseMessageSchema = z.object({
   event: z.enum([
     "CONNECTED", "GAME_STARTED", "ITEM_PURCHASED", "LEVEL_UP",
-    "GAME_TICK", "GAME_INACTIVE", "RECOMMENDATION", "PLAYER_DIED", "HIGH_GOLD_REACHED",
+    "GAME_TICK", "GAME_INACTIVE", "RECOMMENDATION_UPDATE", "PLAYER_DIED", "HIGH_GOLD_REACHED",
+    "LLM_ERROR", "LLM_BUDGET_EXCEEDED",
   ]),
   timestamp: z.number().int(),
   error: z.string().optional(),
@@ -90,7 +91,19 @@ const RecommendationMessageSchema = GameStateMessageSchema.extend({
 });
 
 describe("AsyncAPI Contract: broadcast messages match schema", () => {
-  function setupOrchestrator() {
+  function makeMockLlmProvider() {
+    return {
+      name: "mock",
+      listModels: jest.fn().mockResolvedValue([]),
+      getAnalysis: jest.fn().mockResolvedValue({
+        reasoning: "mock reasoning",
+        situationalItems: [{ id: 3102, name: "Banshee's Veil", reason: "AP heavy", priority: "situational" }],
+        strategy: { winCondition: "early" as const, summary: "s", immediateAction: "a", lateGamePlan: "b" },
+      }),
+    };
+  }
+
+  function setupOrchestrator(llmProvider = null as any) {
     const broadcasts: WsMessage[] = [];
     const wsServer = {
       broadcast: jest.fn((msg: WsMessage) => broadcasts.push(msg)),
@@ -100,7 +113,7 @@ describe("AsyncAPI Contract: broadcast messages match schema", () => {
     const orchestrator = new BridgeOrchestrator(
       wsServer,
       new EventDetector(),
-      null,
+      llmProvider,
       { summonerName: "TestPlayer", llmCooldownMs: 0 },
       () => Date.now(),
     );
@@ -118,12 +131,12 @@ describe("AsyncAPI Contract: broadcast messages match schema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("broadcast_RecommendationEvent_ConformsToRecommendationMessageSchema", async () => {
-    const { orchestrator, broadcasts } = setupOrchestrator();
+  it("broadcast_RecommendationUpdateEvent_ConformsToRecommendationMessageSchema", async () => {
+    const { orchestrator, broadcasts } = setupOrchestrator(makeMockLlmProvider());
 
     await orchestrator.handleGameData(makeRawGameData());
 
-    const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+    const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
     expect(rec).toBeDefined();
     const result = RecommendationMessageSchema.safeParse(rec);
     expect(result.success).toBe(true);
@@ -157,15 +170,15 @@ describe("AsyncAPI Contract: broadcast messages match schema", () => {
     }
   });
 
-  it("broadcast_RecommendationSource_IsAlwaysHeuristicOrLlm", async () => {
-    const { orchestrator, broadcasts } = setupOrchestrator();
+  it("broadcast_RecommendationSource_IsAlwaysLlm", async () => {
+    const { orchestrator, broadcasts } = setupOrchestrator(makeMockLlmProvider());
 
     await orchestrator.handleGameData(makeRawGameData());
 
-    const recs = broadcasts.filter((b) => b.event === "RECOMMENDATION");
+    const recs = broadcasts.filter((b) => b.event === "RECOMMENDATION_UPDATE");
     expect(recs).toHaveLength(1);
     for (const rec of recs) {
-      expect(["heuristic", "llm"]).toContain(rec.recommendation?.source);
+      expect(rec.recommendation?.source).toBe("llm");
     }
   });
 });

@@ -49,20 +49,17 @@ describe("ClaudeProvider", () => {
     },
   });
 
-  it("getAnalysis_NonTextContentBlock_FallsBackToHeuristicReasoningAndStrategy", async () => {
+  it("getAnalysis_NonTextContentBlock_ReturnsEmptyReasoning", async () => {
     mockAnthropicResponse({
       content: [{ type: "tool_use", id: "x", name: "test", input: {} }],
       usage: { input_tokens: 0, output_tokens: 0 },
     });
-    // Need baseRec/GameState so import them in test if needed, or just let it use fixtures here.
-    // wait, I removed baseRec and makeGameState from imports! Let me put them back.
-    const { makeGameState, makeBaseRec } = require("./fixtures");
+    const { makeGameState } = require("./fixtures");
     const provider = new ClaudeProvider("test-key");
 
-    const result = await provider.getAnalysis(makeGameState(), makeBaseRec());
+    const result = await provider.getAnalysis(makeGameState());
 
-    expect(result.reasoning).toBe("heuristic reasoning");
-    expect(result.strategy).toEqual(makeBaseRec().strategy);
+    expect(result.reasoning).toBe("");
   });
 
   it("listModels_ValidKey_ReturnsMappedModelInfoList", async () => {
@@ -109,8 +106,8 @@ describe("ClaudeProvider", () => {
     }));
     const provider = new ClaudeProvider("test-key");
 
-    const { makeGameState, makeBaseRec } = require("./fixtures");
-    await expect(provider.getAnalysis(makeGameState(), makeBaseRec())).rejects.toThrow(
+    const { makeGameState } = require("./fixtures");
+    await expect(provider.getAnalysis(makeGameState())).rejects.toThrow(
       "Claude: Your credit balance is too low to access the Anthropic API.",
     );
   });

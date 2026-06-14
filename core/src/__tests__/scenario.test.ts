@@ -84,7 +84,7 @@ describe("System: Game Scenario — Orchestrator Pipeline", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
 
-  it("scenario_FullGameSequence_EmitsAllExpectedEventsWithFourRecommendations", async () => {
+  it("scenario_FullGameSequence_EmitsAllExpectedGameEvents", async () => {
     // Arrange
     const client = new WebSocket(`ws://127.0.0.1:${port}`);
     await waitForMessage(client, "CONNECTED");
@@ -103,15 +103,13 @@ describe("System: Game Scenario — Orchestrator Pipeline", () => {
     expect(events).toContain("PLAYER_DIED");
     expect(events).toContain("HIGH_GOLD_REACHED");
 
-    // Assert — 4 heuristic recommendations (no LLM configured)
-    const recs = received.filter((m) => m.event === "RECOMMENDATION");
-    expect(recs).toHaveLength(4);
-    expect(recs.every((r) => r.recommendation?.source === "heuristic")).toBe(true);
+    // Without LLM: no recommendations fire
+    expect(received.filter((m) => m.event === "RECOMMENDATION_UPDATE")).toHaveLength(0);
 
     client.close();
   });
 
-  it("scenario_EnemyBuysItem_RecommendationBroadcastBeforeItemPurchasedEvent", async () => {
+  it("scenario_EnemyBuysItem_ItemPurchasedEventFires", async () => {
     // Arrange
     const client = new WebSocket(`ws://127.0.0.1:${port}`);
     await waitForMessage(client, "CONNECTED");
@@ -124,18 +122,17 @@ describe("System: Game Scenario — Orchestrator Pipeline", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
-    // Assert — orchestrator always broadcasts RECOMMENDATION before the trigger event
+    // Assert — ITEM_PURCHASED fires after GAME_STARTED
     const events = received.map((m) => m.event);
-    const lastRecIdx = events.lastIndexOf("RECOMMENDATION");
+    const gameStartedIdx = events.indexOf("GAME_STARTED");
     const itemIdx = events.lastIndexOf("ITEM_PURCHASED");
-    expect(lastRecIdx).toBeGreaterThan(-1);
-    expect(itemIdx).toBeGreaterThan(-1);
-    expect(lastRecIdx).toBeLessThan(itemIdx);
+    expect(gameStartedIdx).toBeGreaterThan(-1);
+    expect(itemIdx).toBeGreaterThan(gameStartedIdx);
 
     client.close();
   });
 
-  it("scenario_LocalPlayerDies_RecommendationGameStateShowsDeadPlayer", async () => {
+  it("scenario_LocalPlayerDies_PlayerDiedEventFiresWithDeadState", async () => {
     // Arrange
     const client = new WebSocket(`ws://127.0.0.1:${port}`);
     await waitForMessage(client, "CONNECTED");
@@ -148,17 +145,16 @@ describe("System: Game Scenario — Orchestrator Pipeline", () => {
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
 
-    // Assert — the RECOMMENDATION that follows PLAYER_DIED carries isDead=true
-    const deathRec = received
-      .filter((m) => m.event === "RECOMMENDATION")
+    // Assert — PLAYER_DIED event carries the dead state
+    const deathEvent = received
+      .filter((m) => m.event === "PLAYER_DIED")
       .find((r) => r.gameState?.localPlayer.isDead === true);
-    expect(deathRec).toBeDefined();
-    expect(deathRec!.recommendation?.source).toBe("heuristic");
+    expect(deathEvent).toBeDefined();
 
     client.close();
   });
 
-  it("scenario_GoldThresholdCrossed_HighGoldEventAndMatchingRecommendationEmitted", async () => {
+  it("scenario_GoldThresholdCrossed_HighGoldEventEmitted", async () => {
     // Arrange
     const client = new WebSocket(`ws://127.0.0.1:${port}`);
     await waitForMessage(client, "CONNECTED");
@@ -170,12 +166,6 @@ describe("System: Game Scenario — Orchestrator Pipeline", () => {
 
     // Assert — HIGH_GOLD_REACHED event present
     expect(received.map((m) => m.event)).toContain("HIGH_GOLD_REACHED");
-
-    // Assert — at least one RECOMMENDATION carries gold >= 1000
-    const highGoldRec = received
-      .filter((m) => m.event === "RECOMMENDATION")
-      .find((r) => (r.gameState?.activePlayer.currentGold ?? 0) >= 1000);
-    expect(highGoldRec).toBeDefined();
 
     client.close();
   });
@@ -258,7 +248,7 @@ describe("System: Game Scenario — Full Poller Pipeline", () => {
     expect(events).toContain("ITEM_PURCHASED");
     expect(events).toContain("PLAYER_DIED");
     expect(events).toContain("HIGH_GOLD_REACHED");
-    expect(received.filter((m) => m.event === "RECOMMENDATION")).toHaveLength(4);
+    expect(received.filter((m) => m.event === "RECOMMENDATION_UPDATE")).toHaveLength(0);
 
     client.close();
   });
