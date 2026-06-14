@@ -30,14 +30,14 @@ export class CacheService {
     this.store.clear();
   }
 
-  buildKey(state: ParsedGameState, heuristicItemIds: number[]): string {
+  buildKey(state: ParsedGameState): string {
     const goldBucket = Math.floor(state.activePlayer.currentGold / 500);
     const phase = getGamePhase(state.gameTime);
     const killsBucket = Math.floor(state.localPlayer.scores.kills / 3);
     const deathsBucket = Math.floor(state.localPlayer.scores.deaths / 2);
     const enemyNames = state.enemies.map((e) => e.championName).sort().join(",");
     const myItems = state.localPlayer.items.map((i) => i.itemID).sort().join(",");
-    const stateHash = [
+    return [
       state.localPlayer.championName,
       phase,
       `g${goldBucket}`,
@@ -46,7 +46,5 @@ export class CacheService {
       `e:${enemyNames}`,
       `myitems:${myItems}`,
     ].join("|");
-    const recHash = [...heuristicItemIds].sort().join(",");
-    return `${stateHash}|rec:${recHash}`;
   }
 }

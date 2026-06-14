@@ -66,15 +66,6 @@ export class BridgeOrchestrator {
     const hasClients = this.wsServer.clientCount > 0;
 
     await this.engine.process(state, eventType, hasClients, {
-      onHeuristic: (rec) => {
-        this.wsServer.broadcast({
-          event: "RECOMMENDATION",
-          timestamp: this.clock(),
-          gameState: state,
-          recommendation: rec,
-          correlationId,
-        });
-      },
       onLlmBudgetExceeded: (sessionTokens, budget) => {
         this.wsServer.broadcast({
           event: "LLM_BUDGET_EXCEEDED",

@@ -1,7 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk";
 import type { LlmProvider, LlmAnalysis, ModelInfo, TokenUsage } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
-import type { ParsedGameState, ItemRecommendation } from "../types.js";
+import type { ParsedGameState } from "../types.js";
 import { Logger } from "../logger.js";
 
 export const CLAUDE_DEFAULT_MODEL = "claude-haiku-4-5-20251001";
@@ -24,14 +24,11 @@ export class ClaudeProvider implements LlmProvider {
     }));
   }
 
-  async getAnalysis(
-    state: ParsedGameState,
-    heuristicRec: ItemRecommendation,
-  ): Promise<LlmAnalysis> {
+  async getAnalysis(state: ParsedGameState): Promise<LlmAnalysis> {
     try {
       const response = await this.client.messages.create({
         model: this.model,
-        max_tokens: 400,
+        max_tokens: 700,
         system: [
           {
             type: "text",
@@ -40,13 +37,13 @@ export class ClaudeProvider implements LlmProvider {
           },
         ],
         messages: [
-          { role: "user", content: await buildUserPrompt(state, heuristicRec) },
+          { role: "user", content: await buildUserPrompt(state) },
         ],
       });
 
-      if (response.content.length === 0) return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
+      if (response.content.length === 0) return { reasoning: "", strategy: { winCondition: "mid", summary: "", immediateAction: "", lateGamePlan: "" } };
       const block = response.content[0];
-      if (block.type !== "text") return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
+      if (block.type !== "text") return { reasoning: "", strategy: { winCondition: "mid", summary: "", immediateAction: "", lateGamePlan: "" } };
 
       const cacheHit = (response.usage as unknown as Record<string, unknown>).cache_read_input_tokens as number ?? 0;
       const tokenUsage: TokenUsage = {
@@ -58,7 +55,7 @@ export class ClaudeProvider implements LlmProvider {
         `[LLM:Claude] Input tokens: ${tokenUsage.input} (cache hit: ${cacheHit}), output tokens: ${tokenUsage.output}`,
       );
 
-      return { ...parseAnalysisResponse(block.text, heuristicRec), tokenUsage };
+      return { ...parseAnalysisResponse(block.text), tokenUsage };
     } catch (err) {
       throw new Error(`Claude: ${this.formatError(err)}`);
     }
