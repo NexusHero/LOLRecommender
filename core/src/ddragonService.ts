@@ -40,6 +40,7 @@ interface CacheFile {
   version: string;
   items: Record<string, ItemInfo>;
   championKeys: Record<string, string>;
+  championTags: Record<string, string[]>;
   champions: Record<string, ChampionAbilities>;
 }
 
@@ -54,6 +55,7 @@ interface DDragonItem {
 interface DDragonChampionSummary {
   id: string;
   name: string;
+  tags: string[];
 }
 
 interface DDragonChampionDetail {
@@ -64,6 +66,7 @@ export class DDragonService {
   private version = "";
   private items: Record<number, ItemInfo> = {};
   private championKeys: Record<string, string> = {};
+  private championTags: Record<string, string[]> = {};
   private champions: Record<string, ChampionAbilities> = {};
   private cacheFile = "";
   private initialized = false;
@@ -90,6 +93,7 @@ export class DDragonService {
           Object.entries(cached.items).map(([k, v]) => [Number(k), v]),
         );
         this.championKeys = cached.championKeys ?? {};
+        this.championTags = cached.championTags ?? {};
         this.champions = cached.champions ?? {};
         console.log(`[DDragon] Loaded from cache (patch ${this.version})`);
         this.initialized = true;
@@ -107,6 +111,11 @@ export class DDragonService {
 
   getItemInfo(id: number): ItemInfo | undefined {
     return this.items[id];
+  }
+
+  /** Returns Riot's official champion tags (e.g. ["Mage","Assassin"], ["Tank"], ["Marksman"]). */
+  getChampionTags(displayName: string): string[] {
+    return this.championTags[displayName] ?? [];
   }
 
   async getChampionAbilities(displayName: string): Promise<ChampionAbilities | undefined> {
@@ -160,6 +169,7 @@ export class DDragonService {
 
     for (const [key, champ] of Object.entries(data.data)) {
       this.championKeys[champ.name] = key;
+      if (champ.tags?.length) this.championTags[champ.name] = champ.tags;
     }
   }
 
@@ -196,6 +206,7 @@ export class DDragonService {
       version: this.version,
       items: Object.fromEntries(Object.entries(this.items).map(([k, v]) => [k, v])),
       championKeys: this.championKeys,
+      championTags: this.championTags,
       champions: this.champions,
     };
     await writeFile(this.cacheFile, JSON.stringify(cache), "utf-8");
