@@ -16,22 +16,23 @@ class GameTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Container(
-      color: AppColors.surfaceMedium,
+      color: colors.surfaceMedium,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             gameState.gameMode.toUpperCase(),
-            style: AppTextStyles.label,
+            style: AppTextStyles.label.copyWith(color: colors.textSecondary),
           ),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.timer_outlined,
                 size: 14,
-                color: AppColors.textSecondary,
+                color: colors.textSecondary,
               ),
               const SizedBox(width: 4),
               Text(_fmt(gameState.gameTime), style: AppTextStyles.bodyBold),
@@ -39,15 +40,15 @@ class GameTopBar extends StatelessWidget {
           ),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.monetization_on_outlined,
                 size: 14,
-                color: AppColors.gold,
+                color: colors.gold,
               ),
               const SizedBox(width: 4),
               Text(
                 '${gameState.activePlayer.currentGold.toInt()}g',
-                style: AppTextStyles.bodyBold.copyWith(color: AppColors.gold),
+                style: AppTextStyles.bodyBold.copyWith(color: colors.gold),
               ),
             ],
           ),

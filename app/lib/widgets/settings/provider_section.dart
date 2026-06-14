@@ -12,14 +12,23 @@ class ProviderSection extends StatelessWidget {
     return ListenableBuilder(
       listenable: ctrl,
       builder: (context, _) {
+        final colors = context.colors;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('AI Provider', style: AppTextStyles.captionBold),
+            Text(
+              'AI Provider',
+              style: AppTextStyles.captionBold.copyWith(
+                color: colors.textSecondary,
+              ),
+            ),
             const SizedBox(height: 4),
-            const Text(
-              'AI gives smarter, context-aware advice. Basic uses fast built-in rules.',
-              style: AppTextStyles.caption,
+            Text(
+              'AI gives smarter, context-aware advice. '
+              'Basic uses fast built-in rules.',
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textSecondary,
+              ),
             ),
             const SizedBox(height: 10),
             SegmentedButton<String>(
@@ -46,14 +55,18 @@ class ProviderSection extends StatelessWidget {
                             child: _ModelDropdown(
                               models: ctrl.currentModels,
                               selected: ctrl.selectedModel,
-                              enabled: !ctrl.isConnecting && !ctrl.isLoadingModels,
-                              onChanged: (val) => ctrl.setSelectedModel(val ?? ''),
+                              enabled:
+                                  !ctrl.isConnecting && !ctrl.isLoadingModels,
+                              onChanged: (val) =>
+                                  ctrl.setSelectedModel(val ?? ''),
                             ),
                           ),
                           const SizedBox(width: 4),
                           _RefreshModelsButton(
                             isLoading: ctrl.isLoadingModels,
-                            enabled: !ctrl.isConnecting && ctrl.apiKeyCtrl.text.isNotEmpty,
+                            enabled:
+                                !ctrl.isConnecting &&
+                                ctrl.apiKeyCtrl.text.isNotEmpty,
                             onPressed: ctrl.loadModels,
                           ),
                         ],
@@ -80,9 +93,9 @@ class ProviderSection extends StatelessWidget {
                                   decoration: InputDecoration(
                                     labelText: '${ctrl.providerType} API Key',
                                     hintText: 'Enter your API key',
-                                    prefixIcon: const Icon(
+                                    prefixIcon: Icon(
                                       Icons.vpn_key_outlined,
-                                      color: AppColors.textSecondary,
+                                      color: colors.textSecondary,
                                     ),
                                   ),
                                   keyboardType: TextInputType.text,
@@ -119,12 +132,12 @@ class ProviderSection extends StatelessWidget {
                       child: TextField(
                         controller: ctrl.tokenBudgetCtrl,
                         enabled: !ctrl.isConnecting,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Session Token Budget',
                           hintText: '0 = unlimited (e.g. 50000)',
                           prefixIcon: Icon(
                             Icons.token_outlined,
-                            color: AppColors.textSecondary,
+                            color: colors.textSecondary,
                           ),
                         ),
                         keyboardType: TextInputType.number,
@@ -161,7 +174,10 @@ class _ValidateKeyButton extends StatelessWidget {
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.verified_outlined, color: AppColors.textSecondary),
+          : Icon(
+              Icons.verified_outlined,
+              color: context.colors.textSecondary,
+            ),
       onPressed: enabled && !isLoading ? onPressed : null,
     );
   }
@@ -175,26 +191,31 @@ class _KeyValidationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     if (valid) {
       return Row(
         children: [
-          const Icon(Icons.check_circle_outline, size: 14, color: AppColors.gold),
+          Icon(
+            Icons.check_circle_outline,
+            size: 14,
+            color: colors.gold,
+          ),
           const SizedBox(width: 6),
           Text(
             'API key is valid',
-            style: AppTextStyles.caption.copyWith(color: AppColors.gold),
+            style: AppTextStyles.caption.copyWith(color: colors.gold),
           ),
         ],
       );
     }
     return Row(
       children: [
-        const Icon(Icons.error_outline, size: 14, color: AppColors.errorLight),
+        Icon(Icons.error_outline, size: 14, color: colors.errorLight),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
             error ?? 'Invalid API key',
-            style: AppTextStyles.caption.copyWith(color: AppColors.errorLight),
+            style: AppTextStyles.caption.copyWith(color: colors.errorLight),
           ),
         ),
       ],
@@ -223,7 +244,7 @@ class _RefreshModelsButton extends StatelessWidget {
               height: 18,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-          : const Icon(Icons.refresh, color: AppColors.textSecondary),
+          : Icon(Icons.refresh, color: context.colors.textSecondary),
       onPressed: enabled && !isLoading ? onPressed : null,
     );
   }
@@ -248,11 +269,11 @@ class _ModelDropdown extends StatelessWidget {
         models.any((m) => m.id == selected) ? selected : models.first.id;
     return DropdownButtonFormField<String>(
       initialValue: effectiveValue,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Model',
         prefixIcon: Icon(
           Icons.psychology_outlined,
-          color: AppColors.textSecondary,
+          color: context.colors.textSecondary,
         ),
       ),
       items: models

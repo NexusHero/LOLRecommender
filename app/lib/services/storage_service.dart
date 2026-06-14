@@ -7,7 +7,8 @@ class StorageService {
   late final SharedPreferences _prefs;
   final _secureStorage = const FlutterSecureStorage();
 
-  /// Initialize the underlying storage. Must be called before accessing properties.
+  /// Initialize the underlying storage.
+  /// Must be called before accessing properties.
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
@@ -35,6 +36,11 @@ class StorageService {
   int get tokenBudget => _prefs.getInt('tokenBudget') ?? 0;
   Future<void> setTokenBudget(int value) =>
       _prefs.setInt('tokenBudget', value);
+
+  // --- Appearance ---
+  String? get themeMode => _prefs.getString('themeMode');
+  Future<void> setThemeMode(String value) =>
+      _prefs.setString('themeMode', value);
 
   // --- Secure Settings ---
   Future<String?> getApiKey() => _secureStorage.read(key: 'apiKey');

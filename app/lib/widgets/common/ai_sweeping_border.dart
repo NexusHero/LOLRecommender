@@ -13,7 +13,7 @@ class AiSweepingBorder extends StatefulWidget {
     super.key,
     this.borderRadius = 8.0,
     this.strokeWidth = 2.0,
-    this.color = AppColors.magic,
+    this.color,
     this.sweepFraction = 0.28,
     this.duration = const Duration(milliseconds: 1800),
   });
@@ -21,7 +21,9 @@ class AiSweepingBorder extends StatefulWidget {
   final Widget child;
   final double borderRadius;
   final double strokeWidth;
-  final Color color;
+
+  /// Defaults to `context.colors.magic` when null (resolved in build()).
+  final Color? color;
   final double sweepFraction;
   final Duration duration;
 
@@ -48,12 +50,13 @@ class _AiSweepingBorderState extends State<AiSweepingBorder>
 
   @override
   Widget build(BuildContext context) {
+    final color = widget.color ?? context.colors.magic;
     return AnimatedBuilder(
       animation: _ctrl,
       builder: (_, child) => CustomPaint(
         foregroundPainter: _SweepPainter(
           progress: _ctrl.value,
-          color: widget.color,
+          color: color,
           borderRadius: widget.borderRadius,
           strokeWidth: widget.strokeWidth,
           sweepFraction: widget.sweepFraction,

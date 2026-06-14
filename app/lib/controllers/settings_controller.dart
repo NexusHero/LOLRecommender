@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:lol_coach/models/model_info.dart';
 import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/storage_service.dart';
 import 'package:lol_coach/services/ws_client.dart';
@@ -86,9 +85,10 @@ class SettingsController extends ChangeNotifier {
     _selectedModel = _storage.selectedModel ?? '';
     apiKeyCtrl.text = await _storage.getApiKey() ?? '';
     final budget = _storage.tokenBudget;
-    tokenBudgetCtrl.text = budget > 0 ? '\$budget' : '';
+    tokenBudgetCtrl.text = budget > 0 ? '$budget' : '';
 
-    _showAdvanced = hostCtrl.text != '127.0.0.1' && hostCtrl.text != 'localhost';
+    _showAdvanced =
+        hostCtrl.text != '127.0.0.1' && hostCtrl.text != 'localhost';
     notifyListeners();
   }
 

@@ -33,121 +33,60 @@ class RecommendationPanel extends StatelessWidget {
     return '${diff.inHours}h ago';
   }
 
-  String get _providerLabel {
-    return switch (recommendation.provider) {
-      'claude' => 'Claude',
-      'openai' => 'GPT-4o',
-      'gemini' => 'Gemini',
-      _ => 'Basic Rules',
-    };
-  }
-
-  Color get _providerColor {
-    return recommendation.isLlm ? AppColors.magic : AppColors.textSecondary;
-  }
-
   IconData get _providerIcon {
     return recommendation.isLlm ? Icons.smart_toy_outlined : Icons.tune;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final timeAgo = _timeAgo();
+    final providerColor =
+        recommendation.isLlm ? colors.magic : colors.textSecondary;
 
     final card = GameCard(
-      borderColor: recommendation.isLlm ? AppColors.magic : AppColors.border,
+      borderColor: recommendation.isLlm ? colors.magic : colors.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Provider header — iOS-style icon box + label hierarchy
+          // Header — calm icon + title, no provider/AI chrome
           Row(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _providerColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: _providerColor.withValues(alpha: 0.3),
-                  ),
+              Icon(_providerIcon, size: 18, color: providerColor),
+              const SizedBox(width: 8),
+              Text(
+                'RECOMMENDATIONS',
+                style: AppTextStyles.label.copyWith(
+                  color: colors.textSecondary,
                 ),
-                child: Icon(_providerIcon, size: 20, color: _providerColor),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    'ANSWERED BY',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  Text(
-                    _providerLabel,
-                    style: AppTextStyles.bodyBold
-                        .copyWith(color: _providerColor),
-                  ),
-                ],
               ),
               const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2,),
-                    decoration: BoxDecoration(
-                      color: _providerColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: _providerColor.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      recommendation.isLlm ? 'AI' : 'AUTO',
-                      style: TextStyle(
-                        color: _providerColor,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
+              if (timeAgo.isNotEmpty)
+                Text(
+                  timeAgo,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
                   ),
-                  if (timeAgo.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(timeAgo, style: AppTextStyles.caption),
-                  ],
-                ],
-              ),
+                ),
             ],
           ),
           const SizedBox(height: 12),
-          const Divider(color: AppColors.border, height: 1),
+          Divider(color: colors.border, height: 1),
           const SizedBox(height: 12),
-          const Row(
-            children: [
-              Icon(Icons.lightbulb_outline, size: 15, color: AppColors.cyan),
-              SizedBox(width: 6),
-              Text('RECOMMENDATIONS', style: AppTextStyles.label),
-            ],
-          ),
-          const SizedBox(height: 10),
           if (recommendation.items.isEmpty)
-            const Text(
+            Text(
               'No specific counter items needed.',
-              style: AppTextStyles.caption,
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textSecondary,
+              ),
             )
           else
             ...recommendation.items.map((item) => _RecItemTile(item: item)),
-          const Divider(color: AppColors.border, height: 16),
-          Text(recommendation.reasoning, style: AppTextStyles.caption),
+          Divider(color: colors.border, height: 16),
+          Text(
+            recommendation.reasoning,
+            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+          ),
           if (recommendation.strategy != null) ...[
             const SizedBox(height: 12),
             _StrategyCard(strategy: recommendation.strategy!),
@@ -171,12 +110,12 @@ class RecommendationPanel extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: AppColors.magic.withValues(alpha: 0.22),
+            color: colors.magic.withValues(alpha: 0.22),
             blurRadius: 24,
             offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: AppColors.magic.withValues(alpha: 0.08),
+            color: colors.magic.withValues(alpha: 0.08),
             blurRadius: 50,
             spreadRadius: 2,
           ),
@@ -196,18 +135,6 @@ class _StrategyCard extends StatelessWidget {
   const _StrategyCard({required this.strategy});
   final Strategy strategy;
 
-  Color get _conditionColor => switch (strategy.winCondition) {
-        WinCondition.early => AppColors.success,
-        WinCondition.mid => AppColors.gold,
-        WinCondition.late => AppColors.magic,
-      };
-
-  Color get _conditionSubtle => switch (strategy.winCondition) {
-        WinCondition.early => AppColors.successSubtle,
-        WinCondition.mid => AppColors.goldSubtle,
-        WinCondition.late => AppColors.magicSubtle,
-      };
-
   String get _conditionLabel => switch (strategy.winCondition) {
         WinCondition.early => 'EARLY WIN',
         WinCondition.mid => 'MID WIN',
@@ -216,25 +143,42 @@ class _StrategyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final conditionColor = switch (strategy.winCondition) {
+      WinCondition.early => colors.success,
+      WinCondition.mid => colors.gold,
+      WinCondition.late => colors.magic,
+    };
+    final conditionSubtle = switch (strategy.winCondition) {
+      WinCondition.early => colors.successSubtle,
+      WinCondition.mid => colors.goldSubtle,
+      WinCondition.late => colors.magicSubtle,
+    };
+
     return GameCard(
-      borderColor: _conditionColor,
+      borderColor: conditionColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.military_tech_outlined,
                 size: 15,
-                color: AppColors.gold,
+                color: colors.gold,
               ),
               const SizedBox(width: 6),
-              const Text('GAME PLAN', style: AppTextStyles.label),
+              Text(
+                'GAME PLAN',
+                style: AppTextStyles.label.copyWith(
+                  color: colors.textSecondary,
+                ),
+              ),
               const Spacer(),
               AppBadge(
                 _conditionLabel,
-                bg: _conditionSubtle,
-                fg: _conditionColor,
+                bg: conditionSubtle,
+                fg: conditionColor,
               ),
             ],
           ),
@@ -243,24 +187,24 @@ class _StrategyCard extends StatelessWidget {
           const SizedBox(height: 8),
           _StrategyRow(
             icon: Icons.arrow_forward,
-            iconColor: AppColors.cyan,
+            iconColor: colors.textSecondary,
             label: 'NOW',
             text: strategy.immediateAction,
           ),
           const SizedBox(height: 4),
           _StrategyRow(
             icon: Icons.flag_outlined,
-            iconColor: _conditionColor,
+            iconColor: conditionColor,
             label: 'LATE',
             text: strategy.lateGamePlan,
           ),
           if (strategy.laneMatchupAnalysis != null ||
               strategy.counterPlay != null) ...[
-            const Divider(color: AppColors.border, height: 16),
+            Divider(color: colors.border, height: 16),
             if (strategy.laneMatchupAnalysis != null) ...[
               _StrategyRow(
                 icon: Icons.compare_arrows,
-                iconColor: AppColors.textSecondary,
+                iconColor: colors.textSecondary,
                 label: 'MATCHUP',
                 text: strategy.laneMatchupAnalysis!,
               ),
@@ -269,7 +213,7 @@ class _StrategyCard extends StatelessWidget {
             if (strategy.counterPlay != null)
               _StrategyRow(
                 icon: Icons.gps_fixed,
-                iconColor: AppColors.warning,
+                iconColor: colors.warning,
                 label: 'COUNTER',
                 text: strategy.counterPlay!,
               ),
@@ -295,14 +239,22 @@ class _StrategyRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 13, color: iconColor),
         const SizedBox(width: 5),
-        AppBadge(label, bg: AppColors.surfaceDark, fg: AppColors.textSecondary),
+        AppBadge(label, bg: colors.surfaceDark, fg: colors.textSecondary),
         const SizedBox(width: 6),
-        Expanded(child: Text(text, style: AppTextStyles.caption)),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.caption.copyWith(
+              color: colors.textSecondary,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -325,29 +277,31 @@ class _TokenUsageRow extends StatelessWidget {
     return (usage!.sessionInput / budget).clamp(0.0, 1.0);
   }
 
-  Color get _color {
-    if (exceeded) return AppColors.error;
+  Color _resolveColor(AppColors colors) {
+    if (exceeded) return colors.error;
     final f = _budgetFraction;
-    if (f != null && f >= 0.8) return AppColors.warning;
-    return AppColors.textSecondary;
+    if (f != null && f >= 0.8) return colors.warning;
+    return colors.textSecondary;
   }
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final color = _resolveColor(colors);
     final fraction = _budgetFraction;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Divider(color: AppColors.border, height: 1),
+        Divider(color: colors.border, height: 1),
         const SizedBox(height: 6),
         Row(
           children: [
-            Icon(Icons.token_outlined, size: 12, color: _color),
+            Icon(Icons.token_outlined, size: 12, color: color),
             const SizedBox(width: 5),
             if (exceeded)
               Text(
                 'Token budget exhausted — using heuristic',
-                style: AppTextStyles.caption.copyWith(color: _color),
+                style: AppTextStyles.caption.copyWith(color: color),
               )
             else if (usage != null)
               Expanded(
@@ -356,7 +310,7 @@ class _TokenUsageRow extends StatelessWidget {
                   ' / ${_fmt(usage!.sessionOutput)} out'
                   '${budget > 0 ? ' · ${_fmt(usage!.sessionInput)}'
                       '/${_fmt(budget)}' : ''}',
-                  style: AppTextStyles.caption.copyWith(color: _color),
+                  style: AppTextStyles.caption.copyWith(color: color),
                 ),
               ),
           ],
@@ -368,8 +322,8 @@ class _TokenUsageRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: fraction,
               minHeight: 3,
-              backgroundColor: AppColors.border,
-              valueColor: AlwaysStoppedAnimation<Color>(_color),
+              backgroundColor: colors.border,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
             ),
           ),
         ],
@@ -384,6 +338,7 @@ class _RecItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -391,7 +346,7 @@ class _RecItemTile extends StatelessWidget {
           ItemSlot(
             itemId: item.id,
             displayName: item.name,
-            borderColor: item.isCore ? AppColors.gold : AppColors.borderAccent,
+            borderColor: item.isCore ? colors.gold : colors.borderAccent,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -406,16 +361,17 @@ class _RecItemTile extends StatelessWidget {
                     const SizedBox(width: 6),
                     AppBadge(
                       item.isCore ? 'CORE' : 'SITUATIONAL',
-                      bg: item.isCore
-                          ? AppColors.goldSubtle
-                          : AppColors.allySubtle,
-                      fg: item.isCore
-                          ? AppColors.gold
-                          : AppColors.textSecondary,
+                      bg: item.isCore ? colors.goldSubtle : colors.allySubtle,
+                      fg: item.isCore ? colors.gold : colors.textSecondary,
                     ),
                   ],
                 ),
-                Text(item.reason, style: AppTextStyles.caption),
+                Text(
+                  item.reason,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),

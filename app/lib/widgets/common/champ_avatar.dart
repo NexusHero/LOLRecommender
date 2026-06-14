@@ -19,7 +19,8 @@ class ChampAvatar extends StatelessWidget {
         .toColor();
   }
 
-  Widget _placeholder() {
+  Widget _placeholder(BuildContext context) {
+    final colors = context.colors;
     return Container(
       width: size,
       height: size,
@@ -27,14 +28,14 @@ class ChampAvatar extends StatelessWidget {
         color: isDead ? const Color(0xFF2A2A2A) : _placeholderColor(name),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isDead ? const Color(0xFF444444) : AppColors.gold,
+          color: isDead ? const Color(0xFF444444) : colors.gold,
         ),
       ),
       child: Center(
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
           style: TextStyle(
-            color: isDead ? AppColors.textSecondary : AppColors.textPrimary,
+            color: isDead ? colors.textSecondary : colors.textPrimary,
             fontSize: size * 0.42,
             fontWeight: FontWeight.bold,
           ),
@@ -45,7 +46,7 @@ class ChampAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (name.isEmpty) return _placeholder();
+    if (name.isEmpty) return _placeholder(context);
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(8),
@@ -63,9 +64,9 @@ class ChampAvatar extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (_, __, ___) => _placeholder(),
+          errorBuilder: (_, __, ___) => _placeholder(context),
           loadingBuilder: (_, child, loading) =>
-              loading == null ? child : _placeholder(),
+              loading == null ? child : _placeholder(context),
         ),
       ),
     );
