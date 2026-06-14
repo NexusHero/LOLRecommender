@@ -12,6 +12,7 @@ class AdvancedSection extends StatelessWidget {
     return ListenableBuilder(
       listenable: ctrl,
       builder: (context, _) {
+        final colors = context.colors;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -25,14 +26,21 @@ class AdvancedSection extends StatelessWidget {
                     Icon(
                       ctrl.showAdvanced ? Icons.expand_less : Icons.expand_more,
                       size: 18,
-                      color: AppColors.textSecondary,
+                      color: colors.textSecondary,
                     ),
                     const SizedBox(width: 6),
-                    const Text('Advanced', style: AppTextStyles.captionBold),
+                    Text(
+                      'Advanced',
+                      style: AppTextStyles.captionBold.copyWith(
+                        color: colors.textSecondary,
+                      ),
+                    ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       '(Server IP & Port)',
-                      style: AppTextStyles.caption,
+                      style: AppTextStyles.caption.copyWith(
+                        color: colors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -52,9 +60,9 @@ class AdvancedSection extends StatelessWidget {
                             decoration: InputDecoration(
                               labelText: 'Server IP',
                               hintText: 'e.g. 192.168.1.100',
-                              prefixIcon: const Icon(
+                              prefixIcon: Icon(
                                 Icons.computer_outlined,
-                                color: AppColors.textSecondary,
+                                color: colors.textSecondary,
                               ),
                               errorText: ctrl.ipError,
                             ),
@@ -65,15 +73,23 @@ class AdvancedSection extends StatelessWidget {
                           TextField(
                             controller: ctrl.portCtrl,
                             enabled: !ctrl.isConnecting,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Port',
                               prefixIcon: Icon(
                                 Icons.settings_ethernet,
-                                color: AppColors.textSecondary,
+                                color: colors.textSecondary,
                               ),
                             ),
                             keyboardType: TextInputType.number,
                             textInputAction: TextInputAction.next,
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'The core server must be running on the same '
+                            'machine. Default: localhost:8765',
+                            style: AppTextStyles.caption.copyWith(
+                              color: colors.textSecondary,
+                            ),
                           ),
                         ],
                       ),

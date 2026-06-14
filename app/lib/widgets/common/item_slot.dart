@@ -8,27 +8,30 @@ class ItemSlot extends StatelessWidget {
     required this.displayName,
     super.key,
     this.size = 34,
-    this.borderColor = AppColors.borderAccent,
+    this.borderColor,
   });
   final int itemId;
   final String displayName;
   final double size;
-  final Color borderColor;
 
-  Widget _placeholder() {
+  /// Defaults to `context.colors.borderAccent` when null (resolved in [build]).
+  final Color? borderColor;
+
+  Widget _placeholder(BuildContext context, Color border) {
+    final colors = context.colors;
     return Container(
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppColors.surfaceMedium,
+        color: colors.surfaceMedium,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: borderColor, width: 1.5),
+        border: Border.all(color: border, width: 1.5),
       ),
       child: Center(
         child: Text(
           displayName.isNotEmpty ? displayName[0] : '?',
-          style: const TextStyle(
-            color: AppColors.gold,
+          style: TextStyle(
+            color: colors.gold,
             fontSize: 9,
             fontWeight: FontWeight.bold,
           ),
@@ -39,13 +42,14 @@ class ItemSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final border = borderColor ?? context.colors.borderAccent;
     return Tooltip(
       message: displayName,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(4),
         child: Container(
           decoration: BoxDecoration(
-            border: Border.all(color: borderColor, width: 1.5),
+            border: Border.all(color: border, width: 1.5),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Image.network(
@@ -53,9 +57,9 @@ class ItemSlot extends StatelessWidget {
             width: size,
             height: size,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _placeholder(),
+            errorBuilder: (_, __, ___) => _placeholder(context, border),
             loadingBuilder: (_, child, loading) =>
-                loading == null ? child : _placeholder(),
+                loading == null ? child : _placeholder(context, border),
           ),
         ),
       ),

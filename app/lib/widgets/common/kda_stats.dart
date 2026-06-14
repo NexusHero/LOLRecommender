@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 
 class KdaNum extends StatelessWidget {
@@ -17,9 +18,14 @@ class KdaSep extends StatelessWidget {
   const KdaSep({super.key});
 
   @override
-  Widget build(BuildContext context) => const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 3),
-        child: Text('/', style: AppTextStyles.caption),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 3),
+        child: Text(
+          '/',
+          style: AppTextStyles.caption.copyWith(
+            color: context.colors.textSecondary,
+          ),
+        ),
       );
 }
 
@@ -32,7 +38,12 @@ class StatChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Column(
         children: [
-          Text(label, style: AppTextStyles.label),
+          Text(
+            label,
+            style: AppTextStyles.label.copyWith(
+              color: context.colors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(
             value,

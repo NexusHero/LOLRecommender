@@ -21,15 +21,16 @@ class ScoreboardSection extends StatefulWidget {
 }
 
 class _ScoreboardSectionState extends State<ScoreboardSection> {
-  bool _expanded = true;
+  bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark,
+        color: colors.surfaceDark,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Column(
         children: [
@@ -40,17 +41,22 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.people_outline,
                     size: 16,
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                   const SizedBox(width: 6),
-                  const Text('SCOREBOARD', style: AppTextStyles.label),
+                  Text(
+                    'SCOREBOARD',
+                    style: AppTextStyles.label.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
                   const Spacer(),
                   Icon(
                     _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                     size: 20,
                   ),
                 ],
@@ -58,18 +64,18 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
             ),
           ),
           if (_expanded) ...[
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: colors.border, height: 1),
             TeamBlock(
               label: 'ALLIES',
               players: [widget.localPlayer, ...widget.allies],
-              accentColor: AppColors.allyBlue,
+              accentColor: colors.allyBlue,
               highlightName: widget.localPlayer.summonerName,
             ),
-            const Divider(color: AppColors.border, height: 1),
+            Divider(color: colors.border, height: 1),
             TeamBlock(
               label: 'ENEMIES',
               players: widget.enemies,
-              accentColor: AppColors.enemyRed,
+              accentColor: colors.enemyRed,
               highlightName: null,
             ),
             const SizedBox(height: 4),
@@ -95,6 +101,7 @@ class TeamBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -105,7 +112,7 @@ class TeamBlock extends StatelessWidget {
           child: Text(
             label,
             style: AppTextStyles.label.copyWith(
-              color: Color.lerp(accentColor, Colors.white, 0.5),
+              color: Color.lerp(accentColor, colors.textPrimary, 0.5),
             ),
           ),
         ),
@@ -131,10 +138,11 @@ class PlayerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final s = player.scores;
     return Container(
       color: isHighlighted
-          ? AppColors.allySubtle.withAlpha(160)
+          ? colors.allySubtle.withAlpha(160)
           : Colors.transparent,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
       child: Row(
@@ -153,29 +161,32 @@ class PlayerRow extends StatelessWidget {
                 Text(
                   player.championName,
                   style: AppTextStyles.captionBold.copyWith(
-                    color: isHighlighted
-                        ? AppColors.cyan
-                        : AppColors.textPrimary,
+                    color: isHighlighted ? colors.gold : colors.textPrimary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   player.summonerName,
                   style: AppTextStyles.caption.copyWith(
-                    color: AppColors.textSecondary,
+                    color: colors.textSecondary,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          Text('Lv${player.level}', style: AppTextStyles.caption),
+          Text(
+            'Lv${player.level}',
+            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+          ),
           const SizedBox(width: 8),
           SizedBox(
             width: 64,
             child: Text(
               '${s.kills}/${s.deaths}/${s.assists}',
-              style: AppTextStyles.captionBold,
+              style: AppTextStyles.captionBold.copyWith(
+                color: colors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
           ),
@@ -183,7 +194,9 @@ class PlayerRow extends StatelessWidget {
             width: 38,
             child: Text(
               '${s.creepScore}cs',
-              style: AppTextStyles.caption,
+              style: AppTextStyles.caption.copyWith(
+                color: colors.textSecondary,
+              ),
               textAlign: TextAlign.right,
             ),
           ),

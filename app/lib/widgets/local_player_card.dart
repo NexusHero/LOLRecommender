@@ -9,7 +9,7 @@ import 'package:lol_coach/widgets/common/game_card.dart';
 import 'package:lol_coach/widgets/common/item_row.dart';
 import 'package:lol_coach/widgets/common/kda_stats.dart';
 
-class LocalPlayerCard extends StatelessWidget {
+class LocalPlayerCard extends StatefulWidget {
   const LocalPlayerCard({
     required this.player,
     required this.activePlayer,
@@ -19,9 +19,22 @@ class LocalPlayerCard extends StatelessWidget {
   final ActivePlayer activePlayer;
 
   @override
+  State<LocalPlayerCard> createState() => _LocalPlayerCardState();
+}
+
+class _LocalPlayerCardState extends State<LocalPlayerCard> {
+  bool _showAllStats = false;
+
+  @override
   Widget build(BuildContext context) {
+    final player = widget.player;
+    final activePlayer = widget.activePlayer;
     final scores = player.scores;
     final stats = activePlayer.championStats;
+    // Show only the offensive/defensive stats relevant to this champion by
+    // default; the rest are tucked behind "Show more" to reduce clutter.
+    final isApChamp = stats.abilityPower >= stats.attackDamage;
+    final colors = context.colors;
 
     return GameCard(
       child: Column(
@@ -41,15 +54,15 @@ class LocalPlayerCard extends StatelessWidget {
                         const SizedBox(width: 8),
                         AppBadge(
                           'Lv ${player.level}',
-                          bg: AppColors.border,
-                          fg: AppColors.cyan,
+                          bg: colors.border,
+                          fg: colors.textSecondary,
                         ),
                         if (player.position.isNotEmpty) ...[
                           const SizedBox(width: 6),
                           AppBadge(
                             player.position.toUpperCase(),
-                            bg: AppColors.successSubtle,
-                            fg: AppColors.success,
+                            bg: colors.surfaceDark,
+                            fg: colors.textSecondary,
                           ),
                         ],
                       ],
@@ -57,15 +70,17 @@ class LocalPlayerCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Row(
                       children: [
-                        KdaNum('${scores.kills}', AppColors.cyan),
+                        KdaNum('${scores.kills}', colors.success),
                         const KdaSep(),
-                        KdaNum('${scores.deaths}', AppColors.errorLight),
+                        KdaNum('${scores.deaths}', colors.errorLight),
                         const KdaSep(),
-                        KdaNum('${scores.assists}', AppColors.textPrimary),
+                        KdaNum('${scores.assists}', colors.textPrimary),
                         const SizedBox(width: 14),
                         Text(
                           'CS ${scores.creepScore}',
-                          style: AppTextStyles.caption,
+                          style: AppTextStyles.caption.copyWith(
+                            color: colors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -78,21 +93,68 @@ class LocalPlayerCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              StatChip('HP', '${stats.healthMax.toInt()}', AppColors.success),
               StatChip(
-                'AD',
-                '${stats.attackDamage.toInt()}',
-                AppColors.errorLight,
+                'HP',
+                '${stats.healthMax.toInt()}',
+                colors.textPrimary,
               ),
-              StatChip('AP', '${stats.abilityPower.toInt()}', AppColors.magic),
-              StatChip('MR', '${stats.magicResist.toInt()}', AppColors.cyan),
-              StatChip('ARM', '${stats.armor.toInt()}', AppColors.gold),
+              if (isApChamp)
+                StatChip(
+                  'AP',
+                  '${stats.abilityPower.toInt()}',
+                  colors.textPrimary,
+                )
+              else
+                StatChip(
+                  'AD',
+                  '${stats.attackDamage.toInt()}',
+                  colors.textPrimary,
+                ),
               StatChip(
-                'CRIT',
-                '${(stats.critChance * 100).toInt()}%',
-                AppColors.warning,
+                'ARM',
+                '${stats.armor.toInt()}',
+                colors.textPrimary,
               ),
+              StatChip(
+                'MR',
+                '${stats.magicResist.toInt()}',
+                colors.textPrimary,
+              ),
+              if (_showAllStats) ...[
+                if (isApChamp)
+                  StatChip(
+                    'AD',
+                    '${stats.attackDamage.toInt()}',
+                    colors.textPrimary,
+                  )
+                else
+                  StatChip(
+                    'AP',
+                    '${stats.abilityPower.toInt()}',
+                    colors.textPrimary,
+                  ),
+                StatChip(
+                  'CRIT',
+                  '${(stats.critChance * 100).toInt()}%',
+                  colors.textPrimary,
+                ),
+              ],
             ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: () => setState(() => _showAllStats = !_showAllStats),
+              child: Text(
+                _showAllStats ? 'Less' : 'More stats',
+                style: AppTextStyles.caption.copyWith(color: colors.gold),
+              ),
+            ),
           ),
           if (player.items.isNotEmpty) ...[
             const SizedBox(height: 12),

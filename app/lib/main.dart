@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:lol_coach/controllers/theme_controller.dart';
 import 'package:lol_coach/screens/main_screen.dart';
 import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/storage_service.dart';
 import 'package:lol_coach/services/ws_client.dart';
-import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/theme/app_theme.dart';
 import 'package:lol_coach/utils/ddragon.dart';
 import 'package:provider/provider.dart';
 
@@ -37,6 +38,7 @@ void main() async {
     MultiProvider(
       providers: [
         Provider.value(value: storageService),
+        ChangeNotifierProvider(create: (_) => ThemeController(storageService)),
         ChangeNotifierProvider(create: (_) => WsClient()),
         ChangeNotifierProxyProvider<WsClient, CoachService>(
           create: (ctx) => CoachService(ctx.read<WsClient>()),
@@ -53,79 +55,13 @@ class LolCoachApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeMode = context.watch<ThemeController>().mode;
     return MaterialApp(
       title: 'LoL Coach',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: AppColors.bgDark,
-        colorScheme: const ColorScheme.dark(
-          primary: AppColors.gold,
-          secondary: AppColors.cyan,
-          surface: AppColors.surfaceDark,
-          error: AppColors.error,
-          onSurface: AppColors.textPrimary,
-          onSurfaceVariant: AppColors.textSecondary,
-          outline: AppColors.border,
-          // SegmentedButton selected state
-          secondaryContainer: AppColors.allySubtle,
-          onSecondaryContainer: AppColors.cyan,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.surfaceMedium,
-          foregroundColor: AppColors.textPrimary,
-          elevation: 0,
-          centerTitle: false,
-          titleTextStyle: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.gold,
-            foregroundColor: AppColors.bgDark,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: AppColors.surfaceDark,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppColors.border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppColors.gold),
-          ),
-          labelStyle: const TextStyle(color: AppColors.textSecondary),
-          hintStyle: const TextStyle(color: AppColors.textDisabled),
-        ),
-        dividerTheme: const DividerThemeData(color: AppColors.border),
-        navigationRailTheme: const NavigationRailThemeData(
-          backgroundColor: AppColors.surfaceMedium,
-          selectedIconTheme: IconThemeData(color: AppColors.gold),
-          unselectedIconTheme: IconThemeData(color: AppColors.textSecondary),
-          selectedLabelTextStyle: TextStyle(
-            color: AppColors.gold,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-          unselectedLabelTextStyle: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-          ),
-          useIndicator: true,
-          indicatorColor: AppColors.goldSubtle,
-        ),
-      ),
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
       home: const MainScreen(),
     );
   }

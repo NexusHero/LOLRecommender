@@ -17,7 +17,9 @@ String _providerLabel(String type) => switch (type) {
 bool _isAiProvider(String type) => type != 'none' && type.isNotEmpty;
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({this.onOpenSettings, super.key});
+
+  final VoidCallback? onOpenSettings;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +41,11 @@ class HomeScreen extends StatelessWidget {
                   tooltip: 'Disconnect',
                   onPressed: ws.disconnect,
                 ),
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Settings',
+                onPressed: onOpenSettings,
+              ),
             ],
           ),
           body: Column(
@@ -61,15 +68,20 @@ class HomeScreen extends StatelessWidget {
     switch (ws.status) {
       case ConnectionStatus.disconnected:
       case ConnectionStatus.error:
-        return _buildNotConnectedView();
+        return _buildNotConnectedView(context);
       case ConnectionStatus.connecting:
-        return const Center(
+        return Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Connecting to core...', style: AppTextStyles.caption),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Connecting to core...',
+                style: AppTextStyles.caption.copyWith(
+                  color: context.colors.textSecondary,
+                ),
+              ),
             ],
           ),
         );
@@ -86,18 +98,19 @@ class HomeScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildNotConnectedView() {
-    return const Center(
+  Widget _buildNotConnectedView(BuildContext context) {
+    final colors = context.colors;
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.link_off, size: 56, color: AppColors.textDisabled),
-          SizedBox(height: 16),
-          Text('Not Connected', style: AppTextStyles.heading),
-          SizedBox(height: 8),
+          Icon(Icons.link_off, size: 56, color: colors.textDisabled),
+          const SizedBox(height: 16),
+          const Text('Not Connected', style: AppTextStyles.heading),
+          const SizedBox(height: 8),
           Text(
-            'Use the Settings tab on the left to connect.',
-            style: AppTextStyles.caption,
+            'Tap the settings icon to connect.',
+            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
           ),
         ],
       ),
@@ -113,11 +126,12 @@ class _StatusDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final color = switch (status) {
-      ConnectionStatus.connected => AppColors.success,
-      ConnectionStatus.connecting => AppColors.warning,
-      ConnectionStatus.error => AppColors.errorLight,
-      ConnectionStatus.disconnected => AppColors.textDisabled,
+      ConnectionStatus.connected => colors.success,
+      ConnectionStatus.connecting => colors.warning,
+      ConnectionStatus.error => colors.errorLight,
+      ConnectionStatus.disconnected => colors.textDisabled,
     };
     return Container(
       width: 8,
@@ -163,18 +177,19 @@ class _AiModeBannerState extends State<_AiModeBanner>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final isAi = _isAiProvider(widget.providerType);
     final failed = isAi && widget.llmFailed;
     final color = failed
-        ? AppColors.warning
+        ? colors.warning
         : isAi
-            ? AppColors.magic
-            : AppColors.textSecondary;
+            ? colors.magic
+            : colors.textSecondary;
     final bg = failed
-        ? AppColors.warning.withValues(alpha: 0.08)
+        ? colors.warning.withValues(alpha: 0.08)
         : isAi
-            ? AppColors.magic.withValues(alpha: 0.1)
-            : AppColors.surfaceDark;
+            ? colors.magic.withValues(alpha: 0.1)
+            : colors.surfaceDark;
     final label = _providerLabel(widget.providerType);
 
     return AnimatedContainer(
@@ -193,10 +208,10 @@ class _AiModeBannerState extends State<_AiModeBanner>
       child: Row(
         children: [
           if (failed)
-            const Icon(
+            Icon(
               Icons.warning_amber_rounded,
               size: 14,
-              color: AppColors.warning,
+              color: colors.warning,
             )
           else
             AnimatedBuilder(
@@ -210,7 +225,7 @@ class _AiModeBannerState extends State<_AiModeBanner>
                   boxShadow: isAi && !failed
                       ? [
                           BoxShadow(
-                            color: AppColors.magic.withValues(
+                            color: colors.magic.withValues(
                               alpha: _pulse.value * 0.7,
                             ),
                             blurRadius: 8,
@@ -236,50 +251,6 @@ class _AiModeBannerState extends State<_AiModeBanner>
                 fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          const Spacer(),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 250),
-            child: isAi
-                ? Container(
-                    key: ValueKey('ai_$failed'),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: color.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Text(
-                      failed ? 'ERROR' : 'AI',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  )
-                : Container(
-                    key: const ValueKey('basic'),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceMedium,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'BASIC',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ),
           ),
         ],
       ),
@@ -322,18 +293,18 @@ class _PulsingFabState extends State<_PulsingFab>
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
     final ws = widget.ws;
     final provider = ws.activeProviderType;
     final isAi = _isAiProvider(provider) && !ws.llmFailed;
-    final label = ws.isAnalyzing
-        ? 'Analysing...'
-        : isAi
-            ? 'Analyse with ${_providerLabel(provider)}'
-            : 'Analyse (Basic)';
+    // Advice is pushed automatically on key events (level up, item buys,
+    // deaths, gold thresholds). This button is just a manual refresh.
+    final label = ws.isAnalyzing ? 'Analysing...' : 'Refresh advice';
 
     final fab = FloatingActionButton.extended(
       onPressed: ws.isAnalyzing ? null : ws.triggerAnalysis,
-      backgroundColor: isAi ? AppColors.magic : AppColors.gold,
+      tooltip: 'Manually refresh — advice also updates automatically',
+      backgroundColor: isAi ? colors.magic : colors.gold,
       foregroundColor: Colors.white,
       elevation: isAi ? 10 : 4,
       icon: ws.isAnalyzing
@@ -345,7 +316,7 @@ class _PulsingFabState extends State<_PulsingFab>
                 color: Colors.white,
               ),
             )
-          : Icon(isAi ? Icons.smart_toy_outlined : Icons.bolt),
+          : const Icon(Icons.refresh),
       label: Text(label),
     );
 
@@ -366,36 +337,37 @@ class _WaitingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final colors = context.colors;
+    return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               Icons.sports_esports_outlined,
               size: 56,
-              color: AppColors.textDisabled,
+              color: colors.textDisabled,
             ),
-            SizedBox(height: 20),
-            Text('Ready to coach', style: AppTextStyles.heading),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
+            const Text('Ready to coach', style: AppTextStyles.heading),
+            const SizedBox(height: 20),
             _StepRow(
               icon: Icons.check_circle_outline,
-              color: AppColors.success,
+              color: colors.success,
               text: 'Core connected',
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             _StepRow(
               icon: Icons.radio_button_unchecked,
-              color: AppColors.textSecondary,
+              color: colors.textSecondary,
               text: 'Start a League of Legends match',
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             _StepRow(
               icon: Icons.radio_button_unchecked,
-              color: AppColors.textSecondary,
-              text: 'Tap "Analyse" to get AI item advice',
+              color: colors.textSecondary,
+              text: 'Advice appears automatically as the match unfolds',
             ),
           ],
         ),

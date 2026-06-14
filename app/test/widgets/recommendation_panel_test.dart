@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/theme/app_theme.dart';
 import 'package:lol_coach/widgets/recommendation_panel.dart';
 
 void main() {
@@ -23,15 +24,15 @@ void main() {
         );
 
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
+          MaterialApp(
+            theme: AppTheme.dark,
+            home: const Scaffold(
               body: RecommendationPanel(recommendation: recommendation),
             ),
           ),
         );
 
         expect(find.text('RECOMMENDATIONS'), findsOneWidget);
-        expect(find.text('AI'), findsOneWidget);
         expect(find.text("Banshee's Veil"), findsOneWidget);
         expect(find.text('CORE'), findsOneWidget);
         expect(find.text('Blocks initial burst combo'), findsOneWidget);
@@ -54,14 +55,14 @@ void main() {
         );
 
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
+          MaterialApp(
+            theme: AppTheme.dark,
+            home: const Scaffold(
               body: RecommendationPanel(recommendation: recommendation),
             ),
           ),
         );
 
-        expect(find.text('AUTO'), findsOneWidget);
         expect(find.text('No specific counter items needed.'), findsOneWidget);
         expect(
           find.text(

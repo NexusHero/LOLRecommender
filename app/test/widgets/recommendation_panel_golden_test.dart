@@ -15,6 +15,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/models/recommendation.dart';
+import 'package:lol_coach/theme/app_theme.dart';
 import 'package:lol_coach/widgets/recommendation_panel.dart';
 
 void main() {
@@ -43,8 +44,9 @@ void main() {
         );
 
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
+          MaterialApp(
+            theme: AppTheme.dark,
+            home: const Scaffold(
               body: SizedBox(
                 width: 400,
                 child: RecommendationPanel(recommendation: recommendation),
@@ -71,8 +73,9 @@ void main() {
         );
 
         await tester.pumpWidget(
-          const MaterialApp(
-            home: Scaffold(
+          MaterialApp(
+            theme: AppTheme.dark,
+            home: const Scaffold(
               body: SizedBox(
                 width: 400,
                 child: RecommendationPanel(recommendation: recommendation),
