@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 import type { LlmProvider, LlmAnalysis, ModelInfo, TokenUsage } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
-import type { ParsedGameState, ItemRecommendation } from "../types.js";
+import type { ParsedGameState } from "../types.js";
 import { Logger } from "../logger.js";
 
 export const OPENAI_DEFAULT_MODEL = "gpt-4o-mini";
@@ -24,23 +24,20 @@ export class OpenAiProvider implements LlmProvider {
       .map((m) => ({ id: m.id, displayName: m.id }));
   }
 
-  async getAnalysis(
-    state: ParsedGameState,
-    heuristicRec: ItemRecommendation,
-  ): Promise<LlmAnalysis> {
+  async getAnalysis(state: ParsedGameState): Promise<LlmAnalysis> {
     try {
       const response = await this.client.chat.completions.create({
         model: this.model,
-        max_tokens: 400,
+        max_tokens: 700,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: await buildUserPrompt(state, heuristicRec) },
+          { role: "user", content: await buildUserPrompt(state) },
         ],
       });
 
       const text = response.choices[0]?.message?.content;
-      if (!text) return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
+      if (!text) return { reasoning: "", strategy: { winCondition: "mid", summary: "", immediateAction: "", lateGamePlan: "" } };
 
       const tokenUsage: TokenUsage = {
         input: response.usage?.prompt_tokens ?? 0,
@@ -50,7 +47,7 @@ export class OpenAiProvider implements LlmProvider {
         `[LLM:OpenAI] Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out`,
       );
 
-      return { ...parseAnalysisResponse(text, heuristicRec), tokenUsage };
+      return { ...parseAnalysisResponse(text), tokenUsage };
     } catch (err) {
       throw new Error(`OpenAI: ${this.formatError(err)}`);
     }

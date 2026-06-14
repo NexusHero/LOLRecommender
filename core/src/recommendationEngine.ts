@@ -1,11 +1,9 @@
-import { buildCompProfile, getHeuristicRecommendations } from "./heuristic.js";
 import type { LlmProvider } from "./llmProvider.js";
 import { CacheService } from "./cacheService.js";
 import type { ParsedGameState, ItemRecommendation, WsTokenUsage } from "./types.js";
 import { Logger } from "./logger.js";
 
 export interface RecommendationCallbacks {
-  onHeuristic: (rec: ItemRecommendation) => void;
   onLlmBudgetExceeded: (sessionTokens: number, budget: number) => void;
   onLlmError: (msg: string) => void;
   onLlmSuccess: (rec: ItemRecommendation, tokenUsage?: WsTokenUsage) => void;
@@ -43,12 +41,6 @@ export class RecommendationEngine {
     hasClients: boolean,
     callbacks: RecommendationCallbacks
   ): Promise<void> {
-    const profile = buildCompProfile(state.enemies);
-    const heuristicRec = getHeuristicRecommendations(profile, state.localPlayer.championName, state);
-
-    callbacks.onHeuristic(heuristicRec);
-    Logger.info(`[Rec] heuristic (Trigger: ${eventType}): ${heuristicRec.items.map((i) => i.name).join(", ")}`);
-
     const useLlm =
       this.llmProvider !== null &&
       hasClients &&
@@ -62,8 +54,7 @@ export class RecommendationEngine {
       return;
     }
 
-    const heuristicItemIds = heuristicRec.items.map((i) => i.id);
-    const cacheKey = this.cache.buildKey(state, heuristicItemIds);
+    const cacheKey = this.cache.buildKey(state);
     const cached = this.cache.get(cacheKey);
 
     let llmAnalysis: Awaited<ReturnType<LlmProvider["getAnalysis"]>>;
@@ -72,7 +63,7 @@ export class RecommendationEngine {
       llmAnalysis = cached;
     } else {
       try {
-        llmAnalysis = await this.llmProvider!.getAnalysis(state, heuristicRec);
+        llmAnalysis = await this.llmProvider!.getAnalysis(state);
         if (llmAnalysis.tokenUsage) {
           this.sessionInputTokens += llmAnalysis.tokenUsage.input;
           this.sessionOutputTokens += llmAnalysis.tokenUsage.output;
@@ -86,11 +77,8 @@ export class RecommendationEngine {
       }
     }
 
-    const coreIds = new Set(heuristicRec.items.map((i) => i.id));
-    const situational = (llmAnalysis.situationalItems ?? []).filter((i) => !coreIds.has(i.id));
-    const enrichedRec: ItemRecommendation = {
-      ...heuristicRec,
-      items: [...heuristicRec.items, ...situational],
+    const rec: ItemRecommendation = {
+      items: llmAnalysis.situationalItems ?? [],
       reasoning: llmAnalysis.reasoning,
       strategy: llmAnalysis.strategy,
       source: "llm",
@@ -106,7 +94,7 @@ export class RecommendationEngine {
         }
       : undefined;
 
-    callbacks.onLlmSuccess(enrichedRec, tokenUsageInfo);
-    Logger.info(`[Rec] llm (Trigger: ${eventType}): ${enrichedRec.items.map((i) => i.name).join(", ")}`);
+    callbacks.onLlmSuccess(rec, tokenUsageInfo);
+    Logger.info(`[Rec] llm (Trigger: ${eventType}): ${rec.items.map((i) => i.name).join(", ")}`);
   }
 }

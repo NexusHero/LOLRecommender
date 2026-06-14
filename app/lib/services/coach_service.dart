@@ -125,7 +125,7 @@ class CoachService extends ChangeNotifier {
       _client.send(jsonEncode({
         'event': 'SET_SUMMONER',
         'summonerName': _activeSummonerName,
-      }));
+      }),);
     }
 
     if (_activeProviderType != null &&
@@ -138,7 +138,7 @@ class CoachService extends ChangeNotifier {
         if (_activeModel != null) 'model': _activeModel,
         'apiKey': _activeApiKey,
         if (_activeTokenBudget > 0) 'tokenBudget': _activeTokenBudget,
-      }));
+      }),);
       _isLoadingModels = true;
       _availableModels = null;
       _availableModelsProvider = null;
@@ -146,11 +146,11 @@ class CoachService extends ChangeNotifier {
         'event': 'GET_MODELS',
         'provider': _activeProviderType,
         'apiKey': _activeApiKey,
-      }));
+      }),);
     } else if (_activeProviderType == 'none') {
       _client.send(jsonEncode({
         'event': 'SET_LLM_PROVIDER',
-      }));
+      }),);
     }
   }
 
@@ -172,7 +172,7 @@ class CoachService extends ChangeNotifier {
       'event': 'GET_MODELS',
       'provider': provider,
       'apiKey': apiKey,
-    }));
+    }),);
   }
 
   void clearLlmError() {
@@ -191,7 +191,7 @@ class CoachService extends ChangeNotifier {
       'event': 'VALIDATE_KEY',
       'provider': provider,
       'apiKey': apiKey,
-    }));
+    }),);
   }
 
   void clearKeyValidation() {
@@ -213,18 +213,14 @@ class CoachService extends ChangeNotifier {
           _gameState = null;
           _recommendation = null;
           _isAnalyzing = false;
-        case 'RECOMMENDATION':
-          _recommendation = msg.recommendation;
-          if (msg.gameState != null) _gameState = msg.gameState;
-          _gameActive = true;
-          _isAnalyzing = false;
-          _recommendationTime = DateTime.now();
         case 'RECOMMENDATION_UPDATE':
           _recommendation = msg.recommendation ?? _recommendation;
           if (msg.gameState != null) _gameState = msg.gameState;
           if (msg.tokenUsage != null) _lastTokenUsage = msg.tokenUsage;
+          _gameActive = true;
           _llmFailed = false;
           _isAnalyzing = false;
+          _recommendationTime = DateTime.now();
         case 'LLM_ERROR':
           _lastLlmError = msg.error;
           _llmFailed = true;

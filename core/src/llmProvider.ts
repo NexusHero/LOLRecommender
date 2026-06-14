@@ -1,6 +1,5 @@
 import { z } from "zod";
-import type { ParsedGameState, ItemRecommendation, RecommendedItem, Strategy, RolePosition } from "./types.js";
-import { minifyGameState } from "./stateMinifier.js";
+import type { ParsedGameState, RecommendedItem, Strategy, RolePosition } from "./types.js";
 import { getGamePhase } from "./stateMinifier.js";
 import { ClaudeProvider } from "./providers/claudeProvider.js";
 import { OpenAiProvider } from "./providers/openaiProvider.js";
@@ -8,35 +7,48 @@ import { GeminiProvider } from "./providers/geminiProvider.js";
 import { Logger } from "./logger.js";
 import { ddragon } from "./ddragonService.js";
 
-export const SYSTEM_PROMPT = `You are an experienced League of Legends coach.
+export const SYSTEM_PROMPT = `You are an experienced League of Legends coach giving live in-game advice.
+The player will glance at your output for a few seconds during a match, so every field must be SHORT and SCANNABLE.
 Analyze the game state and respond ONLY with a JSON object — no markdown, no code blocks, no extra text.
 Use this exact format:
 {
-  "itemReasoning": "2-3 sentences explaining why the core items are a good choice right now",
+  "itemReasoning": "1 short sentence (max ~15 words) on the recommended build direction for this champion vs this enemy comp",
   "situationalItems": [
-    {"id": 3111, "name": "Mercurial Scimitar", "reason": "One specific sentence why this item is needed right now"}
+    {"id": 3111, "name": "Mercurial Scimitar", "reason": "Max ~10 words on why this specific item fits right now"}
   ],
   "strategy": {
     "winCondition": "early" or "mid" or "late",
-    "summary": "1 sentence: when and how the player wins this game",
-    "immediateAction": "1 sentence: what to do RIGHT NOW in-game, referencing their champion and current stats",
-    "lateGamePlan": "1 sentence: how to close out the game with the final build",
-    "laneMatchupAnalysis": "1-2 sentences: role-specific comparison — what the opponent/enemy duo is doing better or worse using the metrics that matter for this role",
-    "counterPlay": "1 sentence: one concrete role-appropriate action to gain or stop losing the matchup right now"
+    "summary": "Max ~10 words: when and how the player wins this game",
+    "immediateAction": "Max ~12 words: what to do RIGHT NOW, referencing their champion/stats",
+    "lateGamePlan": "Max ~12 words: how to close out the game with the final build",
+    "laneMatchupAnalysis": "Max ~15 words: the single most important matchup fact for this role",
+    "counterPlay": "Max ~12 words: one concrete role-appropriate action to swing the matchup"
   }
 }
 
-The "Core items" listed are mechanically optimal picks — always explain these in itemReasoning.
-"situationalItems" is optional (use [] if nothing extra is needed). Add at most 2 items only when the game state genuinely warrants picks beyond the core list (e.g., 3+ CC enemies → QSS/Tenacity, fed AP carry → early MR, enemy heavy healing → Grievous Wounds). Never repeat items already in the core list.
+Every field is a fragment — drop filler words and lead with the verb or key fact. Never exceed the word limits.
+
+"situationalItems": Recommend 2–4 items that genuinely fit THIS champion vs THIS specific enemy comp.
+Each enemy champion includes their official Riot tags (e.g. [Tank], [Mage, Assassin], [Marksman]) — use these to understand the threat profile. Analyze each enemy individually, not just AP/AD totals.
+Recommend items appropriate for the player's champion class:
+- Marksman/ADC: crit, attack speed, lethality (Galeforce=6671, Infinity Edge=3031, Kraken Slayer=6672, Lord Dominik's=3036)
+- Mage/AP: AP, mana, MR (Shadowflame=6675, Rabadon's=3089, Zhonya's=3157, Banshee's=3102, Void Staff=3135)
+- Tank: HP, armor, MR (Heartsteel=6664, Sunfire=3068, Thornmail=3075, Randuin's=3143, Force of Nature=4401)
+- Fighter/Bruiser: damage + survivability (Trinity Force=3078, Black Cleaver=3071, Sterak's=3053, Maw=3156, Goredrinker=6630)
+- Support: utility, auras (Locket=3190, Moonstone=6617, Redemption=3107, Knight's Vow=3109)
+Common defensive counters: QSS=3140 (hard CC), Plated Steelcaps=3047 (AA-heavy), Merc Treads=3111 (CC+AP), Guardian Angel=3026 (burst assassins), GW items=3033/3165 (heavy healing).
+Never repeat items already in the counter items list. Use [] only if the counter items already cover everything.
+
+The "Counter items" shown are automated heuristic suggestions. You may override itemReasoning if they don't fit the champion.
 
 Adjust analysis based on the player's role:
-- UTILITY (Support): ignore CS entirely. Focus on vision score, assists, and whether the ADC is alive and ahead. A support death that lets the ADC get kills is a good trade. Counterplay is about engage, disengage, peel, or vision control — not farming.
-- BOTTOM (ADC): CS lead/deficit matters most. Staying alive to deal sustained damage in fights. Laning phase is about CS and poking, not all-ins unless you are ahead.
-- TOP: check if the champion is a known split-pusher (e.g. Tryndamere, Fiora, Jax, Camille). If so, advise on split push timing vs teleport plays, not teamfighting. If they are a teamfighter, advise on grouping.
-- JUNGLE: focus on objective control (Drake, Baron, Rift Herald) and which lanes are losing and need a gank.
-- MIDDLE: consider roaming to bot/top, wave management before roaming, and priority for objectives.
+- UTILITY (Support): ignore CS. Focus on vision, assists, ADC protection, engage/disengage/peel.
+- BOTTOM (ADC): CS lead/deficit matters most. Sustained DPS and positioning in fights.
+- TOP: split-push vs teamfight timing for this champion, teleport plays, wave management.
+- JUNGLE: Drake/Baron/Herald control, which lanes need ganks, when to invade.
+- MIDDLE: roam timing, wave management before roaming, mid-tier objective priority.
 
-Be specific. Reference actual numbers (CS difference, kill lead, vision score, gold gap). Do not give generic advice.`;
+Be specific. Reference actual numbers (CS lead, kill lead, vision score, gold gap). Do not give generic advice.`;
 
 const LlmResponseSchema = z.object({
   itemReasoning: z.string().optional(),
@@ -76,10 +88,7 @@ export interface ModelInfo {
 export interface LlmProvider {
   readonly name: string;
   listModels(): Promise<ModelInfo[]>;
-  getAnalysis(
-    state: ParsedGameState,
-    heuristicRec: ItemRecommendation,
-  ): Promise<LlmAnalysis>;
+  getAnalysis(state: ParsedGameState): Promise<LlmAnalysis>;
 }
 
 export type ProviderType = "claude" | "openai" | "gemini";
@@ -124,70 +133,73 @@ function findLaneOpponent(state: ParsedGameState, myPos: RolePosition) {
 async function formatOpponent(primaryOpponent: any, myPos: RolePosition): Promise<string> {
   if (!primaryOpponent) return "Opponent: unknown (position data unavailable)";
   const opponentAbilityStr = await formatAbilities(primaryOpponent.championName);
-  return `Opponent (${primaryOpponent.position || myPos}): ${primaryOpponent.championName} — KDA ${primaryOpponent.scores.kills}/${primaryOpponent.scores.deaths}/${primaryOpponent.scores.assists}, CS ${primaryOpponent.scores.creepScore}, Vision: ${Math.round(primaryOpponent.scores.wardScore)}, Lvl ${primaryOpponent.level}${primaryOpponent.isDead ? ", currently DEAD" : ""}${opponentAbilityStr}`;
+  const tags = ddragon.getChampionTags(primaryOpponent.championName);
+  const tagStr = tags.length ? ` [${tags.join(", ")}]` : "";
+  return `Opponent (${primaryOpponent.position || myPos}): ${primaryOpponent.championName}${tagStr} — KDA ${primaryOpponent.scores.kills}/${primaryOpponent.scores.deaths}/${primaryOpponent.scores.assists}, CS ${primaryOpponent.scores.creepScore}, Lvl ${primaryOpponent.level}${primaryOpponent.isDead ? ", DEAD" : ""}${opponentAbilityStr}`;
 }
 
-function formatCoreItems(heuristicRec: ItemRecommendation): string {
-  if (heuristicRec.items.length === 0) return "None";
-  return heuristicRec.items.map((item) => {
-    const info = ddragon.getItemInfo(item.id);
-    if (!info) return `- ${item.name}`;
-    const statsStr = info.stats ? ` (${info.stats})` : "";
-    const descStr = info.plaintext ? ` — ${info.plaintext}` : "";
-    return `- ${item.name}${statsStr}${descStr}`;
-  }).join("\n");
+function formatEnemiesWithTags(enemies: ParsedGameState["enemies"]): string {
+  if (enemies.length === 0) return "None";
+  return enemies.map((e) => {
+    const tags = ddragon.getChampionTags(e.championName);
+    const tagStr = tags.length ? ` [${tags.join(", ")}]` : "";
+    const pos = e.position ? ` (${e.position})` : "";
+    return `${e.championName}${tagStr}${pos} Lvl ${e.level} ${e.scores.kills}/${e.scores.deaths}/${e.scores.assists}`;
+  }).join(", ");
 }
 
-export async function buildUserPrompt(
-  state: ParsedGameState,
-  heuristicRec: ItemRecommendation,
-): Promise<string> {
+export async function buildUserPrompt(state: ParsedGameState): Promise<string> {
   const phase = getGamePhase(state.gameTime);
   const myPos = (state.localPlayer.position || "UNKNOWN") as RolePosition;
   const myVision = state.localPlayer.scores.wardScore;
 
   const primaryOpponent = findLaneOpponent(state, myPos);
-  
+  const myTags = ddragon.getChampionTags(state.localPlayer.championName);
+  const myTagStr = myTags.length ? ` [${myTags.join(", ")}]` : "";
+
   const [myAbilityStr, opponentStr] = await Promise.all([
     formatAbilities(state.localPlayer.championName),
     formatOpponent(primaryOpponent, myPos)
   ]);
 
   const roleContext = buildRoleContext(state, myPos);
-  const itemLines = formatCoreItems(heuristicRec);
+  const enemiesWithTags = formatEnemiesWithTags(state.enemies);
 
-  return `Current Game State:
-${minifyGameState(state)}
-Game Phase: ${phase} (< 14min = early, 14-25min = mid, > 25min = late)
-My role: ${myPos}${myPos === "UTILITY" ? ` (Vision score: ${Math.round(myVision)})` : ""}
-My champion: ${state.localPlayer.championName}${myAbilityStr}
+  return `Game Phase: ${phase} | Time: ${Math.floor(state.gameTime / 60)}m
+My champion: ${state.localPlayer.championName}${myTagStr}${myAbilityStr}
+My role: ${myPos}${myPos === "UTILITY" ? ` (Vision: ${Math.round(myVision)})` : ""}
+My stats: Lvl ${state.localPlayer.level}, Gold ${state.activePlayer.currentGold}, KDA ${state.localPlayer.scores.kills}/${state.localPlayer.scores.deaths}/${state.localPlayer.scores.assists}, CS ${state.localPlayer.scores.creepScore}
+My items: ${state.localPlayer.items.map(i => i.displayName).join(", ") || "None"}
+
+Enemies: ${enemiesWithTags}
 
 ${opponentStr}
 ${roleContext}
-Core items (heuristic baseline):
-${itemLines}
-
 Respond with the JSON object as instructed.`;
 }
 
-export function parseAnalysisResponse(
-  raw: string,
-  fallback: ItemRecommendation,
-): LlmAnalysis {
+const DEFAULT_STRATEGY: Strategy = {
+  winCondition: "mid",
+  summary: "",
+  immediateAction: "",
+  lateGamePlan: "",
+};
+
+export function parseAnalysisResponse(raw: string): LlmAnalysis {
   try {
     const clean = raw.replace(/```(?:json)?\n?/g, "").trim();
     const parsedObj = JSON.parse(clean);
     const parsed = LlmResponseSchema.safeParse(parsedObj);
-    
+
     if (!parsed.success) {
       Logger.warn("[LLM] Failed to parse JSON according to schema:", parsed.error);
-      return { reasoning: fallback.reasoning, strategy: fallback.strategy };
+      return { reasoning: "", strategy: DEFAULT_STRATEGY };
     }
-    
+
     const data = parsed.data;
-    
+
     const situationalItems: RecommendedItem[] = (data.situationalItems ?? [])
-      .slice(0, 2)
+      .slice(0, 4)
       .map((item) => ({
         id: item.id,
         name: item.name,
@@ -197,20 +209,20 @@ export function parseAnalysisResponse(
       .filter((item) => item.id > 0 && item.name.length > 0);
 
     return {
-      reasoning: data.itemReasoning ?? fallback.reasoning,
+      reasoning: data.itemReasoning ?? "",
       situationalItems,
       strategy: {
-        winCondition: data.strategy?.winCondition ?? fallback.strategy.winCondition,
-        summary: data.strategy?.summary ?? fallback.strategy.summary,
-        immediateAction: data.strategy?.immediateAction ?? fallback.strategy.immediateAction,
-        lateGamePlan: data.strategy?.lateGamePlan ?? fallback.strategy.lateGamePlan,
-        laneMatchupAnalysis: data.strategy?.laneMatchupAnalysis ?? fallback.strategy.laneMatchupAnalysis,
-        counterPlay: data.strategy?.counterPlay ?? fallback.strategy.counterPlay,
+        winCondition: data.strategy?.winCondition ?? DEFAULT_STRATEGY.winCondition,
+        summary: data.strategy?.summary ?? DEFAULT_STRATEGY.summary,
+        immediateAction: data.strategy?.immediateAction ?? DEFAULT_STRATEGY.immediateAction,
+        lateGamePlan: data.strategy?.lateGamePlan ?? DEFAULT_STRATEGY.lateGamePlan,
+        laneMatchupAnalysis: data.strategy?.laneMatchupAnalysis,
+        counterPlay: data.strategy?.counterPlay,
       },
     };
   } catch (err) {
     Logger.warn("[LLM] Failed to parse raw LLM output as JSON:", err);
-    return { reasoning: fallback.reasoning, strategy: fallback.strategy };
+    return { reasoning: "", strategy: DEFAULT_STRATEGY };
   }
 }
 

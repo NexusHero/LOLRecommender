@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import type { LlmProvider, LlmAnalysis, ModelInfo, TokenUsage } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
-import type { ParsedGameState, ItemRecommendation } from "../types.js";
+import type { ParsedGameState } from "../types.js";
 import { Logger } from "../logger.js";
 
 
@@ -64,23 +64,20 @@ export class GeminiProvider implements LlmProvider {
     return combined;
   }
 
-  async getAnalysis(
-    state: ParsedGameState,
-    heuristicRec: ItemRecommendation,
-  ): Promise<LlmAnalysis> {
+  async getAnalysis(state: ParsedGameState): Promise<LlmAnalysis> {
     try {
       const result = await this.client.models.generateContent({
         model: this.modelId,
-        contents: await buildUserPrompt(state, heuristicRec),
+        contents: await buildUserPrompt(state),
         config: {
           systemInstruction: SYSTEM_PROMPT,
-          maxOutputTokens: 400,
+          maxOutputTokens: 700,
           responseMimeType: "application/json",
         },
       });
 
       const text = result.text;
-      if (!text) return { reasoning: heuristicRec.reasoning, strategy: heuristicRec.strategy };
+      if (!text) return { reasoning: "", strategy: { winCondition: "mid", summary: "", immediateAction: "", lateGamePlan: "" } };
 
       const meta = result.usageMetadata;
       const tokenUsage: TokenUsage = {
@@ -89,7 +86,7 @@ export class GeminiProvider implements LlmProvider {
       };
       Logger.info(`[LLM:Gemini] Tokens: ${tokenUsage.input} in, ${tokenUsage.output} out`);
 
-      return { ...parseAnalysisResponse(text, heuristicRec), tokenUsage };
+      return { ...parseAnalysisResponse(text), tokenUsage };
     } catch (err) {
       throw new Error(`Gemini: ${this.formatError(err)}`);
     }
