@@ -52,15 +52,15 @@ describe("BridgeOrchestrator", () => {
       expect(broadcasts.map((b) => b.event)).toContain("GAME_STARTED");
     });
 
-    it("handleGameData_FirstCall_BroadcastsRecommendation", async () => {
+    it("handleGameData_FirstCall_BroadcastsRecommendationUpdate", async () => {
       const { orchestrator, broadcasts } = setup();
 
       await orchestrator.handleGameData(makeRawGameData());
 
-      expect(broadcasts.map((b) => b.event)).toContain("RECOMMENDATION");
+      expect(broadcasts.map((b) => b.event)).toContain("RECOMMENDATION_UPDATE");
     });
 
-    it("handleGameData_EnemyBuysItem_BroadcastsItemPurchasedAndRecommendation", async () => {
+    it("handleGameData_EnemyBuysItem_BroadcastsItemPurchasedNoRecommendation", async () => {
       const enemy = makePlayer({ summonerName: "Enemy1", team: "CHAOS" });
       const { orchestrator, broadcasts } = setup();
       await orchestrator.handleGameData(makeRawGameData([makePlayer(), enemy]));
@@ -71,7 +71,7 @@ describe("BridgeOrchestrator", () => {
 
       const events = broadcasts.map((b) => b.event);
       expect(events).toContain("ITEM_PURCHASED");
-      expect(events).toContain("RECOMMENDATION");
+      expect(events).not.toContain("RECOMMENDATION_UPDATE");
     });
 
     it("handleGameData_GameTickCrossed_DoesNotBroadcastRecommendation", async () => {
@@ -87,7 +87,7 @@ describe("BridgeOrchestrator", () => {
 
       const events = broadcasts.map((b) => b.event);
       expect(events).toContain("GAME_TICK");
-      expect(events).not.toContain("RECOMMENDATION");
+      expect(events).not.toContain("RECOMMENDATION_UPDATE");
     });
 
     it("handleGameData_LocalPlayerLevelsUp_DoesNotBroadcastRecommendation", async () => {
@@ -99,7 +99,7 @@ describe("BridgeOrchestrator", () => {
 
       const events = broadcasts.map((b) => b.event);
       expect(events).toContain("LEVEL_UP");
-      expect(events).not.toContain("RECOMMENDATION");
+      expect(events).not.toContain("RECOMMENDATION_UPDATE");
     });
 
     it("handleGameData_FirstCall_BroadcastIncludesGameState", async () => {
@@ -114,13 +114,12 @@ describe("BridgeOrchestrator", () => {
   });
 
   describe("sendRecommendation", () => {
-    it("sendRecommendation_NoLlmProvider_UsesHeuristicSource", async () => {
+    it("sendRecommendation_NoLlmProvider_NoRecommendationFires", async () => {
       const { orchestrator, broadcasts } = setup({ hasLlm: false });
 
       await orchestrator.handleGameData(makeRawGameData());
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-      expect(rec?.recommendation?.source).toBe("heuristic");
+      expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
     });
 
     it("sendRecommendation_LlmProviderSetGameStarted_UsesLlmSource", async () => {
@@ -132,31 +131,26 @@ describe("BridgeOrchestrator", () => {
       expect(rec?.recommendation?.source).toBe("llm");
     });
 
-    it("sendRecommendation_LlmProviderSet_BroadcastsHeuristicImmediatelyThenUpdate", async () => {
+    it("sendRecommendation_LlmProviderSet_BroadcastsOnlyRecommendationUpdate", async () => {
       const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
 
       await orchestrator.handleGameData(makeRawGameData());
 
       const events = broadcasts.map((b) => b.event);
-      expect(events).toContain("RECOMMENDATION");
+      expect(events).not.toContain("RECOMMENDATION");
       expect(events).toContain("RECOMMENDATION_UPDATE");
-      const recIdx = events.indexOf("RECOMMENDATION");
-      const updateIdx = events.indexOf("RECOMMENDATION_UPDATE");
-      expect(recIdx).toBeLessThan(updateIdx);
     });
 
-    it("sendRecommendation_LlmProviderSet_BothMessagesShareCorrelationId", async () => {
+    it("sendRecommendation_LlmProviderSet_RecommendationUpdateHasCorrelationId", async () => {
       const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
 
       await orchestrator.handleGameData(makeRawGameData());
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
       const update = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
-      expect(rec?.correlationId).toBeDefined();
-      expect(rec?.correlationId).toBe(update?.correlationId);
+      expect(update?.correlationId).toBeDefined();
     });
 
-    it("sendRecommendation_ItemPurchasedEvent_AlwaysUsesHeuristic", async () => {
+    it("sendRecommendation_ItemPurchasedEvent_SkipsLlm", async () => {
       const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 1 });
       const enemy = makePlayer({ summonerName: "Enemy1", team: "CHAOS" });
       await orchestrator.handleGameData(makeRawGameData([makePlayer(), enemy]));
@@ -166,18 +160,16 @@ describe("BridgeOrchestrator", () => {
       const enemyWithItem = { ...enemy, items: [makeItem({ itemID: 3102 })] };
       await orchestrator.handleGameData(makeRawGameData([makePlayer(), enemyWithItem]));
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-      expect(rec?.recommendation?.source).toBe("heuristic");
+      expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
       expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
     });
 
-    it("sendRecommendation_NoClientsConnected_SkipsLlmUsesHeuristic", async () => {
+    it("sendRecommendation_NoClientsConnected_SkipsLlm", async () => {
       const { orchestrator, broadcasts, llmProvider } = setup({ hasLlm: true, clientCount: 0 });
 
       await orchestrator.handleGameData(makeRawGameData());
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-      expect(rec?.recommendation?.source).toBe("heuristic");
+      expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
       expect(llmProvider.getAnalysis).not.toHaveBeenCalled();
     });
   });
@@ -241,14 +233,14 @@ describe("BridgeOrchestrator", () => {
       expect(broadcasts).toHaveLength(0);
     });
 
-    it("triggerManualAnalysis_GameStateAvailable_BroadcastsRecommendation", async () => {
-      const { orchestrator, broadcasts } = setup({ hasLlm: false, clientCount: 1 });
+    it("triggerManualAnalysis_LlmProviderSet_BroadcastsRecommendationUpdate", async () => {
+      const { orchestrator, broadcasts } = setup({ hasLlm: true, clientCount: 1 });
       await orchestrator.handleGameData(makeRawGameData());
       broadcasts.length = 0;
 
       await orchestrator.triggerManualAnalysis();
 
-      expect(broadcasts.find((b) => b.event === "RECOMMENDATION")).toBeDefined();
+      expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeDefined();
     });
 
     it("triggerManualAnalysis_LlmProviderSet_UsesLlm", async () => {
@@ -263,15 +255,14 @@ describe("BridgeOrchestrator", () => {
       expect(rec?.recommendation?.source).toBe("llm");
     });
 
-    it("triggerManualAnalysis_NoLlmProvider_UsesHeuristic", async () => {
+    it("triggerManualAnalysis_NoLlmProvider_NoRecommendationFires", async () => {
       const { orchestrator, broadcasts } = setup({ hasLlm: false, clientCount: 1 });
       await orchestrator.handleGameData(makeRawGameData());
       broadcasts.length = 0;
 
       await orchestrator.triggerManualAnalysis();
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
-      expect(rec?.recommendation?.source).toBe("heuristic");
+      expect(broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
     });
 
     it("triggerManualAnalysis_AfterResetDetector_BroadcastsNothing", async () => {
@@ -311,7 +302,7 @@ describe("BridgeOrchestrator", () => {
       orchestrator.setSummonerName("Player2");
       await orchestrator.handleGameData(makeRawGameData([player1, player2, enemy]));
 
-      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION");
+      const rec = broadcasts.find((b) => b.event === "RECOMMENDATION_UPDATE");
       expect(rec?.gameState?.localPlayer.summonerName).toBe("Player2");
       expect(rec?.gameState?.localPlayer.championName).toBe("Garen");
     });

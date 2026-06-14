@@ -81,11 +81,9 @@ async function closeBridge(wss: WebSocketServer): Promise<void> {
   await new Promise<void>((resolve) => wss.close(() => resolve()));
 }
 
-// ─── Heuristic-only mode ──────────────────────────────────────────────────────
-
 describe("Recommendation flow (e2e)", () => {
-  describe("Heuristic-only mode (no LLM provider)", () => {
-    it("HeuristicFlow_GameStarted_ImmediateHeuristicRecommendation", async () => {
+  describe("No LLM provider", () => {
+    it("NoLlm_GameStarted_NoRecommendationFires", async () => {
       const { wss, port, orchestrator } = await setupBridge();
       const client = new WebSocket(`ws://127.0.0.1:${port}`);
       await waitForMessage(client, "CONNECTED");
@@ -94,51 +92,8 @@ describe("Recommendation flow (e2e)", () => {
       await orchestrator.handleGameData(makeRawGameData());
       const messages = await collecting;
 
-      const rec = messages.find((m) => m.event === "RECOMMENDATION");
-      expect(rec).toBeDefined();
-      expect(rec!.recommendation!.source).toBe("heuristic");
+      expect(messages.find((m) => m.event === "RECOMMENDATION")).toBeUndefined();
       expect(messages.find((m) => m.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
-
-      client.close();
-      await closeBridge(wss);
-    });
-
-    it("HeuristicFlow_TriggerAnalysis_NewHeuristicRecommendation", async () => {
-      const { wss, port, orchestrator } = await setupBridge();
-      const client = new WebSocket(`ws://127.0.0.1:${port}`);
-      await waitForMessage(client, "CONNECTED");
-      await orchestrator.handleGameData(makeRawGameData());
-      await waitForMessage(client, "RECOMMENDATION");
-
-      // Register listener BEFORE sending TRIGGER_ANALYSIS
-      const recPromise = waitForMessage(client, "RECOMMENDATION");
-      client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
-      const rec = await recPromise;
-
-      expect(rec.recommendation!.source).toBe("heuristic");
-
-      client.close();
-      await closeBridge(wss);
-    });
-
-    it("HeuristicFlow_TriggerAnalysisTwice_EachTriggerProducesRecommendation", async () => {
-      const { wss, port, orchestrator } = await setupBridge();
-      const client = new WebSocket(`ws://127.0.0.1:${port}`);
-      await waitForMessage(client, "CONNECTED");
-      await orchestrator.handleGameData(makeRawGameData());
-      await waitForMessage(client, "RECOMMENDATION");
-
-      // First press — register listener first
-      const firstPromise = waitForMessage(client, "RECOMMENDATION");
-      client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
-      const first = await firstPromise;
-      expect(first.recommendation!.source).toBe("heuristic");
-
-      // Second press — register listener first
-      const secondPromise = waitForMessage(client, "RECOMMENDATION");
-      client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
-      const second = await secondPromise;
-      expect(second.recommendation!.source).toBe("heuristic");
 
       client.close();
       await closeBridge(wss);
@@ -148,29 +103,36 @@ describe("Recommendation flow (e2e)", () => {
   // ─── LLM mode ──────────────────────────────────────────────────────────────
 
   describe("LLM mode", () => {
-    it("LlmFlow_TriggerAnalysis_HeuristicArrivesThenLlmUpdate", async () => {
+    it("LlmFlow_GameStarted_OnlyLlmUpdateFires", async () => {
       const provider = makeMockProvider();
       const { wss, port, orchestrator } = await setupBridge(provider);
       const client = new WebSocket(`ws://127.0.0.1:${port}`);
       await waitForMessage(client, "CONNECTED");
 
-      // Register listeners BEFORE handleGameData — both messages may arrive in
-      // the same I/O callback, so the second listener must exist up front.
-      const initRec = waitForMessage(client, "RECOMMENDATION");
-      const initUpdate = waitForMessage(client, "RECOMMENDATION_UPDATE");
-      await orchestrator.handleGameData(makeRawGameData());
-      await initRec;
-      await initUpdate;
-
-      // User presses "Analyse" — register listeners before sending
-      const recPromise = waitForMessage(client, "RECOMMENDATION");
       const updatePromise = waitForMessage(client, "RECOMMENDATION_UPDATE");
-      client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
-
-      const rec = await recPromise;
+      await orchestrator.handleGameData(makeRawGameData());
       const update = await updatePromise;
 
-      expect(rec.recommendation!.source).toBe("heuristic");
+      expect(update.recommendation!.source).toBe("llm");
+      expect(update.recommendation!.reasoning).toBe("Buy Thornmail against heavy AD");
+
+      client.close();
+      await closeBridge(wss);
+    });
+
+    it("LlmFlow_TriggerAnalysis_LlmUpdateFires", async () => {
+      const provider = makeMockProvider();
+      const { wss, port, orchestrator } = await setupBridge(provider);
+      const client = new WebSocket(`ws://127.0.0.1:${port}`);
+      await waitForMessage(client, "CONNECTED");
+
+      await orchestrator.handleGameData(makeRawGameData());
+      await waitForMessage(client, "RECOMMENDATION_UPDATE");
+
+      const updatePromise = waitForMessage(client, "RECOMMENDATION_UPDATE");
+      client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
+      const update = await updatePromise;
+
       expect(update.recommendation!.source).toBe("llm");
       expect(update.recommendation!.reasoning).toBe("Buy Thornmail against heavy AD");
       expect(update.tokenUsage?.lastInput).toBe(60);
@@ -186,25 +148,14 @@ describe("Recommendation flow (e2e)", () => {
       const client = new WebSocket(`ws://127.0.0.1:${port}`);
       await waitForMessage(client, "CONNECTED");
 
-      // Initial game start — register before
-      const initRec = waitForMessage(client, "RECOMMENDATION");
-      const initUpdate = waitForMessage(client, "RECOMMENDATION_UPDATE");
       await orchestrator.handleGameData(makeRawGameData());
-      await initRec;
-      await initUpdate;
+      await waitForMessage(client, "RECOMMENDATION_UPDATE");
 
-      // First manual trigger
-      const rec1Promise = waitForMessage(client, "RECOMMENDATION");
-      const update1Promise = waitForMessage(client, "RECOMMENDATION_UPDATE");
       client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
-      await rec1Promise;
-      await update1Promise;
+      await waitForMessage(client, "RECOMMENDATION_UPDATE");
 
-      // Second manual trigger — should produce another update
-      const rec2Promise = waitForMessage(client, "RECOMMENDATION");
       const update2Promise = waitForMessage(client, "RECOMMENDATION_UPDATE");
       client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
-      await rec2Promise;
       const secondUpdate = await update2Promise;
 
       expect(secondUpdate.recommendation!.source).toBe("llm");
@@ -223,12 +174,8 @@ describe("Recommendation flow (e2e)", () => {
       const client = new WebSocket(`ws://127.0.0.1:${port}`);
       await waitForMessage(client, "CONNECTED");
 
-      // Register before handleGameData to avoid missing messages
-      const initRec = waitForMessage(client, "RECOMMENDATION");
-      const initUpdate = waitForMessage(client, "RECOMMENDATION_UPDATE");
       await orchestrator.handleGameData(makeRawGameData());
-      await initRec;
-      await initUpdate; // 60 tokens consumed — now exceeds budget of 50
+      await waitForMessage(client, "RECOMMENDATION_UPDATE"); // 60 tokens consumed — now exceeds budget of 50
 
       // Manual trigger — 60 >= 50 → LLM is blocked, LLM_BUDGET_EXCEEDED emitted
       const collecting = collectMessages(client, 300);
@@ -238,9 +185,6 @@ describe("Recommendation flow (e2e)", () => {
       const budgetMsg = messages.find((m) => m.event === "LLM_BUDGET_EXCEEDED");
       expect(budgetMsg).toBeDefined();
       expect(budgetMsg!.sessionInputTokens).toBe(60);
-
-      // Heuristic still fires — only the LLM call is blocked
-      expect(messages.find((m) => m.event === "RECOMMENDATION")).toBeDefined();
       expect(messages.find((m) => m.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
 
       client.close();

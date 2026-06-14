@@ -82,7 +82,7 @@ describe("System: Full Bridge Wiring (e2e)", () => {
     client.close();
   });
 
-  it("system_GameDataHandled_ClientReceivesGameStartedAndRecommendation", async () => {
+  it("system_GameDataHandled_ClientReceivesGameStartedOnly_NoLlm", async () => {
     const client = new WebSocket(`ws://127.0.0.1:${port}`);
     await waitForMessage(client, "CONNECTED");
     const collecting = collectMessages(client, 200);
@@ -92,7 +92,7 @@ describe("System: Full Bridge Wiring (e2e)", () => {
     const messages = await collecting;
     const events = messages.map((m) => m.event);
     expect(events).toContain("GAME_STARTED");
-    expect(events).toContain("RECOMMENDATION");
+    expect(events).not.toContain("RECOMMENDATION_UPDATE");
     client.close();
   });
 
@@ -108,24 +108,23 @@ describe("System: Full Bridge Wiring (e2e)", () => {
     const collecting = collectMessages(client, 100);
     const messages = await collecting;
 
-    const rec = messages.find((m) => m.event === "RECOMMENDATION");
-    expect(rec?.gameState?.localPlayer.summonerName).toBe("Faker");
+    const gameStarted = messages.find((m) => m.event === "GAME_STARTED");
+    expect(gameStarted?.gameState?.localPlayer.summonerName).toBe("Faker");
     client.close();
   });
 
-  it("system_ClientSendsTriggerAnalysis_BroadcastsRecommendation", async () => {
+  it("system_ClientSendsTriggerAnalysis_NoLlm_NoBroadcast", async () => {
     const client = new WebSocket(`ws://127.0.0.1:${port}`);
     await waitForMessage(client, "CONNECTED");
 
     await orchestrator.handleGameData(makeRawGameData());
-    await waitForMessage(client, "RECOMMENDATION");
+    await waitForMessage(client, "GAME_STARTED");
 
-    const recPromise = waitForMessage(client, "RECOMMENDATION");
+    const collecting = collectMessages(client, 200);
     client.send(JSON.stringify({ event: "TRIGGER_ANALYSIS" }));
-    const rec = await recPromise;
+    const messages = await collecting;
 
-    expect(rec.event).toBe("RECOMMENDATION");
-    expect(rec.gameState).toBeDefined();
+    expect(messages.find((m) => m.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
     client.close();
   });
 
@@ -145,17 +144,18 @@ describe("System: Full Bridge Wiring (e2e)", () => {
     client2.close();
   });
 
-  it("system_SetLlmProviderWithoutApiKey_SetsProviderNull", async () => {
+  it("system_SetLlmProviderWithoutApiKey_SetsProviderNull_NoRecommendation", async () => {
     const client = new WebSocket(`ws://127.0.0.1:${port}`);
     await waitForMessage(client, "CONNECTED");
 
     client.send(JSON.stringify({ event: "SET_LLM_PROVIDER" }));
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    // After disabling provider, game start recommendation should use heuristic
+    // After disabling provider, no recommendation fires
+    const collecting = collectMessages(client, 200);
     await orchestrator.handleGameData(makeRawGameData());
-    const rec = await waitForMessage(client, "RECOMMENDATION");
-    expect(rec.recommendation?.source).toBe("heuristic");
+    const messages = await collecting;
+    expect(messages.find((m) => m.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
     client.close();
   });
 });

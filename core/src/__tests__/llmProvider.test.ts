@@ -1,5 +1,5 @@
 import { createLlmProvider, buildUserPrompt, parseAnalysisResponse } from "../llmProvider";
-import { makeGameState, makeBaseRec, makePlayer } from "./fixtures";
+import { makeGameState, makePlayer } from "./fixtures";
 
 // jest.mock wird gehoisted — factory darf keine äußeren Variablen nutzen
 jest.mock("../ddragonService", () => ({
@@ -7,6 +7,7 @@ jest.mock("../ddragonService", () => ({
     init: jest.fn().mockResolvedValue(undefined),
     getItemInfo: jest.fn().mockReturnValue(undefined),
     getChampionAbilities: jest.fn().mockResolvedValue(undefined),
+    getChampionTags: jest.fn().mockReturnValue([]),
     currentVersion: "test",
   },
 }));
@@ -15,6 +16,7 @@ jest.mock("../ddragonService", () => ({
 const mockDdragon = jest.requireMock("../ddragonService").ddragon as {
   getItemInfo: jest.Mock;
   getChampionAbilities: jest.Mock;
+  getChampionTags: jest.Mock;
 };
 
 describe("createLlmProvider", () => {
@@ -56,19 +58,18 @@ describe("buildUserPrompt", () => {
       gameTime: 125,
     });
 
-    const prompt = await buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state);
 
-    expect(prompt).toContain("Me: Lux");
+    expect(prompt).toContain("My champion: Lux");
     expect(prompt).toContain("Enemies: Soraka");
-    expect(prompt).toContain("- Mortal Reminder");
-    expect(prompt).toContain("Time: 2:05");
+    expect(prompt).toContain("Time: 2m");
     expect(prompt).toContain("Game Phase: early");
   });
 
   it("buildUserPrompt_MidGameTime_ContainsMidPhase", async () => {
     const state = makeGameState({ gameTime: 15 * 60 });
 
-    const prompt = await buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state);
 
     expect(prompt).toContain("Game Phase: mid");
   });
@@ -76,35 +77,18 @@ describe("buildUserPrompt", () => {
   it("buildUserPrompt_LateGameTime_ContainsLatePhase", async () => {
     const state = makeGameState({ gameTime: 26 * 60 });
 
-    const prompt = await buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state);
 
     expect(prompt).toContain("Game Phase: late");
   });
 
-  it("buildUserPrompt_NoItems_ShowsNone", async () => {
+  it("buildUserPrompt_DDragonHasChampionAbilities_NoHeuristicSection", async () => {
     const state = makeGameState();
-    const rec = makeBaseRec({ items: [] });
 
-    const prompt = await buildUserPrompt(state, rec);
+    const prompt = await buildUserPrompt(state);
 
-    expect(prompt).toContain("Core items (heuristic baseline):\nNone");
-  });
-
-  it("buildUserPrompt_DDragonHasItemStats_StatsAppearedInPrompt", async () => {
-    mockDdragon.getItemInfo.mockReturnValue({
-      name: "Banshee's Veil",
-      stats: "80 AP, 65 MR",
-      plaintext: "Blocks a single negative ability",
-    });
-    const state = makeGameState();
-    const rec = makeBaseRec({
-      items: [{ id: 3102, name: "Banshee's Veil", reason: "AP enemies", priority: "core" }],
-    });
-
-    const prompt = await buildUserPrompt(state, rec);
-
-    expect(prompt).toContain("80 AP, 65 MR");
-    expect(prompt).toContain("Blocks a single negative ability");
+    expect(prompt).not.toContain("Heuristic counter items");
+    expect(prompt).not.toContain("Counter items");
   });
 
   it("buildUserPrompt_DDragonHasChampionAbilities_AbilitiesInPrompt", async () => {
@@ -118,7 +102,7 @@ describe("buildUserPrompt", () => {
       enemies: [makePlayer({ championName: "Zed", position: "MID", team: "CHAOS" })],
     });
 
-    const prompt = await buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state);
 
     expect(prompt).toContain("Q=Light Binding");
     expect(prompt).toContain("R=Final Spark");
@@ -132,7 +116,7 @@ describe("buildUserPrompt", () => {
       enemies: [],
     });
 
-    const prompt = await buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state);
 
     expect(prompt).toContain("Opponent: unknown");
   });
@@ -145,7 +129,7 @@ describe("buildUserPrompt", () => {
       enemies: [makePlayer({ championName: "Zed", team: "CHAOS" })],
     });
 
-    const prompt = await buildUserPrompt(state, makeBaseRec());
+    const prompt = await buildUserPrompt(state);
 
     // Prompt muss trotzdem gebaut werden — nur ohne Stats und Abilities
     expect(prompt).toContain("My champion: Ahri");
@@ -154,8 +138,6 @@ describe("buildUserPrompt", () => {
 });
 
 describe("parseAnalysisResponse", () => {
-  const fallback = makeBaseRec();
-
   it("parseAnalysisResponse_ValidJson_ExtractsReasoningAndStrategy", () => {
     const raw = JSON.stringify({
       itemReasoning: "Buy this now",
@@ -167,7 +149,7 @@ describe("parseAnalysisResponse", () => {
       },
     });
 
-    const result = parseAnalysisResponse(raw, fallback);
+    const result = parseAnalysisResponse(raw);
 
     expect(result.reasoning).toBe("Buy this now");
     expect(result.strategy.winCondition).toBe("late");
@@ -177,28 +159,28 @@ describe("parseAnalysisResponse", () => {
   it("parseAnalysisResponse_JsonWithMarkdownCodeBlock_StillParses", () => {
     const raw = "```json\n{\"itemReasoning\":\"Good items\",\"strategy\":{\"winCondition\":\"mid\",\"summary\":\"s\",\"immediateAction\":\"a\",\"lateGamePlan\":\"b\"}}\n```";
 
-    const result = parseAnalysisResponse(raw, fallback);
+    const result = parseAnalysisResponse(raw);
 
     expect(result.reasoning).toBe("Good items");
   });
 
-  it("parseAnalysisResponse_InvalidJson_FallsBackToHeuristic", () => {
-    const result = parseAnalysisResponse("not json at all", fallback);
+  it("parseAnalysisResponse_InvalidJson_ReturnsEmptyReasoning", () => {
+    const result = parseAnalysisResponse("not json at all");
 
-    expect(result.reasoning).toBe(fallback.reasoning);
-    expect(result.strategy).toEqual(fallback.strategy);
+    expect(result.reasoning).toBe("");
+    expect(result.strategy.winCondition).toBe("mid");
   });
 
-  it("parseAnalysisResponse_MissingFields_FallsBackToHeuristicValues", () => {
+  it("parseAnalysisResponse_MissingFields_UsesDefaultValues", () => {
     const raw = JSON.stringify({ itemReasoning: "partial" });
 
-    const result = parseAnalysisResponse(raw, fallback);
+    const result = parseAnalysisResponse(raw);
 
     expect(result.reasoning).toBe("partial");
-    expect(result.strategy.winCondition).toBe(fallback.strategy.winCondition);
+    expect(result.strategy.winCondition).toBe("mid");
   });
 
-  it("parseAnalysisResponse_SituationalItems_ExtractedAndCappedAtTwo", () => {
+  it("parseAnalysisResponse_SituationalItems_ExtractedAndCappedAtFour", () => {
     const raw = JSON.stringify({
       itemReasoning: "Good items",
       situationalItems: [
@@ -209,9 +191,9 @@ describe("parseAnalysisResponse", () => {
       strategy: { winCondition: "mid", summary: "s", immediateAction: "a", lateGamePlan: "b" },
     });
 
-    const result = parseAnalysisResponse(raw, fallback);
+    const result = parseAnalysisResponse(raw);
 
-    expect(result.situationalItems).toHaveLength(2);
+    expect(result.situationalItems).toHaveLength(3);
     expect(result.situationalItems![0]).toEqual({ id: 3111, name: "Mercurial Scimitar", reason: "Heavy CC", priority: "situational" });
   });
 
@@ -222,7 +204,7 @@ describe("parseAnalysisResponse", () => {
       strategy: { winCondition: "mid", summary: "s", immediateAction: "a", lateGamePlan: "b" },
     });
 
-    const result = parseAnalysisResponse(raw, fallback);
+    const result = parseAnalysisResponse(raw);
 
     expect(result.situationalItems).toEqual([]);
   });
@@ -234,7 +216,7 @@ describe("parseAnalysisResponse", () => {
       strategy: { winCondition: "mid", summary: "s", immediateAction: "a", lateGamePlan: "b" },
     });
 
-    const result = parseAnalysisResponse(raw, fallback);
+    const result = parseAnalysisResponse(raw);
 
     expect(result.situationalItems).toEqual([]);
   });
