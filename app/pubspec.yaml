@@ -30,5 +30,6 @@ msix_config:
   identity_name: NexusHero.LoLCoach
   msix_version: 1.1.0.0
   description: League of Legends in-game item coach powered by AI
+  install_certificate: false
   # To bundle the core, msix uses build/windows/x64/runner/Release as source.
   # Our build script will copy core.exe there before calling msix:create.
