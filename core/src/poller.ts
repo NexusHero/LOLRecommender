@@ -30,11 +30,20 @@ function createDefaultFetcher(): DataFetcher {
   const lib: typeof https = isHttps ? https : (http as unknown as typeof https);
 
   // Riot's Live Client API (127.0.0.1:2999) uses a self-signed cert from their
-  // internal CA. Validation is skipped only for loopback addresses where MITM
-  // is impossible — any non-localhost HTTPS target uses standard validation.
+  // internal CA which is not publicly available. cert chain validation is skipped
+  // only for loopback targets; checkServerIdentity enforces this at runtime so
+  // the agent cannot be pointed at a non-loopback host even if the URL changes.
   const agent =
     isHttps && isLocalhostUrl(url)
-      ? new https.Agent({ rejectUnauthorized: false })
+      ? new https.Agent({
+          rejectUnauthorized: false, // lgtm[js/disabling-certificate-validation]
+          checkServerIdentity: (hostname: string) => {
+            if (hostname !== "127.0.0.1" && hostname !== "localhost") {
+              return new Error(`TLS disabled only for loopback — unexpected host: ${hostname}`);
+            }
+            return undefined;
+          },
+        })
       : undefined;
 
   return () =>
