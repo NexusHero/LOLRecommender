@@ -73,6 +73,7 @@ export class GeminiProvider implements LlmProvider {
           systemInstruction: SYSTEM_PROMPT,
           maxOutputTokens: 700,
           responseMimeType: "application/json",
+          thinkingConfig: { thinkingBudget: 0 },
         },
       });
 

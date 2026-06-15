@@ -63,6 +63,7 @@ class GeminiProvider {
                     systemInstruction: llmProvider_js_1.SYSTEM_PROMPT,
                     maxOutputTokens: 700,
                     responseMimeType: "application/json",
+                    thinkingConfig: { thinkingBudget: 0 },
                 },
             });
             const text = result.text;

@@ -156,6 +156,7 @@ const DEFAULT_STRATEGY = {
 function parseAnalysisResponse(raw) {
     try {
         const clean = raw.replace(/```(?:json)?\n?/g, "").trim();
+        logger_js_1.Logger.info("[LLM] Raw response:\n" + clean);
         const parsedObj = JSON.parse(clean);
         const parsed = LlmResponseSchema.safeParse(parsedObj);
         if (!parsed.success) {
@@ -186,7 +187,7 @@ function parseAnalysisResponse(raw) {
         };
     }
     catch (err) {
-        logger_js_1.Logger.warn("[LLM] Failed to parse raw LLM output as JSON:", err);
+        logger_js_1.Logger.warn("[LLM] Failed to parse raw LLM output as JSON:", err, "\nRaw was:\n" + raw);
         return { reasoning: "", strategy: DEFAULT_STRATEGY };
     }
 }

@@ -2,6 +2,7 @@ import type { LlmProvider } from "./llmProvider.js";
 import { CacheService } from "./cacheService.js";
 import type { ParsedGameState, ItemRecommendation, WsTokenUsage } from "./types.js";
 import { Logger } from "./logger.js";
+import { ddragon } from "./ddragonService.js";
 
 export interface RecommendationCallbacks {
   onLlmBudgetExceeded: (sessionTokens: number, budget: number) => void;
@@ -77,8 +78,16 @@ export class RecommendationEngine {
       }
     }
 
+    const ownedItemIds = new Set(state.localPlayer.items.map((i) => i.itemID));
+    const seenIds = new Set<number>();
     const rec: ItemRecommendation = {
-      items: llmAnalysis.situationalItems ?? [],
+      items: (llmAnalysis.situationalItems ?? []).filter((i) => {
+        if (ownedItemIds.has(i.id)) return false;
+        if (!ddragon.getItemInfo(i.id)) { Logger.warn(`[Rec] Dropping hallucinated item id=${i.id} name="${i.name}"`); return false; }
+        if (seenIds.has(i.id)) return false;
+        seenIds.add(i.id);
+        return true;
+      }),
       reasoning: llmAnalysis.reasoning,
       strategy: llmAnalysis.strategy,
       source: "llm",
