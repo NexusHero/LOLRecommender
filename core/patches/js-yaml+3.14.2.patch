@@ -1,0 +1,18 @@
+diff --git a/node_modules/js-yaml/lib/js-yaml/loader.js b/node_modules/js-yaml/lib/js-yaml/loader.js
+index 0e1e43d..7e4eacd 100644
+--- a/node_modules/js-yaml/lib/js-yaml/loader.js
++++ b/node_modules/js-yaml/lib/js-yaml/loader.js
+@@ -336,8 +336,12 @@ function storeMappingPair(state, _result, overridableKeys, keyTag, keyNode, valu
+ 
+   if (keyTag === 'tag:yaml.org,2002:merge') {
+     if (Array.isArray(valueNode)) {
++      var seen = new Set();
+       for (index = 0, quantity = valueNode.length; index < quantity; index += 1) {
+-        mergeMappings(state, _result, valueNode[index], overridableKeys);
++        var mergeSource = valueNode[index];
++        if (seen.has(mergeSource)) continue;
++        seen.add(mergeSource);
++        mergeMappings(state, _result, mergeSource, overridableKeys);
+       }
+     } else {
+       mergeMappings(state, _result, valueNode, overridableKeys);
