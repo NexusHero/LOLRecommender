@@ -3,6 +3,7 @@ import WebSocket from "ws";
 import { BridgeWsServer } from "../wsServer";
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
+import { RecommendationEngine } from "../recommendationEngine";
 import { MessageRouter } from "../messageRouter";
 import { makeRawGameData } from "./fixtures";
 import type { WsMessage } from "../types";
@@ -65,10 +66,12 @@ async function setupBridge(llmProvider: LlmProvider | null = null, tokenBudget?:
   const port = (wss.address() as { port: number }).port;
 
   let _router: MessageRouter;
-  const wsServer = new BridgeWsServer(wss, (_ws, msg) => _router.handle(_ws, msg));
+  const wsServer = new BridgeWsServer(wss);
+  wsServer.setMessageHandler((_ws, msg) => _router.handle(_ws, msg));
   const orchestrator = new BridgeOrchestrator(
     wsServer,
     new EventDetector(),
+    new RecommendationEngine(),
     llmProvider,
     { summonerName: "TestPlayer", llmCooldownMs: 0, tokenBudget },
   );

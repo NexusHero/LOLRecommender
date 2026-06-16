@@ -103,7 +103,8 @@ describe("BridgeWsServer", () => {
   describe("message handling", () => {
     it("onMessage_ClientSendsValidJson_ParsesAndCallsHandler", () => {
       const handler = jest.fn();
-      const serverWithHandler = new BridgeWsServer(mockWss as any, handler);
+      const serverWithHandler = new BridgeWsServer(mockWss as any);
+      serverWithHandler.setMessageHandler(handler);
       const ws = new MockWebSocket();
       mockWss.emit("connection", ws, fakeReq());
 
@@ -113,7 +114,8 @@ describe("BridgeWsServer", () => {
     });
 
     it("onMessage_ClientSendsMalformedJson_DoesNotThrow", () => {
-      const serverWithHandler = new BridgeWsServer(mockWss as any, jest.fn());
+      const serverWithHandler = new BridgeWsServer(mockWss as any);
+      serverWithHandler.setMessageHandler(jest.fn());
       const ws = new MockWebSocket();
       mockWss.emit("connection", ws, fakeReq());
 
@@ -133,7 +135,8 @@ describe("BridgeWsServer", () => {
 
     it("onMessage_SetSummonerMessage_PassesParsedObjectToHandler", () => {
       const handler = jest.fn();
-      const serverWithHandler = new BridgeWsServer(mockWss as any, handler);
+      const serverWithHandler = new BridgeWsServer(mockWss as any);
+      serverWithHandler.setMessageHandler(handler);
       const ws = new MockWebSocket();
       mockWss.emit("connection", ws, fakeReq());
       const msg = { event: "SET_SUMMONER", summonerName: "Faker" };

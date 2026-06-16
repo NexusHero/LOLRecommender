@@ -1,8 +1,13 @@
+// reflect-metadata must be imported once, before any decorated class is
+// loaded — tsyringe reads constructor parameter metadata it emits.
+import "reflect-metadata";
 import "dotenv/config";
 import type { IncomingMessage } from "http";
 import { WebSocketServer } from "ws";
+import { container } from "tsyringe";
 import { LiveClientPoller } from "./poller.js";
 import { EventDetector } from "./eventDetector.js";
+import { RecommendationEngine } from "./recommendationEngine.js";
 import { BridgeWsServer } from "./wsServer.js";
 import { BridgeOrchestrator } from "./orchestrator.js";
 import { MessageRouter } from "./messageRouter.js";
@@ -11,6 +16,7 @@ import { ddragon } from "./ddragonService.js";
 import { loadOrCreateSecret, secretFilePath } from "./secretManager.js";
 import { config } from "./config.js";
 import { Logger } from "./logger.js";
+import { CLOCK_TOKEN, LLM_PROVIDER_TOKEN, ORCHESTRATOR_CONFIG_TOKEN, WSS_TOKEN } from "./tokens.js";
 
 // DDragon im Hintergrund initialisieren — kein blocking start
 ddragon.init().catch((err) => Logger.error("[Main] DDragon init error:", err));
@@ -47,31 +53,41 @@ if (parentPidArg) {
 const secret = loadOrCreateSecret();
 Logger.info(`[Main] Bridge secret stored at: ${secretFilePath()}`);
 
-// Closure trick: wsServer needs orchestrator reference before orchestrator is constructed
-let orchestrator: BridgeOrchestrator;
-let messageRouter: MessageRouter;
-
-const wsServer = new BridgeWsServer(
-  new WebSocketServer({
+// --- DI container registrations ---
+// tsyringe resolves the acyclic part of the graph (EventDetector,
+// RecommendationEngine, BridgeOrchestrator, MessageRouter). Interfaces,
+// unions and external (non-decorated) classes can't be resolved by
+// reflected type, so they get an explicit value token registered here.
+container.register(ORCHESTRATOR_CONFIG_TOKEN, {
+  useValue: {
+    summonerName: LOCAL_SUMMONER,
+    llmCooldownMs: DEFAULT_LLM_COOLDOWN_MS,
+  },
+});
+// tsyringe's `useValue` provider treats `null`/`undefined` as "not a value"
+// (a `!= undefined` check) and would mis-register this as a class to
+// construct. `useFactory` has no such check, so it's the safe way to
+// register a token whose initial value is null.
+container.register(LLM_PROVIDER_TOKEN, { useFactory: () => null });
+container.register(CLOCK_TOKEN, { useValue: Date.now });
+container.register(WSS_TOKEN, {
+  useValue: new WebSocketServer({
     host: config.ws.host,
     port: WS_PORT,
     verifyClient: ({ req }: { req: IncomingMessage }) =>
       req.headers["authorization"] === `Bearer ${secret}`,
   }),
-  (_ws, message) => messageRouter.handle(_ws, message),
-);
+});
 
-orchestrator = new BridgeOrchestrator(
-  wsServer,
-  new EventDetector(),
-  null,
-  {
-    summonerName: LOCAL_SUMMONER,
-    llmCooldownMs: DEFAULT_LLM_COOLDOWN_MS,
-  },
-);
-
-messageRouter = new MessageRouter(orchestrator);
+// BridgeWsServer <-> MessageRouter is a genuine cycle (the router needs the
+// orchestrator, which needs the wsServer, which needs to call the router on
+// incoming messages) — no DI container resolves a true constructor cycle.
+// Broken here via method injection: construct both through the container,
+// then wire the one circular edge explicitly.
+const wsServer = container.resolve(BridgeWsServer);
+const orchestrator = container.resolve(BridgeOrchestrator);
+const messageRouter = container.resolve(MessageRouter);
+wsServer.setMessageHandler((ws, message) => messageRouter.handle(ws, message));
 
 // Backward compatible: use ANTHROPIC_API_KEY from .env if present
 if (process.env.ANTHROPIC_API_KEY) {

@@ -1,14 +1,12 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:lol_coach/controllers/theme_controller.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lol_coach/providers.dart';
 import 'package:lol_coach/screens/main_screen.dart';
-import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/storage_service.dart';
-import 'package:lol_coach/services/ws_client.dart';
 import 'package:lol_coach/theme/app_theme.dart';
 import 'package:lol_coach/utils/ddragon.dart';
-import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,34 +33,31 @@ void main() async {
   }
 
   runApp(
-    MultiProvider(
-      providers: [
-        Provider.value(value: storageService),
-        ChangeNotifierProvider(create: (_) => ThemeController(storageService)),
-        ChangeNotifierProvider(create: (_) => WsClient()),
-        ChangeNotifierProxyProvider<WsClient, CoachService>(
-          create: (ctx) => CoachService(ctx.read<WsClient>()),
-          update: (_, client, coach) => coach ?? CoachService(client),
-        ),
+    ProviderScope(
+      overrides: [
+        storageServiceProvider.overrideWithValue(storageService),
       ],
       child: const LolCoachApp(),
     ),
   );
 }
 
-class LolCoachApp extends StatelessWidget {
+class LolCoachApp extends ConsumerWidget {
   const LolCoachApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final themeMode = context.watch<ThemeController>().mode;
-    return MaterialApp(
-      title: 'LoL Coach',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      darkTheme: AppTheme.dark,
-      themeMode: themeMode,
-      home: const MainScreen(),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeController = ref.watch(themeControllerProvider);
+    return ListenableBuilder(
+      listenable: themeController,
+      builder: (context, _) => MaterialApp(
+        title: 'LoL Coach',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        themeMode: themeController.mode,
+        home: const MainScreen(),
+      ),
     );
   }
 }

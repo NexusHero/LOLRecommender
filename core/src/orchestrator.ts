@@ -1,10 +1,12 @@
+import { inject, singleton } from "tsyringe";
 import { parseGameState } from "./parser.js";
 import { EventDetector } from "./eventDetector.js";
 import { BridgeWsServer } from "./wsServer.js";
 import type { LlmProvider } from "./llmProvider.js";
-import type { AllGameData, ParsedGameState } from "./types.js";
+import type { AllGameData, ParsedGameState, RiskLevel } from "./types.js";
 import { Logger } from "./logger.js";
 import { RecommendationEngine } from "./recommendationEngine.js";
+import { CLOCK_TOKEN, LLM_PROVIDER_TOKEN, ORCHESTRATOR_CONFIG_TOKEN } from "./tokens.js";
 
 export interface OrchestratorConfig {
   summonerName: string;
@@ -12,17 +14,23 @@ export interface OrchestratorConfig {
   tokenBudget?: number; // session input token budget; 0 or undefined = unlimited
 }
 
+@singleton()
 export class BridgeOrchestrator {
   private lastState: ParsedGameState | null = null;
   private correlationCounter = 0;
-  private readonly engine = new RecommendationEngine();
 
   constructor(
-    private readonly wsServer: BridgeWsServer,
-    private readonly eventDetector: EventDetector,
-    llmProvider: LlmProvider | null,
-    private readonly config: OrchestratorConfig,
-    private readonly clock: () => number = Date.now,
+    // Every param is explicitly @inject()'d, even the class-typed ones —
+    // `tsx`/esbuild (used by `npm run dev`) does not emit the
+    // `design:paramtypes` metadata tsyringe needs for implicit type-based
+    // resolution, so relying on reflection alone breaks the dev runner
+    // while still working under ts-jest/tsc. Explicit tokens work under both.
+    @inject(BridgeWsServer) private readonly wsServer: BridgeWsServer,
+    @inject(EventDetector) private readonly eventDetector: EventDetector,
+    @inject(RecommendationEngine) private readonly engine: RecommendationEngine,
+    @inject(LLM_PROVIDER_TOKEN) llmProvider: LlmProvider | null,
+    @inject(ORCHESTRATOR_CONFIG_TOKEN) private readonly config: OrchestratorConfig,
+    @inject(CLOCK_TOKEN) private readonly clock: () => number = Date.now,
   ) {
     this.engine.setLlmProvider(llmProvider);
     if (this.config.tokenBudget) {
@@ -120,5 +128,9 @@ export class BridgeOrchestrator {
 
   setLlmProvider(provider: LlmProvider | null): void {
     this.engine.setLlmProvider(provider);
+  }
+
+  setRiskLevel(level: RiskLevel): void {
+    this.engine.setRiskLevel(level);
   }
 }

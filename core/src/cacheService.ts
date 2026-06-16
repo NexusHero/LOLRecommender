@@ -1,4 +1,6 @@
-import type { ParsedGameState } from "./types.js";
+import { injectable } from "tsyringe";
+import type { ParsedGameState, RiskLevel } from "./types.js";
+import { DEFAULT_RISK_LEVEL } from "./types.js";
 import type { LlmAnalysis } from "./llmProvider.js";
 import { getGamePhase } from "./stateMinifier.js";
 
@@ -9,6 +11,7 @@ interface CacheEntry {
   cachedAt: number;
 }
 
+@injectable()
 export class CacheService {
   private readonly store = new Map<string, CacheEntry>();
 
@@ -30,11 +33,13 @@ export class CacheService {
     this.store.clear();
   }
 
-  buildKey(state: ParsedGameState): string {
+  buildKey(state: ParsedGameState, risk: RiskLevel = DEFAULT_RISK_LEVEL): string {
     const goldBucket = Math.floor(state.activePlayer.currentGold / 500);
     const phase = getGamePhase(state.gameTime);
     const killsBucket = Math.floor(state.localPlayer.scores.kills / 3);
-    const deathsBucket = Math.floor(state.localPlayer.scores.deaths / 2);
+    // Deaths are exact (not bucketed): each death changes the live situation
+    // meaningfully, so consecutive deaths must not collapse into one cache entry.
+    const deaths = state.localPlayer.scores.deaths;
     const enemyNames = state.enemies.map((e) => e.championName).sort().join(",");
     const myItems = state.localPlayer.items.map((i) => i.itemID).sort().join(",");
     return [
@@ -42,7 +47,8 @@ export class CacheService {
       phase,
       `g${goldBucket}`,
       `k${killsBucket}`,
-      `d${deathsBucket}`,
+      `d${deaths}`,
+      `r:${risk}`,
       `e:${enemyNames}`,
       `myitems:${myItems}`,
     ].join("|");

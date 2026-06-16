@@ -13,12 +13,13 @@ jest.mock("../llmProvider", () => ({
 
 import { createLlmProvider } from "../llmProvider";
 
-function makeOrchestrator(): jest.Mocked<Pick<BridgeOrchestrator, "setSummonerName" | "triggerManualAnalysis" | "setLlmProvider" | "setTokenBudget">> {
+function makeOrchestrator(): jest.Mocked<Pick<BridgeOrchestrator, "setSummonerName" | "triggerManualAnalysis" | "setLlmProvider" | "setTokenBudget" | "setRiskLevel">> {
   return {
     setSummonerName: jest.fn(),
     triggerManualAnalysis: jest.fn().mockResolvedValue(undefined),
     setLlmProvider: jest.fn(),
     setTokenBudget: jest.fn(),
+    setRiskLevel: jest.fn(),
   };
 }
 
@@ -243,6 +244,26 @@ describe("MessageRouter", () => {
 
       const sent = JSON.parse((ws.send as jest.Mock).mock.calls[0][0]);
       expect(sent.event).toBe("KEY_INVALID");
+    });
+  });
+
+  describe("handle — SET_RISK_LEVEL", () => {
+    it("handle_SetRiskLevelWithValidLevel_CallsSetRiskLevel", async () => {
+      const orchestrator = makeOrchestrator();
+      const router = new MessageRouter(orchestrator as any);
+
+      await router.handle(fakeWs, { event: "SET_RISK_LEVEL", riskLevel: "risky" });
+
+      expect(orchestrator.setRiskLevel).toHaveBeenCalledWith("risky");
+    });
+
+    it("handle_SetRiskLevelWithInvalidLevel_DoesNotCallSetRiskLevel", async () => {
+      const orchestrator = makeOrchestrator();
+      const router = new MessageRouter(orchestrator as any);
+
+      await router.handle(fakeWs, { event: "SET_RISK_LEVEL", riskLevel: "yolo" });
+
+      expect(orchestrator.setRiskLevel).not.toHaveBeenCalled();
     });
   });
 

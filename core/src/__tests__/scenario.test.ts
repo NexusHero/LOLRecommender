@@ -3,6 +3,7 @@ import WebSocket from "ws";
 import { BridgeWsServer } from "../wsServer.js";
 import { BridgeOrchestrator } from "../orchestrator.js";
 import { EventDetector } from "../eventDetector.js";
+import { RecommendationEngine } from "../recommendationEngine.js";
 import { MessageRouter } from "../messageRouter.js";
 import { LiveClientPoller } from "../poller.js";
 import type { DataFetcher } from "../poller.js";
@@ -46,9 +47,10 @@ function buildStack() {
   let _router: MessageRouter;
 
   const wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
-  const wsServer = new BridgeWsServer(wss, (_ws, msg) => _router.handle(_ws, msg));
+  const wsServer = new BridgeWsServer(wss);
+  wsServer.setMessageHandler((_ws, msg) => _router.handle(_ws, msg));
 
-  _orchestrator = new BridgeOrchestrator(wsServer, new EventDetector(), null, {
+  _orchestrator = new BridgeOrchestrator(wsServer, new EventDetector(), new RecommendationEngine(), null, {
     summonerName: "TestPlayer",
     llmCooldownMs: 0,
   });

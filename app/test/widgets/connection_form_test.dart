@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/controllers/settings_controller.dart';
 import 'package:lol_coach/controllers/theme_controller.dart';
+import 'package:lol_coach/providers.dart';
 import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/storage_service.dart';
 import 'package:lol_coach/services/ws_client.dart';
 import 'package:lol_coach/theme/app_theme.dart';
 import 'package:lol_coach/widgets/connection_form.dart';
-import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -36,8 +37,12 @@ Future<SettingsController> _buildCtrl() async {
 Future<Widget> _wrap(SettingsController ctrl) async {
   final themeStorage = _FakeStorage();
   await themeStorage.init();
-  return ChangeNotifierProvider<ThemeController>(
-    create: (_) => ThemeController(themeStorage),
+  return ProviderScope(
+    overrides: [
+      themeControllerProvider.overrideWithValue(
+        ThemeController(themeStorage),
+      ),
+    ],
     child: MaterialApp(
       theme: AppTheme.dark,
       home: Scaffold(body: ConnectionForm(ctrl: ctrl)),

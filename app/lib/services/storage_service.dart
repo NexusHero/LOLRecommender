@@ -37,6 +37,11 @@ class StorageService {
   Future<void> setTokenBudget(int value) =>
       _prefs.setInt('tokenBudget', value);
 
+  /// Playstyle for coaching tone: 'safe' | 'normal' | 'risky'.
+  String get riskLevel => _prefs.getString('riskLevel') ?? 'normal';
+  Future<void> setRiskLevel(String value) =>
+      _prefs.setString('riskLevel', value);
+
   // --- Appearance ---
   String? get themeMode => _prefs.getString('themeMode');
   Future<void> setThemeMode(String value) =>

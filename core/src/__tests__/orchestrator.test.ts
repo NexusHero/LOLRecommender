@@ -1,5 +1,6 @@
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
+import { RecommendationEngine } from "../recommendationEngine";
 import { BridgeWsServer } from "../wsServer";
 import { makeRawGameData, makePlayer, makeItem, makeActivePlayer } from "./fixtures";
 import type { WsMessage } from "../types";
@@ -34,6 +35,7 @@ function setup(overrides: {
   const orchestrator = new BridgeOrchestrator(
     wsServer,
     new EventDetector(),
+    new RecommendationEngine(),
     overrides.hasLlm === false ? null : llmProvider,
     { summonerName: "TestPlayer", llmCooldownMs: 60_000 },
     overrides.clock ?? (() => 1000),

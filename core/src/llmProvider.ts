@@ -1,5 +1,6 @@
 import { z } from "zod";
-import type { ParsedGameState, RecommendedItem, Strategy, RolePosition } from "./types.js";
+import type { ParsedGameState, RecommendedItem, Strategy, RolePosition, RiskLevel } from "./types.js";
+import { DEFAULT_RISK_LEVEL } from "./types.js";
 import { getGamePhase } from "./stateMinifier.js";
 import { ClaudeProvider } from "./providers/claudeProvider.js";
 import { OpenAiProvider } from "./providers/openaiProvider.js";
@@ -48,7 +49,29 @@ Adjust analysis based on the player's role:
 - JUNGLE: Drake/Baron/Herald control, which lanes need ganks, when to invade.
 - MIDDLE: roam timing, wave management before roaming, mid-tier objective priority.
 
+Summoner spells: each enemy lists their summoner spells (e.g. [Flash, Ignite]).
+Use them to judge kill threat and trade risk: Ignite = early all-in/kill pressure, Exhaust = anti-dive/anti-burst, Heal = sustain in 2v2, Teleport = map pressure, Cleanse = CC resistant.
+HONESTY RULE: you do NOT know enemy cooldowns — never state that an enemy spell "is down" or "is on cooldown" as fact. If a play depends on it, phrase it conditionally: "if their Flash is down, …". The only certainty is a DEAD enemy (their cooldowns reset on respawn).
+
+"immediateAction" is the single most important line the player reads — make it the concrete play for RIGHT NOW.
+
 Be specific. Reference actual numbers (CS lead, kill lead, vision score, gold gap). Do not give generic advice.`;
+
+/**
+ * Per-request directive appended to the user prompt. Keeps the cached system
+ * prompt intact while shifting only the aggressiveness of the single recommendation.
+ */
+export function riskDirective(risk: RiskLevel): string {
+  switch (risk) {
+    case "safe":
+      return `Playstyle: SAFE. Bias toward survival and tempo over kills. Prefer disengage, safe farming, and objective trades. Only suggest an all-in when it is near risk-free. Lead "immediateAction" with the cautious play.`;
+    case "risky":
+      return `Playstyle: AGGRESSIVE. Reward proactive, high-upside plays. When an all-in, dive, or pick is realistic, call it explicitly in "immediateAction" (e.g. "Flash in, Ignite, Q — if their Flash is down they die"). Stay within the HONESTY RULE: conditional, never claiming enemy cooldowns as fact.`;
+    case "normal":
+    default:
+      return `Playstyle: BALANCED. Weigh risk and reward normally for this game state.`;
+  }
+}
 
 const LlmResponseSchema = z.object({
   itemReasoning: z.string().optional(),
@@ -88,7 +111,7 @@ export interface ModelInfo {
 export interface LlmProvider {
   readonly name: string;
   listModels(): Promise<ModelInfo[]>;
-  getAnalysis(state: ParsedGameState): Promise<LlmAnalysis>;
+  getAnalysis(state: ParsedGameState, risk?: RiskLevel): Promise<LlmAnalysis>;
 }
 
 export type ProviderType = "claude" | "openai" | "gemini";
@@ -130,12 +153,21 @@ function findLaneOpponent(state: ParsedGameState, myPos: RolePosition) {
   return state.enemies.find((e) => e.position === opponentPos);
 }
 
+function formatSpells(player: { summonerSpells?: { summonerSpellOne?: { displayName: string }; summonerSpellTwo?: { displayName: string } } }): string {
+  const names = [
+    player.summonerSpells?.summonerSpellOne?.displayName,
+    player.summonerSpells?.summonerSpellTwo?.displayName,
+  ].filter((n): n is string => !!n && n.length > 0);
+  return names.length ? ` {${names.join(", ")}}` : "";
+}
+
 async function formatOpponent(primaryOpponent: any, myPos: RolePosition): Promise<string> {
   if (!primaryOpponent) return "Opponent: unknown (position data unavailable)";
   const opponentAbilityStr = await formatAbilities(primaryOpponent.championName);
   const tags = ddragon.getChampionTags(primaryOpponent.championName);
   const tagStr = tags.length ? ` [${tags.join(", ")}]` : "";
-  return `Opponent (${primaryOpponent.position || myPos}): ${primaryOpponent.championName}${tagStr} — KDA ${primaryOpponent.scores.kills}/${primaryOpponent.scores.deaths}/${primaryOpponent.scores.assists}, CS ${primaryOpponent.scores.creepScore}, Lvl ${primaryOpponent.level}${primaryOpponent.isDead ? ", DEAD" : ""}${opponentAbilityStr}`;
+  const spellStr = formatSpells(primaryOpponent);
+  return `Opponent (${primaryOpponent.position || myPos}): ${primaryOpponent.championName}${tagStr}${spellStr} — KDA ${primaryOpponent.scores.kills}/${primaryOpponent.scores.deaths}/${primaryOpponent.scores.assists}, CS ${primaryOpponent.scores.creepScore}, Lvl ${primaryOpponent.level}${primaryOpponent.isDead ? ", DEAD" : ""}${opponentAbilityStr}`;
 }
 
 function formatEnemiesWithTags(enemies: ParsedGameState["enemies"]): string {
@@ -144,11 +176,12 @@ function formatEnemiesWithTags(enemies: ParsedGameState["enemies"]): string {
     const tags = ddragon.getChampionTags(e.championName);
     const tagStr = tags.length ? ` [${tags.join(", ")}]` : "";
     const pos = e.position ? ` (${e.position})` : "";
-    return `${e.championName}${tagStr}${pos} Lvl ${e.level} ${e.scores.kills}/${e.scores.deaths}/${e.scores.assists}`;
+    const spellStr = formatSpells(e);
+    return `${e.championName}${tagStr}${spellStr}${pos} Lvl ${e.level} ${e.scores.kills}/${e.scores.deaths}/${e.scores.assists}`;
   }).join(", ");
 }
 
-export async function buildUserPrompt(state: ParsedGameState): Promise<string> {
+export async function buildUserPrompt(state: ParsedGameState, risk: RiskLevel = DEFAULT_RISK_LEVEL): Promise<string> {
   const phase = getGamePhase(state.gameTime);
   const myPos = (state.localPlayer.position || "UNKNOWN") as RolePosition;
   const myVision = state.localPlayer.scores.wardScore;
@@ -156,6 +189,7 @@ export async function buildUserPrompt(state: ParsedGameState): Promise<string> {
   const primaryOpponent = findLaneOpponent(state, myPos);
   const myTags = ddragon.getChampionTags(state.localPlayer.championName);
   const myTagStr = myTags.length ? ` [${myTags.join(", ")}]` : "";
+  const mySpellStr = formatSpells(state.localPlayer);
 
   const [myAbilityStr, opponentStr] = await Promise.all([
     formatAbilities(state.localPlayer.championName),
@@ -166,7 +200,7 @@ export async function buildUserPrompt(state: ParsedGameState): Promise<string> {
   const enemiesWithTags = formatEnemiesWithTags(state.enemies);
 
   return `Game Phase: ${phase} | Time: ${Math.floor(state.gameTime / 60)}m
-My champion: ${state.localPlayer.championName}${myTagStr}${myAbilityStr}
+My champion: ${state.localPlayer.championName}${myTagStr}${mySpellStr}${myAbilityStr}
 My role: ${myPos}${myPos === "UTILITY" ? ` (Vision: ${Math.round(myVision)})` : ""}
 My stats: Lvl ${state.localPlayer.level}, Gold ${state.activePlayer.currentGold}, KDA ${state.localPlayer.scores.kills}/${state.localPlayer.scores.deaths}/${state.localPlayer.scores.assists}, CS ${state.localPlayer.scores.creepScore}
 My items: ${state.localPlayer.items.map(i => i.displayName).join(", ") || "None"}
@@ -175,6 +209,7 @@ Enemies: ${enemiesWithTags}
 
 ${opponentStr}
 ${roleContext}
+${riskDirective(risk)}
 Respond with the JSON object as instructed.`;
 }
 

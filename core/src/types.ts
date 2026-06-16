@@ -27,6 +27,17 @@ export const ItemSchema = z.object({
   slot: z.number(),
 });
 
+export const SummonerSpellSchema = z.object({
+  displayName: z.string().catch(""),
+});
+
+export const SummonerSpellsSchema = z
+  .object({
+    summonerSpellOne: SummonerSpellSchema.optional(),
+    summonerSpellTwo: SummonerSpellSchema.optional(),
+  })
+  .optional();
+
 export const PlayerSchema = z.object({
   championName: z.string(),
   isBot: z.boolean(),
@@ -35,6 +46,7 @@ export const PlayerSchema = z.object({
   level: z.number(),
   position: z.string().catch(""),
   rawChampionName: z.string(),
+  summonerSpells: SummonerSpellsSchema,
   scores: z.object({
     assists: z.number(),
     creepScore: z.number(),
@@ -68,6 +80,15 @@ export type GameData = z.infer<typeof GameDataSchema>;
 export type AllGameData = z.infer<typeof AllGameDataSchema>;
 
 export type RolePosition = "TOP" | "JUNGLE" | "MIDDLE" | "BOTTOM" | "UTILITY" | "UNKNOWN" | string;
+
+/**
+ * Playstyle the user wants the coaching tuned to.
+ * Shapes only the *tone/aggressiveness* of the single recommendation — never
+ * produces multiple parallel recommendations.
+ */
+export type RiskLevel = "safe" | "normal" | "risky";
+
+export const DEFAULT_RISK_LEVEL: RiskLevel = "normal";
 
 // --- Interne Bridge-Typen ---
 

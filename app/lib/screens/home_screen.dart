@@ -1,11 +1,12 @@
 // ignore_for_file: lines_longer_than_80_chars
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lol_coach/providers.dart';
 import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/ws_client.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/game_view.dart';
-import 'package:provider/provider.dart';
 
 String _providerLabel(String type) => switch (type) {
       'claude' => 'Claude',
@@ -16,15 +17,17 @@ String _providerLabel(String type) => switch (type) {
 
 bool _isAiProvider(String type) => type != 'none' && type.isNotEmpty;
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({this.onOpenSettings, super.key});
 
   final VoidCallback? onOpenSettings;
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<CoachService>(
-      builder: (context, ws, _) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ws = ref.watch(coachServiceProvider);
+    return ListenableBuilder(
+      listenable: ws,
+      builder: (context, _) {
         return Scaffold(
           appBar: AppBar(
             title: Row(
@@ -94,6 +97,9 @@ class HomeScreen extends StatelessWidget {
           recommendationTime: ws.recommendationTime,
           tokenUsage: ws.lastTokenUsage,
           isBudgetExceeded: ws.isBudgetExceeded,
+          riskLevel: _isAiProvider(ws.activeProviderType) ? ws.riskLevel : null,
+          onRiskLevelChanged:
+              _isAiProvider(ws.activeProviderType) ? ws.setRiskLevel : null,
         );
     }
   }

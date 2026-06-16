@@ -1,6 +1,8 @@
+import { singleton } from "tsyringe";
 import type { LlmProvider } from "./llmProvider.js";
 import { CacheService } from "./cacheService.js";
-import type { ParsedGameState, ItemRecommendation, WsTokenUsage } from "./types.js";
+import type { ParsedGameState, ItemRecommendation, WsTokenUsage, RiskLevel } from "./types.js";
+import { DEFAULT_RISK_LEVEL } from "./types.js";
 import { Logger } from "./logger.js";
 import { ddragon } from "./ddragonService.js";
 
@@ -10,12 +12,21 @@ export interface RecommendationCallbacks {
   onLlmSuccess: (rec: ItemRecommendation, tokenUsage?: WsTokenUsage) => void;
 }
 
+@singleton()
 export class RecommendationEngine {
   private llmProvider: LlmProvider | null = null;
   private readonly cache = new CacheService();
   private sessionInputTokens = 0;
   private sessionOutputTokens = 0;
   private tokenBudget = 0;
+  private riskLevel: RiskLevel = DEFAULT_RISK_LEVEL;
+
+  setRiskLevel(level: RiskLevel): void {
+    if (this.riskLevel !== level) {
+      Logger.info(`[Engine] Risk level changed: ${this.riskLevel} → ${level}`);
+      this.riskLevel = level;
+    }
+  }
 
   setLlmProvider(provider: LlmProvider | null): void {
     const oldName = this.llmProvider?.name ?? "none";
@@ -55,7 +66,7 @@ export class RecommendationEngine {
       return;
     }
 
-    const cacheKey = this.cache.buildKey(state);
+    const cacheKey = this.cache.buildKey(state, this.riskLevel);
     const cached = this.cache.get(cacheKey);
 
     let llmAnalysis: Awaited<ReturnType<LlmProvider["getAnalysis"]>>;
@@ -64,7 +75,7 @@ export class RecommendationEngine {
       llmAnalysis = cached;
     } else {
       try {
-        llmAnalysis = await this.llmProvider!.getAnalysis(state);
+        llmAnalysis = await this.llmProvider!.getAnalysis(state, this.riskLevel);
         if (llmAnalysis.tokenUsage) {
           this.sessionInputTokens += llmAnalysis.tokenUsage.input;
           this.sessionOutputTokens += llmAnalysis.tokenUsage.output;

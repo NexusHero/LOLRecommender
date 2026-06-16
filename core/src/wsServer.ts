@@ -1,16 +1,26 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
+import { inject, singleton } from "tsyringe";
 import type { WsMessage } from "./types.js";
 import { Logger } from "./logger.js";
+import { WSS_TOKEN } from "./tokens.js";
 
+@singleton()
 export class BridgeWsServer {
   private clients = new Set<WebSocket>();
+  private onMessage?: (ws: WebSocket, message: any) => void;
 
-  constructor(
-    private readonly wss: WebSocketServer,
-    private readonly onMessage?: (ws: WebSocket, message: any) => void
-  ) {
+  constructor(@inject(WSS_TOKEN) private readonly wss: WebSocketServer) {
     this.setupHandlers();
+  }
+
+  /**
+   * BridgeWsServer <-> MessageRouter is a genuine constructor cycle (the
+   * router needs the orchestrator, which needs this wsServer). Set after
+   * construction by the composition root instead of via constructor param.
+   */
+  setMessageHandler(handler: (ws: WebSocket, message: any) => void): void {
+    this.onMessage = handler;
   }
 
   private setupHandlers() {

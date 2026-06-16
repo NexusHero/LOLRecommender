@@ -8,6 +8,7 @@ import 'package:lol_coach/models/model_info.dart';
 import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/models/token_usage.dart';
 import 'package:lol_coach/models/ws_message.dart';
+import 'package:lol_coach/services/storage_service.dart';
 import 'package:lol_coach/services/ws_client.dart';
 
 String? _loadCoreSecret() {
@@ -20,12 +21,14 @@ String? _loadCoreSecret() {
 }
 
 class CoachService extends ChangeNotifier {
-  CoachService(this._client) {
+  CoachService(this._client, [this._storage]) {
+    _riskLevel = _storage?.riskLevel ?? 'normal';
     _client.addListener(_onClientStatusChanged);
     _subscription = _client.messages.listen(_onMessage);
   }
 
   final WsClient _client;
+  final StorageService? _storage;
   late final StreamSubscription<String> _subscription;
 
   ParsedGameState? _gameState;
@@ -53,10 +56,12 @@ class CoachService extends ChangeNotifier {
   String? _activeModel;
   String? _activeApiKey;
   int _activeTokenBudget = 0;
+  String _riskLevel = 'normal';
 
   ConnectionStatus get status => _client.status;
   String? get lastError => _client.lastError;
   bool get isConnected => _client.isConnected;
+  String get riskLevel => _riskLevel;
 
   String? get lastLlmError => _lastLlmError;
   String get activeProviderType => _activeProviderType ?? 'none';
@@ -121,6 +126,11 @@ class CoachService extends ChangeNotifier {
   }
 
   void _sendInitialSetup() {
+    _client.send(jsonEncode({
+      'event': 'SET_RISK_LEVEL',
+      'riskLevel': _riskLevel,
+    }),);
+
     if (_activeSummonerName != null && _activeSummonerName!.isNotEmpty) {
       _client.send(jsonEncode({
         'event': 'SET_SUMMONER',
@@ -160,6 +170,21 @@ class CoachService extends ChangeNotifier {
     _lastLlmError = null;
     notifyListeners();
     _client.send(jsonEncode({'event': 'TRIGGER_ANALYSIS'}));
+  }
+
+  /// Sets the coaching playstyle ('safe' | 'normal' | 'risky'). Persists the
+  /// choice and pushes it live so the next recommendation reflects it.
+  void setRiskLevel(String level) {
+    if (_riskLevel == level) return;
+    _riskLevel = level;
+    unawaited(_storage?.setRiskLevel(level));
+    if (isConnected) {
+      _client.send(jsonEncode({
+        'event': 'SET_RISK_LEVEL',
+        'riskLevel': level,
+      }),);
+    }
+    notifyListeners();
   }
 
   void loadModels(String provider, String apiKey) {

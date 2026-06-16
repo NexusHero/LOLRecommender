@@ -3,6 +3,7 @@ import WebSocket from "ws";
 import { BridgeWsServer } from "../wsServer";
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
+import { RecommendationEngine } from "../recommendationEngine";
 import { MessageRouter } from "../messageRouter";
 import { makeRawGameData, makePlayer } from "./fixtures";
 import type { WsMessage } from "../types";
@@ -51,14 +52,13 @@ describe("System: Full Bridge Wiring (e2e)", () => {
     let _orchestrator: BridgeOrchestrator;
     let _messageRouter: MessageRouter;
 
-    wsServer = new BridgeWsServer(
-      wss,
-      (_ws, msg) => _messageRouter.handle(_ws, msg),
-    );
+    wsServer = new BridgeWsServer(wss);
+    wsServer.setMessageHandler((_ws, msg) => _messageRouter.handle(_ws, msg));
 
     _orchestrator = new BridgeOrchestrator(
       wsServer,
       new EventDetector(),
+      new RecommendationEngine(),
       null,
       { summonerName: "TestPlayer", llmCooldownMs: 0 },
     );
@@ -156,6 +156,30 @@ describe("System: Full Bridge Wiring (e2e)", () => {
     await orchestrator.handleGameData(makeRawGameData());
     const messages = await collecting;
     expect(messages.find((m) => m.event === "RECOMMENDATION_UPDATE")).toBeUndefined();
+    client.close();
+  });
+
+  it("system_ClientSendsSetRiskLevel_PropagatesToGetAnalysisCall", async () => {
+    const { createLlmProvider } = jest.requireMock("../llmProvider") as {
+      createLlmProvider: jest.Mock;
+    };
+    const getAnalysis = jest.fn().mockResolvedValue({
+      reasoning: "",
+      strategy: { winCondition: "mid", summary: "", immediateAction: "", lateGamePlan: "" },
+    });
+    createLlmProvider.mockResolvedValue({ name: "mock-provider", getAnalysis });
+
+    const client = new WebSocket(`ws://127.0.0.1:${port}`);
+    await waitForMessage(client, "CONNECTED");
+
+    client.send(JSON.stringify({ event: "SET_LLM_PROVIDER", provider: "claude", apiKey: "sk-test" }));
+    client.send(JSON.stringify({ event: "SET_RISK_LEVEL", riskLevel: "risky" }));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    await orchestrator.handleGameData(makeRawGameData());
+    await waitForMessage(client, "RECOMMENDATION_UPDATE");
+
+    expect(getAnalysis).toHaveBeenCalledWith(expect.anything(), "risky");
     client.close();
   });
 });

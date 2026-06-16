@@ -1,13 +1,20 @@
 import type { WebSocket } from "ws";
-import type { BridgeOrchestrator } from "./orchestrator.js";
+import { inject, singleton } from "tsyringe";
+import { BridgeOrchestrator } from "./orchestrator.js";
 import { Logger } from "./logger.js";
 import type { WsMessage } from "./types.js";
 
 import { createLlmProvider } from "./llmProvider.js";
 import type { ProviderType } from "./llmProvider.js";
+import type { RiskLevel } from "./types.js";
 
+const VALID_RISK_LEVELS: readonly RiskLevel[] = ["safe", "normal", "risky"];
+
+@singleton()
 export class MessageRouter {
-  constructor(private readonly orchestrator: BridgeOrchestrator) {}
+  // Explicit @inject (not reflected design:paramtypes) — see comment in
+  // orchestrator.ts: `tsx`/esbuild doesn't emit that metadata.
+  constructor(@inject(BridgeOrchestrator) private readonly orchestrator: BridgeOrchestrator) {}
 
   async handle(ws: WebSocket, message: Record<string, unknown>): Promise<void> {
     if (message.event === "SET_SUMMONER" && typeof message.summonerName === "string") {
@@ -20,6 +27,15 @@ export class MessageRouter {
 
     if (message.event === "SET_LLM_PROVIDER") {
       await this.handleSetLlmProvider(message);
+    }
+
+    if (message.event === "SET_RISK_LEVEL") {
+      const level = message.riskLevel;
+      if (typeof level === "string" && VALID_RISK_LEVELS.includes(level as RiskLevel)) {
+        this.orchestrator.setRiskLevel(level as RiskLevel);
+      } else {
+        Logger.warn(`[MessageRouter] Ignoring invalid risk level: ${String(level)}`);
+      }
     }
 
     if (message.event === "GET_MODELS") {

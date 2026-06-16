@@ -1,7 +1,8 @@
 import { Anthropic } from "@anthropic-ai/sdk";
 import type { LlmProvider, LlmAnalysis, ModelInfo, TokenUsage } from "../llmProvider.js";
 import { SYSTEM_PROMPT, buildUserPrompt, parseAnalysisResponse } from "../llmProvider.js";
-import type { ParsedGameState } from "../types.js";
+import type { ParsedGameState, RiskLevel } from "../types.js";
+import { DEFAULT_RISK_LEVEL } from "../types.js";
 import { Logger } from "../logger.js";
 
 export const CLAUDE_DEFAULT_MODEL = "claude-haiku-4-5-20251001";
@@ -24,7 +25,7 @@ export class ClaudeProvider implements LlmProvider {
     }));
   }
 
-  async getAnalysis(state: ParsedGameState): Promise<LlmAnalysis> {
+  async getAnalysis(state: ParsedGameState, risk: RiskLevel = DEFAULT_RISK_LEVEL): Promise<LlmAnalysis> {
     try {
       const response = await this.client.messages.create({
         model: this.model,
@@ -37,7 +38,7 @@ export class ClaudeProvider implements LlmProvider {
           },
         ],
         messages: [
-          { role: "user", content: await buildUserPrompt(state) },
+          { role: "user", content: await buildUserPrompt(state, risk) },
         ],
       });
 

@@ -1,5 +1,6 @@
 import { BridgeOrchestrator } from "../orchestrator.js";
 import { EventDetector } from "../eventDetector.js";
+import { RecommendationEngine } from "../recommendationEngine.js";
 import type { BridgeWsServer } from "../wsServer.js";
 import { makeRawGameData, makePlayer, makeActivePlayer } from "./fixtures.js";
 import type { LlmProvider } from "../llmProvider.js";
@@ -34,6 +35,7 @@ describe("Integration: Match Progressions", () => {
     const orchestrator = new BridgeOrchestrator(
       wsServer,
       new EventDetector(),
+      new RecommendationEngine(),
       llmProvider,
       { summonerName: "TestPlayer", llmCooldownMs: 7 * 60 * 1000 },
       clock,

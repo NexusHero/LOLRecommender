@@ -110,6 +110,49 @@ describe("buildUserPrompt", () => {
     expect(prompt).toContain("R=Death Mark");
   });
 
+  it("buildUserPrompt_EnemyHasSummonerSpells_SpellsInPrompt", async () => {
+    const state = makeGameState({
+      localPlayer: makePlayer({ championName: "Ahri", position: "MID" }),
+      enemies: [makePlayer({
+        championName: "Zed",
+        position: "MID",
+        team: "CHAOS",
+        summonerSpells: {
+          summonerSpellOne: { displayName: "Flash" },
+          summonerSpellTwo: { displayName: "Ignite" },
+        },
+      })],
+    });
+
+    const prompt = await buildUserPrompt(state);
+
+    expect(prompt).toContain("{Flash, Ignite}");
+  });
+
+  it("buildUserPrompt_RiskyLevel_ContainsAggressiveDirective", async () => {
+    const state = makeGameState();
+
+    const prompt = await buildUserPrompt(state, "risky");
+
+    expect(prompt).toContain("Playstyle: AGGRESSIVE");
+  });
+
+  it("buildUserPrompt_SafeLevel_ContainsCautiousDirective", async () => {
+    const state = makeGameState();
+
+    const prompt = await buildUserPrompt(state, "safe");
+
+    expect(prompt).toContain("Playstyle: SAFE");
+  });
+
+  it("buildUserPrompt_DefaultLevel_ContainsBalancedDirective", async () => {
+    const state = makeGameState();
+
+    const prompt = await buildUserPrompt(state);
+
+    expect(prompt).toContain("Playstyle: BALANCED");
+  });
+
   it("buildUserPrompt_NoOpponent_ShowsUnknown", async () => {
     const state = makeGameState({
       localPlayer: makePlayer({ position: "TOP" }),

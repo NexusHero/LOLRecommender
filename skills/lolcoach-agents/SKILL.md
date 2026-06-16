@@ -37,8 +37,8 @@ Flutter Desktop App  (macOS / Windows / Linux)
 
 | Component | Tech |
 |-----------|------|
-| Core | Node.js 18+, TypeScript ~5.8 strict, Zod v3, ws, Jest 29 + ts-jest 29 |
-| App (UI) | Flutter 3.x, Dart, Provider, web_socket_channel, flutter_secure_storage |
+| Core | Node.js 18+, TypeScript ~5.8 strict, Zod v3, ws, tsyringe (DI), Jest 29 + ts-jest 29 |
+| App (UI) | Flutter 3.x, Dart, flutter_riverpod (DI/state), web_socket_channel, flutter_secure_storage |
 | Wire protocol | `core/asyncapi.yml` |
 
 ---
@@ -47,8 +47,10 @@ Flutter Desktop App  (macOS / Windows / Linux)
 
 | File | Role |
 |------|------|
-| `core/src/index.ts` | Entry point — DI wiring, `DEFAULT_LLM_COOLDOWN_MS` |
-| `core/src/orchestrator.ts` | Wires events → recommendations → broadcast |
+| `core/src/index.ts` | Composition root — registers tokens + `container.resolve()`s the tsyringe DI graph, `DEFAULT_LLM_COOLDOWN_MS` |
+| `core/src/tokens.ts` | tsyringe injection tokens for non-class deps (config, nullable `LlmProvider`, `WebSocketServer`, clock) |
+| `core/src/orchestrator.ts` | Wires events → recommendations → broadcast (singleton, `@inject()`-decorated) |
+| `app/lib/providers.dart` | Riverpod provider definitions (`storageServiceProvider`, `coachServiceProvider`, etc.) — services stay plain `ChangeNotifier`s, riverpod only manages construction/lifecycle |
 | `core/src/eventDetector.ts` | Emits typed events; exports `HIGH_GOLD_THRESHOLD = 1000` |
 | `core/src/poller.ts` | Polls Riot API every second; exports `MAX_POLL_FAILURES = 3` |
 | `core/src/heuristic.ts` | Rule-based counter-item logic; reads from `src/data/*.json` |
@@ -60,6 +62,16 @@ Flutter Desktop App  (macOS / Windows / Linux)
 | `app/lib/widgets/game_top_bar.dart` | Extracted top bar widget |
 
 ---
+
+## DI Frameworks — tsyringe (core) / riverpod (app)
+
+Both sides use constructor injection through a real container, not hand-rolled wiring. Three non-obvious gotchas, found the hard way — don't rediscover them:
+
+- **tsyringe + `null` via `useValue` is broken.** `isValueProvider` checks `provider.useValue != undefined`, and `null != undefined` is `false` in JS — so `container.register(TOKEN, { useValue: null })` silently mis-registers as a class provider and throws `TypeInfo not known for "undefined"` at resolve time. Use `{ useFactory: () => null }` instead for any token whose value can legitimately be `null` (see `LLM_PROVIDER_TOKEN` in `index.ts`).
+- **`tsx`/esbuild (the `npm run dev` / `npm run mock-lol` runner) does not emit `design:paramtypes` metadata**, even though `tsc`/`ts-jest` do. Any constructor param relying on *implicit* type-based resolution (no explicit `@inject()`) silently resolves to `undefined` under `tsx` while working fine under Jest — a passing test suite does not prove the real dev-mode process works. Every constructor param in this codebase is explicitly `@inject()`'d for this reason, even class-typed ones (see `orchestrator.ts`). Always smoke-test DI changes by actually running `npx tsx src/index.ts`, not just `npm test`.
+- **tsyringe registrations are Transient by default.** `container.resolve(X)` builds a fresh dependency graph every call — if `BridgeWsServer` isn't `@singleton()`, three separate `container.resolve()` calls (`wsServer`, `orchestrator`, `messageRouter`) each construct their own independent `BridgeWsServer` instance wrapping the same underlying socket, all attaching duplicate `"connection"` listeners (visible as duplicate `CONNECTED` messages to one client). Every class actually resolved through the container in `index.ts` (`EventDetector`, `RecommendationEngine`, `BridgeWsServer`, `BridgeOrchestrator`, `MessageRouter`) is `@singleton()`, not `@injectable()`.
+- **`BridgeWsServer` ↔ `MessageRouter` is a genuine constructor cycle** (router needs orchestrator, orchestrator needs wsServer, wsServer needs to call the router on incoming messages). No DI container resolves a true cycle — it's broken via method injection: `BridgeWsServer.setMessageHandler()` is called once, after both are resolved, in `index.ts`.
+- **`flutter_riverpod` has no `ChangeNotifierProvider`** (removed/never shipped in modern riverpod). Services stay plain `ChangeNotifier`s; riverpod's plain `Provider` only manages construction + disposal. Widgets that need to rebuild on internal `notifyListeners()` calls must wrap with Flutter's own `ListenableBuilder(listenable: ref.watch(xProvider), builder: ...)` — riverpod's `ref.watch` alone won't trigger a rebuild since the provider's *value* (the instance) never changes.
 
 ## Domain Knowledge
 

@@ -2,6 +2,7 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
+  setupFiles: ["reflect-metadata"],
   moduleNameMapper: {
     // resolve .js imports to .ts files for ts-jest
     "^(\\.{1,2}/.*)\\.js$": "$1",

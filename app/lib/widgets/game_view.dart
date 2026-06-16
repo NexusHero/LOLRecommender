@@ -18,6 +18,8 @@ class GameView extends StatelessWidget {
     this.tokenUsage,
     this.tokenBudget = 0,
     this.isBudgetExceeded = false,
+    this.riskLevel,
+    this.onRiskLevelChanged,
   });
   final ParsedGameState gameState;
   final ItemRecommendation? recommendation;
@@ -26,6 +28,8 @@ class GameView extends StatelessWidget {
   final TokenUsage? tokenUsage;
   final int tokenBudget;
   final bool isBudgetExceeded;
+  final String? riskLevel;
+  final ValueChanged<String>? onRiskLevelChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +38,11 @@ class GameView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          GameTopBar(gameState: gameState),
+          GameTopBar(
+            gameState: gameState,
+            riskLevel: riskLevel,
+            onRiskLevelChanged: onRiskLevelChanged,
+          ),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),

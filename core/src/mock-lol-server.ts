@@ -53,6 +53,10 @@ interface ScenarioPlayer {
   scores: { assists: number; creepScore: number; deaths: number; kills: number; wardScore: number };
   skinID: number;
   summonerName: string;
+  summonerSpells: {
+    summonerSpellOne: { displayName: string };
+    summonerSpellTwo: { displayName: string };
+  };
   team: Team;
 }
 
@@ -84,6 +88,10 @@ function player(
     scores: { assists: 0, creepScore: 45, deaths: 0, kills: 1, wardScore: 5 },
     skinID: 0,
     summonerName,
+    summonerSpells: {
+      summonerSpellOne: { displayName: "Flash" },
+      summonerSpellTwo: { displayName: team === "CHAOS" ? "Ignite" : "Teleport" },
+    },
     team,
     ...overrides,
   };

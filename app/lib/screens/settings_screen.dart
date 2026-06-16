@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lol_coach/controllers/settings_controller.dart';
-import 'package:lol_coach/services/coach_service.dart';
-import 'package:lol_coach/services/storage_service.dart';
+import 'package:lol_coach/providers.dart';
 import 'package:lol_coach/widgets/connection_form.dart';
-import 'package:provider/provider.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({required this.onConnected, super.key});
   final VoidCallback onConnected;
 
   @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late SettingsController _ctrl;
 
   @override
   void initState() {
     super.initState();
     _ctrl = SettingsController(
-      storage: context.read<StorageService>(),
-      coach: context.read<CoachService>(),
+      storage: ref.read(storageServiceProvider),
+      coach: ref.read(coachServiceProvider),
       onConnected: widget.onConnected,
     );
   }

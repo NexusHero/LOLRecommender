@@ -1,6 +1,7 @@
 import { z } from "zod/v3";
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
+import { RecommendationEngine } from "../recommendationEngine";
 import type { BridgeWsServer } from "../wsServer";
 import { makeRawGameData, makePlayer } from "./fixtures";
 import type { WsMessage } from "../types";
@@ -113,6 +114,7 @@ describe("AsyncAPI Contract: broadcast messages match schema", () => {
     const orchestrator = new BridgeOrchestrator(
       wsServer,
       new EventDetector(),
+      new RecommendationEngine(),
       llmProvider,
       { summonerName: "TestPlayer", llmCooldownMs: 0 },
       () => Date.now(),
