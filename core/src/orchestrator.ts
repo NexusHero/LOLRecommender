@@ -1,12 +1,17 @@
 import { inject, singleton } from "tsyringe";
 import { parseGameState } from "./parser.js";
-import { EventDetector } from "./eventDetector.js";
-import { BridgeWsServer } from "./wsServer.js";
 import type { LlmProvider } from "./llmProvider.js";
 import type { AllGameData, ParsedGameState, RiskLevel } from "./types.js";
+import type { IEventDetector, IRecommendationEngine, IWsBroadcaster } from "./interfaces.js";
 import { Logger } from "./logger.js";
-import { RecommendationEngine } from "./recommendationEngine.js";
-import { CLOCK_TOKEN, LLM_PROVIDER_TOKEN, ORCHESTRATOR_CONFIG_TOKEN } from "./tokens.js";
+import {
+  CLOCK_TOKEN,
+  EVENT_DETECTOR_TOKEN,
+  LLM_PROVIDER_TOKEN,
+  ORCHESTRATOR_CONFIG_TOKEN,
+  RECOMMENDATION_ENGINE_TOKEN,
+  WS_BROADCASTER_TOKEN,
+} from "./tokens.js";
 
 export interface OrchestratorConfig {
   summonerName: string;
@@ -20,14 +25,14 @@ export class BridgeOrchestrator {
   private correlationCounter = 0;
 
   constructor(
-    // Every param is explicitly @inject()'d, even the class-typed ones —
-    // `tsx`/esbuild (used by `npm run dev`) does not emit the
-    // `design:paramtypes` metadata tsyringe needs for implicit type-based
-    // resolution, so relying on reflection alone breaks the dev runner
-    // while still working under ts-jest/tsc. Explicit tokens work under both.
-    @inject(BridgeWsServer) private readonly wsServer: BridgeWsServer,
-    @inject(EventDetector) private readonly eventDetector: EventDetector,
-    @inject(RecommendationEngine) private readonly engine: RecommendationEngine,
+    // Depends on abstractions (DIP), not the concrete classes — the tokens
+    // are `useToken` aliases to the existing singletons in index.ts, so this
+    // still resolves to the one shared instance of each, just through an
+    // interface. `tsx`/esbuild doesn't emit `design:paramtypes` metadata, so
+    // every param is explicitly @inject()'d regardless (see tokens.ts).
+    @inject(WS_BROADCASTER_TOKEN) private readonly wsServer: IWsBroadcaster,
+    @inject(EVENT_DETECTOR_TOKEN) private readonly eventDetector: IEventDetector,
+    @inject(RECOMMENDATION_ENGINE_TOKEN) private readonly engine: IRecommendationEngine,
     @inject(LLM_PROVIDER_TOKEN) llmProvider: LlmProvider | null,
     @inject(ORCHESTRATOR_CONFIG_TOKEN) private readonly config: OrchestratorConfig,
     @inject(CLOCK_TOKEN) private readonly clock: () => number = Date.now,

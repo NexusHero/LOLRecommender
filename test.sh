@@ -251,14 +251,18 @@ run_app() {
     fi
   fi
 
-  # Build the test file list
-  local test_dirs=(
+  # Build the test file list (only include paths that exist)
+  local _candidates=(
     test/models
     test/services
     test/screens
     test/widgets/recommendation_panel_test.dart
     test/widgets/connection_form_test.dart
   )
+  local test_dirs=()
+  for _p in "${_candidates[@]}"; do
+    [[ -e "$_p" ]] && test_dirs+=("$_p")
+  done
 
   if $GOLDENS; then
     test_dirs+=("test/widgets/recommendation_panel_golden_test.dart")

@@ -1,12 +1,13 @@
 import { singleton } from "tsyringe";
 import type { ParsedGameState, GameEvent, Player } from "./types.js";
+import type { IEventDetector } from "./interfaces.js";
 import { config } from "./config.js";
 
 const TICK_INTERVAL_SEC = 30;
 export const HIGH_GOLD_THRESHOLD = config.game.highGoldThreshold;
 
 @singleton()
-export class EventDetector {
+export class EventDetector implements IEventDetector {
   private lastState: ParsedGameState | null = null;
 
   detect(current: ParsedGameState): GameEvent[] {

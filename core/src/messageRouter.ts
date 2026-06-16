@@ -10,44 +10,60 @@ import type { RiskLevel } from "./types.js";
 
 const VALID_RISK_LEVELS: readonly RiskLevel[] = ["safe", "normal", "risky"];
 
+type MessageHandler = (ws: WebSocket, message: Record<string, unknown>) => Promise<void> | void;
+
 @singleton()
 export class MessageRouter {
+  // Dispatch table instead of an if-chain on message.event — adding a new
+  // event type means adding a map entry, not editing existing branches (OCP).
+  // Built in the constructor body (not as a field initializer): field
+  // initializers run in declaration order, and this one must run *after*
+  // the handler arrow-function fields below are assigned, not before.
+  private readonly handlers: ReadonlyMap<string, MessageHandler>;
+
   // Explicit @inject (not reflected design:paramtypes) — see comment in
   // orchestrator.ts: `tsx`/esbuild doesn't emit that metadata.
-  constructor(@inject(BridgeOrchestrator) private readonly orchestrator: BridgeOrchestrator) {}
-
-  async handle(ws: WebSocket, message: Record<string, unknown>): Promise<void> {
-    if (message.event === "SET_SUMMONER" && typeof message.summonerName === "string") {
-      this.orchestrator.setSummonerName(message.summonerName);
-    }
-
-    if (message.event === "TRIGGER_ANALYSIS") {
-      await this.orchestrator.triggerManualAnalysis();
-    }
-
-    if (message.event === "SET_LLM_PROVIDER") {
-      await this.handleSetLlmProvider(message);
-    }
-
-    if (message.event === "SET_RISK_LEVEL") {
-      const level = message.riskLevel;
-      if (typeof level === "string" && VALID_RISK_LEVELS.includes(level as RiskLevel)) {
-        this.orchestrator.setRiskLevel(level as RiskLevel);
-      } else {
-        Logger.warn(`[MessageRouter] Ignoring invalid risk level: ${String(level)}`);
-      }
-    }
-
-    if (message.event === "GET_MODELS") {
-      await this.handleGetModels(ws, message);
-    }
-
-    if (message.event === "VALIDATE_KEY") {
-      await this.handleValidateKey(ws, message);
-    }
+  constructor(@inject(BridgeOrchestrator) private readonly orchestrator: BridgeOrchestrator) {
+    this.handlers = new Map([
+      ["SET_SUMMONER", this.handleSetSummoner],
+      ["TRIGGER_ANALYSIS", this.handleTriggerAnalysis],
+      ["SET_LLM_PROVIDER", this.handleSetLlmProvider],
+      ["SET_RISK_LEVEL", this.handleSetRiskLevel],
+      ["GET_MODELS", this.handleGetModels],
+      ["VALIDATE_KEY", this.handleValidateKey],
+    ]);
   }
 
-  private async handleGetModels(ws: WebSocket, message: Record<string, unknown>): Promise<void> {
+  async handle(ws: WebSocket, message: Record<string, unknown>): Promise<void> {
+    const event = message.event;
+    if (typeof event !== "string") return;
+
+    const handler = this.handlers.get(event);
+    if (!handler) return;
+
+    await handler(ws, message);
+  }
+
+  private handleSetSummoner: MessageHandler = (_ws, message) => {
+    if (typeof message.summonerName === "string") {
+      this.orchestrator.setSummonerName(message.summonerName);
+    }
+  };
+
+  private handleTriggerAnalysis: MessageHandler = async () => {
+    await this.orchestrator.triggerManualAnalysis();
+  };
+
+  private handleSetRiskLevel: MessageHandler = (_ws, message) => {
+    const level = message.riskLevel;
+    if (typeof level === "string" && VALID_RISK_LEVELS.includes(level as RiskLevel)) {
+      this.orchestrator.setRiskLevel(level as RiskLevel);
+    } else {
+      Logger.warn(`[MessageRouter] Ignoring invalid risk level: ${String(level)}`);
+    }
+  };
+
+  private handleGetModels: MessageHandler = async (ws, message) => {
     const providerType = message.provider as ProviderType | undefined;
     const apiKey = message.apiKey as string | undefined;
 
@@ -63,9 +79,9 @@ export class MessageRouter {
     } catch (err) {
       ws.send(JSON.stringify({ event: "MODELS_ERROR", error: err instanceof Error ? err.message : String(err) }));
     }
-  }
+  };
 
-  private async handleValidateKey(ws: WebSocket, message: Record<string, unknown>): Promise<void> {
+  private handleValidateKey: MessageHandler = async (ws, message) => {
     const providerType = message.provider as ProviderType | undefined;
     const apiKey = message.apiKey as string | undefined;
 
@@ -81,9 +97,9 @@ export class MessageRouter {
     } catch (err) {
       ws.send(JSON.stringify({ event: "KEY_INVALID", provider: providerType, error: err instanceof Error ? err.message : String(err) }));
     }
-  }
+  };
 
-  private async handleSetLlmProvider(message: Record<string, unknown>): Promise<void> {
+  private handleSetLlmProvider: MessageHandler = async (_ws, message) => {
     const providerType = message.provider as ProviderType | undefined;
     const apiKey = message.apiKey as string | undefined;
     const model = message.model as string | undefined;
@@ -104,5 +120,5 @@ export class MessageRouter {
       Logger.error("[MessageRouter] Failed to create LLM provider:", err);
       this.orchestrator.setLlmProvider(null);
     }
-  }
+  };
 }

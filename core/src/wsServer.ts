@@ -2,11 +2,12 @@ import { WebSocketServer, WebSocket } from "ws";
 import type { IncomingMessage } from "http";
 import { inject, singleton } from "tsyringe";
 import type { WsMessage } from "./types.js";
+import type { IWsBroadcaster } from "./interfaces.js";
 import { Logger } from "./logger.js";
 import { WSS_TOKEN } from "./tokens.js";
 
 @singleton()
-export class BridgeWsServer {
+export class BridgeWsServer implements IWsBroadcaster {
   private clients = new Set<WebSocket>();
   private onMessage?: (ws: WebSocket, message: any) => void;
 

@@ -3,6 +3,7 @@ import type { LlmProvider } from "./llmProvider.js";
 import { CacheService } from "./cacheService.js";
 import type { ParsedGameState, ItemRecommendation, WsTokenUsage, RiskLevel } from "./types.js";
 import { DEFAULT_RISK_LEVEL } from "./types.js";
+import type { IRecommendationEngine } from "./interfaces.js";
 import { Logger } from "./logger.js";
 import { ddragon } from "./ddragonService.js";
 
@@ -13,7 +14,7 @@ export interface RecommendationCallbacks {
 }
 
 @singleton()
-export class RecommendationEngine {
+export class RecommendationEngine implements IRecommendationEngine {
   private llmProvider: LlmProvider | null = null;
   private readonly cache = new CacheService();
   private sessionInputTokens = 0;

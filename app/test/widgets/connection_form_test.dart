@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lol_coach/controllers/settings_controller.dart';
-import 'package:lol_coach/controllers/theme_controller.dart';
 import 'package:lol_coach/providers.dart';
 import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/storage_service.dart';
@@ -32,16 +31,15 @@ Future<SettingsController> _buildCtrl() async {
   return SettingsController(storage: storage, coach: coach);
 }
 
-/// Wraps [ConnectionForm] in the app theme + a ThemeController provider
-/// (required by the embedded AppearanceSection).
+/// Wraps [ConnectionForm] in the app theme + a storage override (the
+/// generated `themeControllerProvider`'s `build()` reads
+/// `storageServiceProvider` — required by the embedded AppearanceSection).
 Future<Widget> _wrap(SettingsController ctrl) async {
   final themeStorage = _FakeStorage();
   await themeStorage.init();
   return ProviderScope(
     overrides: [
-      themeControllerProvider.overrideWithValue(
-        ThemeController(themeStorage),
-      ),
+      storageServiceProvider.overrideWithValue(themeStorage),
     ],
     child: MaterialApp(
       theme: AppTheme.dark,

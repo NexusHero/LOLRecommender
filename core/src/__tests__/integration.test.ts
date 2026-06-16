@@ -1,7 +1,7 @@
 import { BridgeOrchestrator } from "../orchestrator.js";
 import { EventDetector } from "../eventDetector.js";
 import { RecommendationEngine } from "../recommendationEngine.js";
-import type { BridgeWsServer } from "../wsServer.js";
+import type { IWsBroadcaster } from "../interfaces.js";
 import { makeRawGameData, makePlayer, makeActivePlayer } from "./fixtures.js";
 import type { LlmProvider } from "../llmProvider.js";
 import type { WsMessage } from "../types.js";
@@ -17,7 +17,7 @@ describe("Integration: Match Progressions", () => {
       broadcast: jest.fn((msg: WsMessage) => broadcasts.push(msg)),
       clientCount: 1,
       close: jest.fn(),
-    } as unknown as BridgeWsServer;
+    } as unknown as IWsBroadcaster;
 
     const llmProvider = {
       name: "mock-llm",

@@ -16,7 +16,15 @@ import { ddragon } from "./ddragonService.js";
 import { loadOrCreateSecret, secretFilePath } from "./secretManager.js";
 import { config } from "./config.js";
 import { Logger } from "./logger.js";
-import { CLOCK_TOKEN, LLM_PROVIDER_TOKEN, ORCHESTRATOR_CONFIG_TOKEN, WSS_TOKEN } from "./tokens.js";
+import {
+  CLOCK_TOKEN,
+  EVENT_DETECTOR_TOKEN,
+  LLM_PROVIDER_TOKEN,
+  ORCHESTRATOR_CONFIG_TOKEN,
+  RECOMMENDATION_ENGINE_TOKEN,
+  WS_BROADCASTER_TOKEN,
+  WSS_TOKEN,
+} from "./tokens.js";
 
 // DDragon im Hintergrund initialisieren — kein blocking start
 ddragon.init().catch((err) => Logger.error("[Main] DDragon init error:", err));
@@ -78,6 +86,17 @@ container.register(WSS_TOKEN, {
       req.headers["authorization"] === `Bearer ${secret}`,
   }),
 });
+
+// BridgeOrchestrator depends on interfaces (DIP), not the concrete classes.
+// `useToken` is an alias, not a separate registration — resolving the
+// interface token redirects to `container.resolve(BridgeWsServer)` etc.,
+// which (being @singleton()) returns the SAME cached instance used below.
+// Registering these as `useClass` instead would silently construct a
+// second, disconnected singleton per interface — exactly the bug already
+// fixed once for BridgeWsServer's connection-listener duplication.
+container.register(WS_BROADCASTER_TOKEN, { useToken: BridgeWsServer });
+container.register(EVENT_DETECTOR_TOKEN, { useToken: EventDetector });
+container.register(RECOMMENDATION_ENGINE_TOKEN, { useToken: RecommendationEngine });
 
 // BridgeWsServer <-> MessageRouter is a genuine cycle (the router needs the
 // orchestrator, which needs the wsServer, which needs to call the router on

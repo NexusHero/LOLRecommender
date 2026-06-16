@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lol_coach/controllers/theme_controller.dart';
 import 'package:lol_coach/providers.dart';
 import 'package:lol_coach/screens/main_screen.dart';
 import 'package:lol_coach/services/storage_service.dart';
@@ -47,17 +48,16 @@ class LolCoachApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeController = ref.watch(themeControllerProvider);
-    return ListenableBuilder(
-      listenable: themeController,
-      builder: (context, _) => MaterialApp(
-        title: 'LoL Coach',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: themeController.mode,
-        home: const MainScreen(),
-      ),
+    // ref.watch on a generated Notifier provider rebuilds this widget
+    // directly on state change — no ListenableBuilder needed.
+    final themeMode = ref.watch(themeControllerProvider);
+    return MaterialApp(
+      title: 'LoL Coach',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
+      home: const MainScreen(),
     );
   }
 }

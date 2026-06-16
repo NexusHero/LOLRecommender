@@ -1,7 +1,7 @@
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
 import { RecommendationEngine } from "../recommendationEngine";
-import { BridgeWsServer } from "../wsServer";
+import type { IWsBroadcaster } from "../interfaces";
 import { makeRawGameData, makePlayer, makeItem, makeActivePlayer } from "./fixtures";
 import type { WsMessage } from "../types";
 import type { LlmProvider } from "../llmProvider";
@@ -17,7 +17,7 @@ function setup(overrides: {
     broadcast: jest.fn((msg: WsMessage) => broadcasts.push(msg)),
     clientCount: overrides.clientCount ?? 1,
     close: jest.fn(),
-  } as unknown as BridgeWsServer;
+  } as unknown as IWsBroadcaster;
 
   const llmProvider = {
     name: "mock",

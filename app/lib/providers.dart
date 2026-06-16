@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:lol_coach/controllers/theme_controller.dart';
 import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/storage_service.dart';
 import 'package:lol_coach/services/ws_client.dart';
@@ -18,11 +17,9 @@ final wsClientProvider = Provider<WsClient>((ref) {
   return client;
 });
 
-final themeControllerProvider = Provider<ThemeController>((ref) {
-  final controller = ThemeController(ref.watch(storageServiceProvider));
-  ref.onDispose(controller.dispose);
-  return controller;
-});
+// themeControllerProvider is generated from controllers/theme_controller.dart
+// (the @riverpod / Notifier-based "state of the art" pattern — state +
+// mutator in one class, no manual Provider wiring or ListenableBuilder).
 
 /// Mirrors the previous `ChangeNotifierProxyProvider<WsClient, CoachService>`
 /// dependency wiring. These services remain plain `ChangeNotifier`s — riverpod

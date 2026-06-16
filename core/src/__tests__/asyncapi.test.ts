@@ -2,7 +2,7 @@ import { z } from "zod/v3";
 import { BridgeOrchestrator } from "../orchestrator";
 import { EventDetector } from "../eventDetector";
 import { RecommendationEngine } from "../recommendationEngine";
-import type { BridgeWsServer } from "../wsServer";
+import type { IWsBroadcaster } from "../interfaces";
 import { makeRawGameData, makePlayer } from "./fixtures";
 import type { WsMessage } from "../types";
 
@@ -110,7 +110,7 @@ describe("AsyncAPI Contract: broadcast messages match schema", () => {
       broadcast: jest.fn((msg: WsMessage) => broadcasts.push(msg)),
       clientCount: 1,
       close: jest.fn(),
-    } as unknown as BridgeWsServer;
+    } as unknown as IWsBroadcaster;
     const orchestrator = new BridgeOrchestrator(
       wsServer,
       new EventDetector(),
