@@ -1,0 +1,46 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+skinparam sequenceBoxBorderColor #AAAAAA
+
+title WebSocket Authentication — Shared-Secret Handshake
+
+actor "Player" as user
+participant "Flutter App\n(CoachService)" as app
+participant "OS Filesystem\n~/.lolcoach/.secret" as fs
+participant "Bridge\n(index.ts)" as bridge
+participant "ws.Server\n(verifyClient)" as wss
+
+== First Bridge start (one-time) ==
+bridge -> bridge : loadOrCreateSecret()
+note right of bridge
+  No secret yet → generate
+  64 hex chars, write file
+  with mode 0600
+end note
+bridge -> fs : write ~/.lolcoach/.secret (0600)
+bridge -> wss : start WebSocketServer(host 127.0.0.1,\nverifyClient: header == "Bearer <secret>")
+
+== Client connect ==
+user -> app : open app / auto-connect
+app -> fs : _loadCoreSecret()
+fs --> app : <secret> (or null)
+
+alt secret file present
+  app -> wss : WS upgrade\nAuthorization: Bearer <secret>
+  wss -> wss : verifyClient():\nheader == "Bearer <secret>" ?
+  alt token matches
+    wss --> app : 101 Switching Protocols
+    bridge --> app : CONNECTED
+    app -> app : status = connected
+  else token missing / wrong
+    wss --> app : 401 — connection rejected
+    app -> app : status = disconnected\n(auto-reconnect backoff)
+  end
+else no secret file
+  app -> wss : WS upgrade (no Authorization header)
+  wss --> app : 401 — connection rejected
+end
+@enduml

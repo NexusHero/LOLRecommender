@@ -91,6 +91,14 @@ Both sides use constructor injection through a real container, not hand-rolled w
 - `@yao-pkg/pkg` is the packager (`pkg` alias in scripts) — do not replace with the original `pkg`.
 - LLM cooldown default is 7 minutes (`DEFAULT_LLM_COOLDOWN_MS`).
 
+### Architecture Documentation & Diagrams
+
+- The architecture is documented as an **arc42** document in `docs/architecture.md` (Markdown, rendered via pandoc). Keep it in sync when you change a building block, runtime flow, or decision.
+- **All diagrams are authored in PlantUML** — source `.puml` files live in `docs/umls/`, each rendered to a committed `.svg` of the same name that the Markdown embeds. Do **not** hand-edit the `.svg`; edit the `.puml` and re-render.
+- Render with the local CLI: `plantuml -tsvg docs/umls/<name>.puml` (or `plantuml -tsvg docs/umls/*.puml` for all). Commit both the `.puml` and the regenerated `.svg`.
+- Match the existing diagram style — reuse the `skinparam` header block from a neighbouring `.puml` (white background, Arial, sequence arrow/border colours).
+- Existing sequence diagrams to follow as templates: `06_seq_recommendation_engine.puml` (event → `RECOMMENDATION_UPDATE`, incl. budget/cache/Basic-mode), `06_seq_auth_handshake.puml` (shared-secret WS handshake), `05_di_bootstrap.puml` (tsyringe composition root), plus `06_seq_gamestart`, `06_seq_itempurchase`, `06_seq_reconnect`, `06_seq_autostart`.
+
 ### Commit Messages
 
 All commit messages must follow **Conventional Commits** and be written in **English**:

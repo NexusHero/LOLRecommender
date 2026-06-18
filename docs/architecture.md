@@ -128,7 +128,7 @@ The following diagram shows LoL Coach as a black box with all its communication 
 | Bridge ↔ Flutter App | WebSocket | JSON (AsyncAPI 2.6) | :8765 (configurable via `WS_PORT`) |
 | App → OS Keychain | OS API | Binary (encrypted) | macOS Keychain / Windows DPAPI / Linux libsecret |
 
-The complete WebSocket message protocol (message types, payloads, error handling) is specified in `bridge/asyncapi.yml`.
+The complete WebSocket message protocol (message types, payloads, error handling) is specified in `core/asyncapi.yml`.
 
 **Input/Output to channel mapping:**
 
@@ -178,7 +178,7 @@ The system consists of two independent processes communicating over a local WebS
 
 | Interface | Protocol | Schema |
 |-----------|----------|--------|
-| Bridge ↔ Flutter App | WebSocket JSON | `bridge/asyncapi.yml` |
+| Bridge ↔ Flutter App | WebSocket JSON | `core/asyncapi.yml` |
 
 ## Level 2 — Bridge (Whitebox) {#_white_box_building_block_1}
 
@@ -212,10 +212,10 @@ The system consists of two independent processes communicating over a local WebS
 
 ![Flutter App Whitebox](umls/05_flutter_whitebox.svg)
 
-**Directory structure of `flutter_app/lib/`:**
+**Directory structure of `app/lib/`:**
 
 ```
-flutter_app/lib/
+app/lib/
 │
 ├── main.dart               ← Entry point, provider setup, bridge auto-start
 │
@@ -326,6 +326,33 @@ This scenario describes the process model: the Flutter app starts the Bridge as 
 - On Windows, `EPERM` (elevated integrity level mismatch) disables the watchdog (documented workaround)
 - On normal app shutdown, the Bridge terminates itself cleanly
 
+## Scenario: Recommendation Pipeline — Event to RECOMMENDATION_UPDATE {#_runtime_scenario_5}
+
+This scenario details the current recommendation flow inside `BridgeOrchestrator` and `RecommendationEngine`: how a detected event becomes a `RECOMMENDATION_UPDATE`, and the decision points that can short-circuit it (no LLM provider, session token budget exhausted, cache hit, LLM error).
+
+![Sequence: Recommendation Pipeline](umls/06_seq_recommendation_engine.svg)
+
+**Notable aspects:**
+
+- `RECOMMENDATION_UPDATE` is broadcast **only** on the LLM-success path (`onLlmSuccess`). The recommendation payload is LLM-produced (`source: "llm"`); item ids are filtered against owned items and Data Dragon (`ddragon.getItemInfo`) to drop hallucinated or duplicate suggestions.
+- **Basic rules mode** (`activeProviderType == 'none'`, i.e. no LLM provider configured): `RecommendationEngine.process` returns early at the `useLlm` gate and emits no `RECOMMENDATION_UPDATE` for the whole match. The Flutter app must therefore render a static notice in the recommendation slot, **not** a loading spinner that would never resolve.
+- `CacheService` keys on `(state, riskLevel)`; a cache hit reuses a prior analysis and skips both the LLM call and any token spend.
+- The session token budget (`OrchestratorConfig.tokenBudget`) is checked before the LLM call; on exhaustion the orchestrator broadcasts `LLM_BUDGET_EXCEEDED` and skips the call. `0` (default) means unlimited.
+- LLM failures surface as a non-fatal `LLM_ERROR` broadcast; the process never crashes.
+
+## Scenario: WebSocket Authentication Handshake {#_runtime_scenario_6}
+
+This scenario documents the shared-secret authentication that protects the local WebSocket. On first start the Bridge generates a secret file; every client must present it as a Bearer token on the WS upgrade.
+
+![Sequence: WebSocket Authentication Handshake](umls/06_seq_auth_handshake.svg)
+
+**Notable aspects:**
+
+- On first run, `secretManager.ts` generates `~/.lolcoach/.secret` (mode `0600`, 64 hex chars) via `loadOrCreateSecret()`.
+- The `WebSocketServer` is created with a `verifyClient` callback that accepts a connection only when the `Authorization` header equals `Bearer <secret>`.
+- The Flutter `CoachService` reads the same file (`_loadCoreSecret()`) and attaches the Bearer header on connect; a missing or wrong token yields a rejected upgrade and the client falls back to its reconnect backoff.
+- The secret value is never logged or transmitted off-machine.
+
 ---
 
 # Deployment View {#section-deployment-view}
@@ -372,10 +399,13 @@ On macOS and Linux the `bridge` binary is copied into the app bundle or app dire
 
 | Workflow | Trigger | Checks |
 |---------|---------|--------|
-| `ci.yml` | Push / PR on master | TypeScript build, Jest 91 tests, Flutter tests |
+| `ci.yml` | Push / PR on master | core — Node.js (`npm ci` + Jest, 226 tests); Flutter — `flutter analyze` + `flutter test --exclude-tags=golden` |
+| `webpack.yml` | Push / PR | webpack bundle generation (`npm run bundle`) |
 | `security.yml` | Push / PR / weekly | `npm audit --audit-level=high`, license check (no GPL/AGPL) |
-| `webpack.yml` | Push / PR | webpack bundle generation |
+| `codeql.yml` | Push / PR | CodeQL static analysis |
 | `docs.yml` | Push / PR | TypeDoc API documentation generation |
+
+Every change ships through a Pull Request; all of the above checks must be green before merge (see the `lolcoach-agents` skill → *Pull Request Workflow*).
 
 ---
 
@@ -384,6 +414,20 @@ On macOS and Linux the `bridge` binary is copied into the app bundle or app dire
 The following overview shows which concepts affect which building blocks:
 
 ![Cross-cutting Concepts Overview](umls/08_concepts_overview.svg)
+
+## Dependency Injection {#_concept_0}
+
+Both processes wire their components through a real DI container rather than hand-rolled construction: **tsyringe** in the Bridge (constructor injection via `@inject()` tokens, resolved in the `index.ts` composition root) and **flutter_riverpod** in the app (provider definitions in `lib/providers.dart`). The Bridge bootstrap sequence is:
+
+![Bridge Composition Root — tsyringe Bootstrap](umls/05_di_bootstrap.svg)
+
+Three non-obvious rules govern the Bridge container — all enforced in `index.ts`:
+
+- **Nullable tokens use `useFactory`, not `useValue`.** tsyringe's `useValue` provider treats `null` as "no value" (`null != undefined`) and would mis-register the token as a class to construct. `LLM_PROVIDER_TOKEN` is registered as `{ useFactory: () => null }`.
+- **Interface tokens are `useToken` aliases, not `useClass`.** Registering an interface as `useClass` would construct a second, disconnected singleton; `useToken` redirects to the existing `@singleton` instance so there is exactly one of each.
+- **The `BridgeWsServer` ↔ `MessageRouter` constructor cycle is broken by method injection.** Both are resolved through the container, then the single circular edge is wired explicitly via `wsServer.setMessageHandler(...)`.
+
+> Under `tsx`/esbuild (`npm run dev`) no `design:paramtypes` metadata is emitted, so every constructor parameter is explicitly `@inject()`'d — a passing Jest suite does not prove the dev-mode process resolves correctly. Smoke-test DI changes with `npx tsx src/index.ts`.
 
 ## Type Safety and Validation {#_concept_1}
 
@@ -418,6 +462,8 @@ The Flutter app uses the Dart type system with `fromJson` factory constructors o
 | Measure | Implementation |
 |---------|----------------|
 | API key storage | `flutter_secure_storage` (macOS Keychain / Windows DPAPI / Linux libsecret) |
+| WebSocket authentication | Shared secret in `~/.lolcoach/.secret` (mode `0600`, 64 hex chars, generated by `secretManager.ts`); the server's `verifyClient` rejects any upgrade whose `Authorization` header is not `Bearer <secret>`. The secret is never logged. |
+| WebSocket binding | The server binds to `127.0.0.1` only (never `0.0.0.0`) — unreachable from other machines by design |
 | TLS bypass (Riot API) | `rejectUnauthorized: false` only for `127.0.0.1:2999` — local loopback, no attack surface |
 | API key transmission | Only over a local WebSocket connection (LAN); never transmitted externally |
 | Dependency security | `npm audit` in CI; replaced `pkg` with `@yao-pkg/pkg` (fixes CVE GHSA-22r3-9w55-cj54) |
@@ -440,7 +486,7 @@ The Flutter app uses the Dart type system with `fromJson` factory constructors o
 - `clock: () => number` in `BridgeOrchestrator` enables deterministic time control in tests
 - Golden tests for Flutter widgets (platform-specific; disabled on Ubuntu CI)
 
-Current test status: **91 tests** across 12 Bridge suites (all passing).
+Current test status: **226 tests** across 21 Bridge suites (all passing).
 
 ## Token Optimisation (LLM) {#_concept_5}
 
@@ -479,8 +525,8 @@ To prevent uncontrolled API costs, an LLM call is only triggered when **all** of
 | WebSocket port | Environment variable `WS_PORT` | 8765 |
 | Summoner name | `SUMMONER_NAME` (env) or WebSocket message `SET_SUMMONER` | (empty) |
 | LLM provider | WebSocket message `SET_LLM_PROVIDER` or `ANTHROPIC_API_KEY` (env) | None |
-| Champion classifications | `bridge/src/data/champions.json` | Bundled |
-| Item names | `bridge/src/data/items.json` | Bundled |
+| Champion classifications | `core/src/data/champions.json` | Bundled |
+| Item names | `core/src/data/items.json` | Bundled |
 | Heuristic thresholds | `champions.json → thresholds` | Bundled |
 | LLM cooldown | `DEFAULT_LLM_COOLDOWN_MS` in `index.ts` | 7 minutes |
 | Polling failure tolerance | `MAX_POLL_FAILURES` in `poller.ts` | 3 |
@@ -594,7 +640,7 @@ To prevent uncontrolled API costs, an LLM call is only triggered when **all** of
 
 **Context:** Champion classifications and item names were hardcoded as TypeScript constants. Meta changes required a code deployment.
 
-**Decision:** Extracted to `bridge/src/data/champions.json` and `bridge/src/data/items.json`. TypeScript imports these files statically (`resolveJsonModule: true`); webpack bundles them into the binary.
+**Decision:** Extracted to `core/src/data/champions.json` and `core/src/data/items.json`. TypeScript imports these files statically (`resolveJsonModule: true`); webpack bundles them into the binary.
 
 **Consequences:**
 
@@ -679,7 +725,8 @@ The following scenarios make the quality goals from Section 1.2 concrete and mea
 | **MSIX** | Windows app package format for Microsoft Store distribution and sideloading |
 | **ParsedGameState** | Normalised game state produced by the parser — the base structure for all downstream components |
 | **pkg / @yao-pkg/pkg** | Tool for compiling Node.js applications into platform-specific binaries (including embedded runtime) |
-| **Provider (Flutter)** | State management pattern (`ChangeNotifier` + `Provider` package) used in the Flutter app |
+| **riverpod (Flutter)** | Dependency-injection / state framework used in the app. Services remain plain `ChangeNotifier`s; riverpod's `Provider` manages their construction and lifecycle. Defined in `app/lib/providers.dart` |
+| **tsyringe (Bridge)** | Constructor-injection DI container for the Bridge. Components are `@singleton()`-decorated and resolved in the `index.ts` composition root |
 | **Retry with Backoff** | Error recovery strategy: retry attempts with exponentially increasing wait times |
 | **WsMessage** | Shared JSON message format between Bridge and Flutter app over WebSocket (specified in `asyncapi.yml`) |
 | **WsService** | Flutter service (`ChangeNotifier`) managing the WebSocket connection to the Bridge; implements a state machine with auto-reconnect |

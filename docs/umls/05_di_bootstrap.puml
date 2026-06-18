@@ -1,0 +1,61 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+skinparam sequenceBoxBorderColor #AAAAAA
+
+title Bridge Composition Root — tsyringe Bootstrap (index.ts)
+
+participant "index.ts\n(composition root)" as main
+participant "tsyringe\ncontainer" as di
+participant "BridgeWsServer\n@singleton" as ws
+participant "BridgeOrchestrator\n@singleton" as orch
+participant "MessageRouter\n@singleton" as router
+
+note over main : import "reflect-metadata" first —\ntsyringe reads emitted param metadata
+
+== Register value/alias providers ==
+main -> di : register(ORCHESTRATOR_CONFIG_TOKEN, { useValue })
+main -> di : register(LLM_PROVIDER_TOKEN, { useFactory: () => null })
+note right of di
+  null via useFactory, NOT useValue:
+  useValue treats null as "no value"
+  (null != undefined) and would
+  mis-register it as a class.
+end note
+main -> di : register(CLOCK_TOKEN, { useValue: Date.now })
+main -> di : register(WSS_TOKEN, { useValue: new WebSocketServer(verifyClient) })
+main -> di : register(WS_BROADCASTER_TOKEN, { useToken: BridgeWsServer })
+main -> di : register(EVENT_DETECTOR_TOKEN, { useToken: EventDetector })
+main -> di : register(RECOMMENDATION_ENGINE_TOKEN, { useToken: RecommendationEngine })
+note right of di
+  useToken = alias, not a new
+  registration — interface tokens
+  redirect to the same @singleton
+  instance (no duplicate construction).
+end note
+
+== Resolve the singletons ==
+main -> di : resolve(BridgeWsServer)
+di --> ws : construct (cached singleton)
+di --> main : wsServer
+main -> di : resolve(BridgeOrchestrator)
+di -> di : inject WS_BROADCASTER / EVENT_DETECTOR /\nRECOMMENDATION_ENGINE tokens -> same singletons
+di --> orch : construct
+di --> main : orchestrator
+main -> di : resolve(MessageRouter)
+di --> router : construct
+di --> main : messageRouter
+
+== Break the one true cycle via method injection ==
+note over ws, router
+  BridgeWsServer needs to call MessageRouter on
+  incoming messages, but MessageRouter -> Orchestrator
+  -> WsServer is a constructor cycle no container resolves.
+end note
+main -> ws : setMessageHandler((ws, msg) => messageRouter.handle(ws, msg))
+
+== Start ==
+main -> main : new LiveClientPoller(...).start()
+@enduml
