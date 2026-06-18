@@ -39,6 +39,7 @@ class CoachService extends ChangeNotifier {
   bool _llmFailed = false;
   String? _lastLlmError;
   DateTime? _recommendationTime;
+  String? _triggerEvent;
 
   List<ModelInfo>? _availableModels;
   String? _availableModelsProvider;
@@ -82,6 +83,11 @@ class CoachService extends ChangeNotifier {
   bool get llmFailed => _llmFailed;
   DateTime? get recommendationTime => _recommendationTime;
 
+  /// Raw game event that triggered the current recommendation
+  /// (e.g. PLAYER_DIED, HIGH_GOLD_REACHED, MANUAL). Null until the first
+  /// recommendation arrives.
+  String? get triggerEvent => _triggerEvent;
+
   void connect(
     String host, {
     int port = 8765,
@@ -105,6 +111,7 @@ class CoachService extends ChangeNotifier {
     _isAnalyzing = false;
     _llmFailed = false;
     _recommendationTime = null;
+    _triggerEvent = null;
     _isBudgetExceeded = false;
 
     final secret = _loadCoreSecret();
@@ -238,6 +245,7 @@ class CoachService extends ChangeNotifier {
           _gameState = null;
           _recommendation = null;
           _isAnalyzing = false;
+          _triggerEvent = null;
         case 'RECOMMENDATION_UPDATE':
           _recommendation = msg.recommendation ?? _recommendation;
           if (msg.gameState != null) _gameState = msg.gameState;
@@ -246,6 +254,7 @@ class CoachService extends ChangeNotifier {
           _llmFailed = false;
           _isAnalyzing = false;
           _recommendationTime = DateTime.now();
+          _triggerEvent = msg.triggerEvent;
         case 'LLM_ERROR':
           _lastLlmError = msg.error;
           _llmFailed = true;

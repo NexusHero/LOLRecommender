@@ -94,6 +94,8 @@ class HomeScreen extends ConsumerWidget {
           gameState: ws.gameState!,
           recommendation: ws.recommendation,
           lastEvent: ws.lastEvent,
+          triggerEvent: ws.triggerEvent,
+          isAnalyzing: ws.isAnalyzing,
           recommendationTime: ws.recommendationTime,
           tokenUsage: ws.lastTokenUsage,
           isBudgetExceeded: ws.isBudgetExceeded,

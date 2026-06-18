@@ -23,9 +23,14 @@ class ScoreboardSection extends StatefulWidget {
 class _ScoreboardSectionState extends State<ScoreboardSection> {
   bool _expanded = false;
 
+  int _teamKills(Iterable<Player> players) =>
+      players.fold(0, (sum, p) => sum + p.scores.kills);
+
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final allyKills = _teamKills([widget.localPlayer, ...widget.allies]);
+    final enemyKills = _teamKills(widget.enemies);
     return Container(
       decoration: BoxDecoration(
         color: colors.surfaceDark,
@@ -54,6 +59,35 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
                     ),
                   ),
                   const Spacer(),
+                  // Team-kill summary so the collapsed bar still answers
+                  // "who's ahead?" without duplicating the in-game Tab screen.
+                  Text(
+                    '$allyKills',
+                    style: AppTextStyles.captionBold.copyWith(
+                      color: Color.lerp(
+                        colors.allyBlue,
+                        colors.textPrimary,
+                        0.5,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    ' — ',
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    '$enemyKills',
+                    style: AppTextStyles.captionBold.copyWith(
+                      color: Color.lerp(
+                        colors.enemyRed,
+                        colors.textPrimary,
+                        0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   Icon(
                     _expanded ? Icons.expand_less : Icons.expand_more,
                     color: colors.textSecondary,
