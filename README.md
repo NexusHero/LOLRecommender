@@ -90,9 +90,11 @@ Open **Settings**, enter your Summoner Name and optionally an LLM API key, then 
 
 | Component | Tech |
 |-----------|------|
-| Core | Node.js 18+, TypeScript, Zod, ws, @anthropic-ai/sdk, openai, @google/genai |
-| Mobile app | Flutter 3.x, Dart, Provider, web_socket_channel, shared_preferences |
+| Core | Node.js 18+, TypeScript, Zod, ws, tsyringe (DI), @anthropic-ai/sdk, openai, @google/genai |
+| Desktop app | Flutter 3.x, Dart, flutter_riverpod (DI/state), web_socket_channel, flutter_secure_storage, shared_preferences |
 | Tests | Jest + ts-jest (core), flutter_test (app) |
+
+> **Architecture documentation:** a full [arc42 architecture document](docs/architecture.md) covers the building blocks, runtime scenarios, and decisions. Diagrams are authored in **PlantUML** (`docs/umls/*.puml`, rendered to `*.svg`) and include sequence diagrams for the recommendation pipeline, the WebSocket auth handshake, and the tsyringe DI bootstrap.
 
 ---
 
@@ -175,7 +177,8 @@ lolclient/
 ├── app/                      # UI (Flutter)
 │   ├── lib/
 │   │   ├── models/           # Data models (Strategy, ItemRecommendation, …)
-│   │   ├── services/         # WsService (ChangeNotifier)
+│   │   ├── services/         # CoachService + WsClient (ChangeNotifier)
+│   │   ├── providers.dart    # riverpod provider definitions (DI / lifecycle)
 │   │   ├── screens/          # MainScreen, HomeScreen (Coach tab)
 │   │   └── widgets/          # RecommendationPanel, GameView, ConnectionForm
 │   └── test/                 # Widget, unit and golden tests

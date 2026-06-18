@@ -1,0 +1,72 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam sequenceArrowThickness 1.5
+skinparam sequenceParticipantBorderColor #888888
+skinparam sequenceBoxBorderColor #AAAAAA
+
+title Recommendation Pipeline — Event to RECOMMENDATION_UPDATE
+
+participant "LiveClientPoller" as poll
+participant "BridgeOrchestrator" as orch
+participant "EventDetector" as det
+participant "RecommendationEngine" as eng
+participant "CacheService" as cache
+participant "LlmProvider" as llm
+participant "ddragon" as dd
+participant "BridgeWsServer" as ws
+participant "Flutter App" as app
+
+poll -> orch : handleGameData(raw)
+orch -> orch : parseGameState(raw) -> ParsedGameState
+orch -> det : detect(state)
+det --> orch : GameEvent[]
+
+loop for each event
+  orch -> ws : broadcast({ event, gameState })
+  ws --> app : event + gameState (UI update)
+
+  alt event triggers a recommendation\n(GAME_STARTED / ITEM_PURCHASED /\nPLAYER_DIED / HIGH_GOLD_REACHED)
+    orch -> eng : process(state, eventType, hasClients, callbacks)
+
+    alt useLlm == false\n(no LLM provider = Basic mode,\nno clients, or non-LLM event)
+      eng --> orch : return (no broadcast)
+      note right of eng
+        Basic rules mode emits
+        no RECOMMENDATION_UPDATE —
+        the app shows a static notice,
+        not a spinner.
+      end note
+    else useLlm == true
+      alt session token budget exceeded
+        eng -> orch : onLlmBudgetExceeded(sessionTokens, budget)
+        orch -> ws : broadcast(LLM_BUDGET_EXCEEDED)
+        ws --> app : budget warning
+      else within budget
+        eng -> cache : get(buildKey(state, riskLevel))
+        alt cache MISS
+          eng -> llm : getAnalysis(state, riskLevel)
+          alt LLM error
+            llm --> eng : throws
+            eng -> orch : onLlmError(msg)
+            orch -> ws : broadcast(LLM_ERROR)
+            ws --> app : error (fallback, no crash)
+          else LLM ok
+            llm --> eng : analysis (+ tokenUsage)
+            eng -> eng : sessionInputTokens += usage.input
+            eng -> cache : set(key, analysis)
+          end
+        else cache HIT
+          cache --> eng : analysis
+        end
+
+        eng -> dd : getItemInfo(id) per item
+        dd --> eng : drop owned / unknown / duplicate ids
+        eng -> orch : onLlmSuccess(rec, tokenUsage)
+        orch -> ws : broadcast(RECOMMENDATION_UPDATE,\ncorrelationId, triggerEvent)
+        ws --> app : RECOMMENDATION_UPDATE (hero panel)
+      end
+    end
+  end
+end
+@enduml
