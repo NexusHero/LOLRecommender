@@ -143,6 +143,10 @@ components:
           properties:
             recommendation:
               $ref: '#/components/schemas/ItemRecommendation'
+            triggerEvent:
+              type: string
+              description: Game event that triggered this recommendation
+              example: PLAYER_DIED
 
     ParsedGameState:
       type: object

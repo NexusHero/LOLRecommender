@@ -89,6 +89,7 @@ const GameStateMessageSchema = BaseMessageSchema.extend({
 
 const RecommendationMessageSchema = GameStateMessageSchema.extend({
   recommendation: ItemRecommendationSchema,
+  triggerEvent: z.string().optional(),
 });
 
 describe("AsyncAPI Contract: broadcast messages match schema", () => {

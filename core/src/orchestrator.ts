@@ -97,6 +97,7 @@ export class BridgeOrchestrator {
           gameState: state,
           recommendation: rec,
           correlationId,
+          triggerEvent: eventType,
           tokenUsage,
         });
       },
