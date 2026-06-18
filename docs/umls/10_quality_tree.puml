@@ -1,12 +1,12 @@
 @startmindmap
 * Qualität
 ** Zuverlässigkeit
-*** Offline-Betrieb\n(Heuristik ohne LLM)
+*** Graceful Degradation\n(Live-Status ohne LLM)
 *** Retry bei Polling-Fehlern\n(max. 3 aufeinanderfolgend)
 *** Auto-Reconnect\n(exponentieller Backoff)
 ** Leistung
-*** Heuristik-Empfehlung < 5 ms
-*** LLM-Erklärung < 3 s
+*** Live-Status-Update < 5 ms
+*** LLM-Empfehlung < 3 s
 *** WebSocket-Latenz < 10 ms (LAN)
 ** Sicherheit
 *** API-Keys im OS-Keychain
@@ -14,7 +14,7 @@
 ** Wartbarkeit
 *** Champion-/Item-Daten\nohne Code-Deployment
 *** Neuer LLM-Anbieter\n= eine neue Datei
-*** 91 automatisierte Tests
+*** 226 automatisierte Tests
 ** Benutzbarkeit
 *** Kein manueller Bridge-Start
 *** Persistente\nVerbindungseinstellungen

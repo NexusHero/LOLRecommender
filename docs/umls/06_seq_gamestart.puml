@@ -5,27 +5,38 @@ skinparam sequenceArrowThickness 1.5
 skinparam sequenceParticipantBorderColor #888888
 skinparam sequenceBoxBorderColor #AAAAAA
 
+title Game Start with LLM Recommendation
+
 participant "Flutter App" as app
 participant "WsService" as ws
 participant "Bridge" as bridge
 participant "Riot API" as riot
+participant "RecommendationEngine" as eng
 participant "LLM API" as llm
 
 app -> ws : connect()
-ws -> bridge : WebSocket öffnen
+ws -> bridge : open WebSocket (Bearer secret)
 bridge --> ws : CONNECTED
 ws --> app : status: connected
 
 bridge -> riot : GET /liveclientdata/allgamedata
 riot --> bridge : 200 JSON
 
-bridge -> bridge : poll() → parse()\ndetect() → GAME_STARTED
-bridge -> bridge : buildCompProfile()\ngetHeuristicRec()\nminifyGameState()
-bridge -> llm : POST (optional)
-llm --> bridge : LLM-Antwort
-
+bridge -> bridge : poll() -> parse()\ndetect() -> GAME_STARTED
 bridge --> ws : GAME_STARTED (gameState)
-ws --> app : UI aktualisieren
-bridge --> ws : RECOMMENDATION (Heuristik + LLM)
-ws --> app : UI aktualisieren
+ws --> app : UI update
+
+bridge -> eng : process(state, "GAME_STARTED", hasClients, ...)
+alt LLM provider configured
+  eng -> eng : minifyGameState()
+  eng -> llm : getAnalysis(state, riskLevel)
+  llm --> eng : analysis (+ tokenUsage)
+  eng -> eng : validate item ids (Data Dragon, owned, dupes)
+  eng --> bridge : onLlmSuccess(rec)
+  bridge --> ws : RECOMMENDATION_UPDATE (source: "llm")
+  ws --> app : render hero recommendation
+else no provider (Basic mode)
+  eng --> bridge : return (no RECOMMENDATION_UPDATE)
+  note right of app : advice slot shows a\nstatic notice, not a spinner
+end
 @enduml

@@ -12,7 +12,7 @@ package "Bridge (Node.js)" {
   component "Orchestrator" as orch
   component "WsServer" as wsserver
   component "LlmProvider" as llmprov
-  component "Heuristik" as heur
+  component "RecommendationEngine" as engine
 }
 
 package "Flutter App (Dart)" {
@@ -28,13 +28,15 @@ end note
 
 note as n_err
   **Fehlerbehandlung**
-  Retry + Fallback
+  Retry (Polling)
+  LLM_ERROR statt Crash
   Exponentieller Backoff
 end note
 
 note as n_sec
   **Sicherheit**
   OS-Keychain (API-Keys)
+  WS Shared-Secret (Bearer)
   TLS-Bypass lokal (:2999)
 end note
 
@@ -45,8 +47,9 @@ note as n_test
 end note
 
 note as n_llm
-  **Token-Optimierung & Cooldown**
+  **Token-Optimierung & Kosten**
   minifyGameState()
+  Cache + Token-Budget
   7-Minuten-Cooldown
 end note
 
@@ -65,6 +68,6 @@ n_test -- orch
 n_test -- llmprov
 n_test -- wsservice
 
-n_llm -- orch
+n_llm -- engine
 
 @enduml
