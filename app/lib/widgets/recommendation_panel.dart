@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/models/strategy.dart';
@@ -9,47 +11,127 @@ import 'package:lol_coach/widgets/common/badge.dart';
 import 'package:lol_coach/widgets/common/game_card.dart';
 import 'package:lol_coach/widgets/common/item_slot.dart';
 
-class RecommendationPanel extends StatelessWidget {
+/// Human-readable label + icon for the raw game event that triggered the
+/// current recommendation. Returns null for events not worth surfacing
+/// (e.g. plain ticks).
+({String label, IconData icon})? _triggerMeta(String? event) {
+  switch (event) {
+    case 'GAME_STARTED':
+      return (label: 'Game start', icon: Icons.flag_outlined);
+    case 'PLAYER_DIED':
+      return (label: 'After your death', icon: Icons.dangerous_outlined);
+    case 'HIGH_GOLD_REACHED':
+      return (label: 'Gold to spend', icon: Icons.monetization_on_outlined);
+    case 'LEVEL_UP':
+      return (label: 'Level up', icon: Icons.trending_up);
+    case 'ITEM_PURCHASED':
+      return (label: 'Build changed', icon: Icons.shopping_bag_outlined);
+    case 'MANUAL':
+      return (label: 'Manual refresh', icon: Icons.refresh);
+    default:
+      return null;
+  }
+}
+
+class RecommendationPanel extends StatefulWidget {
   const RecommendationPanel({
     required this.recommendation,
     super.key,
+    this.triggerEvent,
+    this.isAnalyzing = false,
     this.recommendationTime,
     this.tokenUsage,
     this.tokenBudget = 0,
     this.isBudgetExceeded = false,
   });
   final ItemRecommendation recommendation;
+  final String? triggerEvent;
+  final bool isAnalyzing;
   final DateTime? recommendationTime;
   final TokenUsage? tokenUsage;
   final int tokenBudget;
   final bool isBudgetExceeded;
 
+  @override
+  State<RecommendationPanel> createState() => _RecommendationPanelState();
+}
+
+class _RecommendationPanelState extends State<RecommendationPanel>
+    with SingleTickerProviderStateMixin {
+  // One-shot highlight when a fresh recommendation arrives — the attention
+  // cue for a second-monitor glance.
+  late final AnimationController _flash;
+
+  // Keeps the "Xs ago" freshness label live without an external rebuild.
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _flash = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
+    _syncTicker();
+  }
+
+  @override
+  void didUpdateWidget(RecommendationPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final t = widget.recommendationTime;
+    if (t != null && t != oldWidget.recommendationTime) {
+      // A genuinely new recommendation landed → flash to catch the eye.
+      _flash.forward(from: 0);
+    }
+    _syncTicker();
+  }
+
+  /// Runs the 1 Hz freshness ticker only while we actually have a timestamp,
+  /// so static usages (and widget tests) never leave a timer pending.
+  void _syncTicker() {
+    final needed = widget.recommendationTime != null;
+    if (needed && _ticker == null) {
+      _ticker = Timer.periodic(const Duration(seconds: 5), (_) {
+        if (mounted) setState(() {});
+      });
+    } else if (!needed) {
+      _ticker?.cancel();
+      _ticker = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _flash.dispose();
+    super.dispose();
+  }
+
   String _timeAgo() {
-    if (recommendationTime == null) return '';
-    final diff = DateTime.now().difference(recommendationTime!);
+    if (widget.recommendationTime == null) return '';
+    final diff = DateTime.now().difference(widget.recommendationTime!);
     if (diff.inSeconds < 10) return 'just now';
     if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     return '${diff.inHours}h ago';
   }
 
-  IconData get _providerIcon {
-    return recommendation.isLlm ? Icons.smart_toy_outlined : Icons.tune;
-  }
+  IconData get _providerIcon =>
+      widget.recommendation.isLlm ? Icons.smart_toy_outlined : Icons.tune;
 
   @override
   Widget build(BuildContext context) {
+    final rec = widget.recommendation;
     final colors = context.colors;
     final timeAgo = _timeAgo();
-    final providerColor =
-        recommendation.isLlm ? colors.magic : colors.textSecondary;
+    final providerColor = rec.isLlm ? colors.magic : colors.textSecondary;
+    final trigger = _triggerMeta(widget.triggerEvent);
 
     final card = GameCard(
-      borderColor: recommendation.isLlm ? colors.magic : colors.border,
+      borderColor: rec.isLlm ? colors.magic : colors.border,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header — calm icon + title, no provider/AI chrome
           Row(
             children: [
               Icon(_providerIcon, size: 18, color: providerColor),
@@ -61,7 +143,9 @@ class RecommendationPanel extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (timeAgo.isNotEmpty)
+              if (widget.isAnalyzing)
+                _UpdatingChip(color: providerColor)
+              else if (timeAgo.isNotEmpty)
                 Text(
                   timeAgo,
                   style: AppTextStyles.caption.copyWith(
@@ -70,10 +154,23 @@ class RecommendationPanel extends StatelessWidget {
                 ),
             ],
           ),
+          if (trigger != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(trigger.icon, size: 13, color: colors.gold),
+                const SizedBox(width: 5),
+                Text(
+                  trigger.label,
+                  style: AppTextStyles.captionBold.copyWith(color: colors.gold),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           Divider(color: colors.border, height: 1),
           const SizedBox(height: 12),
-          if (recommendation.items.isEmpty)
+          if (rec.items.isEmpty)
             Text(
               'No specific counter items needed.',
               style: AppTextStyles.caption.copyWith(
@@ -81,29 +178,66 @@ class RecommendationPanel extends StatelessWidget {
               ),
             )
           else
-            ...recommendation.items.map((item) => _RecItemTile(item: item)),
+            ...rec.items.map((item) => _RecItemTile(item: item)),
           Divider(color: colors.border, height: 16),
           Text(
-            recommendation.reasoning,
+            rec.reasoning,
             style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
           ),
-          if (recommendation.strategy != null) ...[
+          if (rec.strategy != null) ...[
             const SizedBox(height: 12),
-            _StrategyCard(strategy: recommendation.strategy!),
+            _StrategyCard(strategy: rec.strategy!),
           ],
-          if (tokenUsage != null || isBudgetExceeded) ...[
+          if (widget.tokenUsage != null || widget.isBudgetExceeded) ...[
             const SizedBox(height: 10),
             _TokenUsageRow(
-              usage: tokenUsage,
-              budget: tokenBudget,
-              exceeded: isBudgetExceeded,
+              usage: widget.tokenUsage,
+              budget: widget.tokenBudget,
+              exceeded: widget.isBudgetExceeded,
             ),
           ],
         ],
       ),
     );
 
-    if (!recommendation.isLlm) return card;
+    // The flash overlay sits above the card and fades to nothing at rest, so
+    // it never alters the steady-state appearance.
+    final flashColor = rec.isLlm ? colors.magic : colors.gold;
+    final withFlash = AnimatedBuilder(
+      animation: _flash,
+      builder: (context, child) {
+        final v = 1.0 - Curves.easeOut.transform(_flash.value);
+        return Stack(
+          children: [
+            child!,
+            if (v > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: flashColor.withValues(alpha: v),
+                        width: 2.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: flashColor.withValues(alpha: v * 0.5),
+                          blurRadius: 28,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+      child: card,
+    );
+
+    if (!rec.isLlm) return withFlash;
 
     return Container(
       decoration: BoxDecoration(
@@ -125,8 +259,34 @@ class RecommendationPanel extends StatelessWidget {
         strokeWidth: 2.5,
         sweepFraction: 0.32,
         duration: const Duration(milliseconds: 1600),
-        child: card,
+        child: withFlash,
       ),
+    );
+  }
+}
+
+/// Small animated "Updating…" pill shown while a refresh is in flight and the
+/// previous advice is still on screen (so it never looks stale-but-frozen).
+class _UpdatingChip extends StatelessWidget {
+  const _UpdatingChip({required this.color});
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 10,
+          height: 10,
+          child: CircularProgressIndicator(strokeWidth: 1.6, color: color),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          'Updating…',
+          style: AppTextStyles.caption.copyWith(color: color),
+        ),
+      ],
     );
   }
 }
@@ -339,6 +499,9 @@ class _RecItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
+    final isCore = item.isCore;
+    // Core items are the at-a-glance answer — render them larger and bolder
+    // than situational picks so they read from across the room.
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -346,7 +509,8 @@ class _RecItemTile extends StatelessWidget {
           ItemSlot(
             itemId: item.id,
             displayName: item.name,
-            borderColor: item.isCore ? colors.gold : colors.borderAccent,
+            size: isCore ? 42 : 34,
+            borderColor: isCore ? colors.gold : colors.borderAccent,
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -356,13 +520,21 @@ class _RecItemTile extends StatelessWidget {
                 Row(
                   children: [
                     Flexible(
-                      child: Text(item.name, style: AppTextStyles.bodyBold),
+                      child: Text(
+                        item.name,
+                        style: isCore
+                            ? const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              )
+                            : AppTextStyles.bodyBold,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     AppBadge(
-                      item.isCore ? 'CORE' : 'SITUATIONAL',
-                      bg: item.isCore ? colors.goldSubtle : colors.allySubtle,
-                      fg: item.isCore ? colors.gold : colors.textSecondary,
+                      isCore ? 'CORE' : 'SITUATIONAL',
+                      bg: isCore ? colors.goldSubtle : colors.allySubtle,
+                      fg: isCore ? colors.gold : colors.textSecondary,
                     ),
                   ],
                 ),

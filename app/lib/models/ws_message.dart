@@ -12,6 +12,7 @@ class WsMessage {
     this.tokenUsage,
     this.sessionInputTokens,
     this.budget,
+    this.triggerEvent,
   });
 
   factory WsMessage.fromJson(Map<String, dynamic> json) => WsMessage(
@@ -33,6 +34,7 @@ class WsMessage {
             : null,
         sessionInputTokens: json['sessionInputTokens'] as int?,
         budget: json['budget'] as int?,
+        triggerEvent: json['triggerEvent'] as String?,
       );
 
   final String event;
@@ -43,4 +45,5 @@ class WsMessage {
   final TokenUsage? tokenUsage;
   final int? sessionInputTokens;
   final int? budget;
+  final String? triggerEvent;
 }

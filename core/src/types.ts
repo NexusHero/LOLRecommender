@@ -125,6 +125,8 @@ export interface WsMessage {
   recommendation?: ItemRecommendation;
   error?: string;
   correlationId?: string;
+  /** Game event that triggered this recommendation (e.g. PLAYER_DIED). */
+  triggerEvent?: string;
   tokenUsage?: WsTokenUsage;
   sessionInputTokens?: number;
   budget?: number;

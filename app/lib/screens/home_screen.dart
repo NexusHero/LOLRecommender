@@ -94,12 +94,15 @@ class HomeScreen extends ConsumerWidget {
           gameState: ws.gameState!,
           recommendation: ws.recommendation,
           lastEvent: ws.lastEvent,
+          triggerEvent: ws.triggerEvent,
+          isAnalyzing: ws.isAnalyzing,
           recommendationTime: ws.recommendationTime,
           tokenUsage: ws.lastTokenUsage,
           isBudgetExceeded: ws.isBudgetExceeded,
           riskLevel: _isAiProvider(ws.activeProviderType) ? ws.riskLevel : null,
           onRiskLevelChanged:
               _isAiProvider(ws.activeProviderType) ? ws.setRiskLevel : null,
+          aiEnabled: _isAiProvider(ws.activeProviderType),
         );
     }
   }
