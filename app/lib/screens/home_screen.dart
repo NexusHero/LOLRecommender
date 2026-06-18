@@ -102,6 +102,7 @@ class HomeScreen extends ConsumerWidget {
           riskLevel: _isAiProvider(ws.activeProviderType) ? ws.riskLevel : null,
           onRiskLevelChanged:
               _isAiProvider(ws.activeProviderType) ? ws.setRiskLevel : null,
+          aiEnabled: _isAiProvider(ws.activeProviderType),
         );
     }
   }

@@ -22,6 +22,7 @@ class GameView extends StatelessWidget {
     this.isBudgetExceeded = false,
     this.riskLevel,
     this.onRiskLevelChanged,
+    this.aiEnabled = true,
   });
   final ParsedGameState gameState;
   final ItemRecommendation? recommendation;
@@ -34,6 +35,11 @@ class GameView extends StatelessWidget {
   final bool isBudgetExceeded;
   final String? riskLevel;
   final ValueChanged<String>? onRiskLevelChanged;
+
+  /// Whether an AI provider is active. In Basic rules mode the bridge never
+  /// emits a RECOMMENDATION_UPDATE, so the hero slot must not show a loading
+  /// spinner that would spin for the whole match.
+  final bool aiEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +73,10 @@ class GameView extends StatelessWidget {
                     tokenBudget: tokenBudget,
                     isBudgetExceeded: isBudgetExceeded,
                   )
+                else if (aiEnabled)
+                  const _AwaitingAdvice()
                 else
-                  const _AwaitingAdvice(),
+                  const _BasicModeNotice(),
                 const SizedBox(height: 10),
                 LocalPlayerCard(
                   player: gameState.localPlayer,
@@ -116,6 +124,44 @@ class _AwaitingAdvice extends StatelessWidget {
           Expanded(
             child: Text(
               'Reading the match — first advice lands shortly.',
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Hero slot for Basic rules mode, where no AI provider is configured and the
+/// bridge never produces a recommendation. A static, non-loading state — not a
+/// spinner — so the slot reads as "nothing pending" rather than "still loading".
+class _BasicModeNotice extends StatelessWidget {
+  const _BasicModeNotice();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.insights_outlined,
+            size: 18,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              'Basic rules mode — live game stats only. '
+              'Add an AI provider in Settings for item advice.',
               style: theme.textTheme.bodyMedium,
             ),
           ),
