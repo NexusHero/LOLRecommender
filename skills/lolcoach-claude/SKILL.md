@@ -33,3 +33,8 @@ Conventions are defined in the `lolcoach-agents` skill → **Commit Messages** a
 Apply them automatically — do not wait to be asked:
 - All commits: Conventional Commits format, English
 - All tests: Microsoft naming (`Subject_State_Expected`) + AAA pattern
+
+## Pull Requests
+
+Every change ships through a PR — see `lolcoach-agents` skill → **Pull Request Workflow**.
+Branch from `master`, never commit straight to it, and treat the task as done only once the PR is mergeable: all CI checks green, all Quality Gates met, all review comments resolved. A green local run is not enough — CI builds the committed tree, so `git add` every file the code depends on (no untracked sources).
