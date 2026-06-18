@@ -141,14 +141,40 @@ If a phase is trivially obvious (e.g., a one-liner Act with no setup), the comme
 
 ---
 
+## Pull Request Workflow
+
+**Every change ships through a Pull Request — never commit straight to `master`/`main`.**
+Branch from `master`, open a PR, and the PR may only merge once **all** Quality Gates below are green. "Done" means the PR is mergeable, not just that the code runs locally.
+
+The PR is the single source of truth for completeness — *everything* must be satisfied on it:
+
+- **All CI checks must pass** — none skipped, none red. The required GitHub Actions checks are:
+  - `core — Node.js` (`ci.yml`) — `npm ci` + `npm test`
+  - `Bundle core with webpack` (`webpack.yml`) — `npm run bundle`
+  - `Flutter app — Dart` (`ci.yml`) — `flutter analyze` + `flutter test --exclude-tags=golden`
+  - CodeQL (`codeql.yml`) and the security workflow (`security.yml`)
+- **CI checks out the commit, not your working tree.** A green local run proves nothing if a file is untracked — every file the committed code depends on must be `git add`ed. Run `git status` before pushing and confirm no needed source is left untracked.
+- **All Quality Gates below hold** (they are the merge bar, not a nice-to-have).
+- **All review comments are resolved** — address bot and human feedback before merge, don't leave open threads.
+- The branch is **up to date with `master`** and the PR has **no merge conflicts**.
+
+Do not consider a task finished until the PR exists and every one of these is fulfilled.
+
+---
+
 ## Quality Gates
 
-A change is considered done when:
+A change is considered done — and its PR mergeable — only when **all** of the following hold:
 - `npm test` passes in `core/` (20 suites)
+- `npm run bundle` succeeds in `core/` (webpack build is a separate CI job from the tests)
 - `flutter test` passes in `app/` (golden tests excluded unless baselines are updated)
+- `flutter analyze` reports no issues in `app/`
 - TypeScript compiles without errors (`tsc --noEmit`)
 - No new `any` types introduced
 - New logic is covered by at least one test
+- No source file the committed code imports is left untracked (`git status` is clean of needed files)
+
+These map one-to-one onto the CI checks listed under **Pull Request Workflow** — if a gate fails locally, the PR will be red. Verify them locally (`./test.sh`) before pushing so the PR goes green on the first run.
 
 ---
 
