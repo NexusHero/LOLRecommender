@@ -14,7 +14,7 @@
 
 An AI-powered in-game coaching assistant for League of Legends. A local Node.js core backend reads live game data from the Riot Games Live Client API and streams real-time recommendations to a Flutter desktop app over WebSocket.
 
-The coaching engine combines a rule-based heuristic (zero latency, no internet) with an optional LLM layer (Claude, OpenAI, or Gemini) that produces role-aware, matchup-specific advice — not generic tips.
+The coaching engine is LLM-powered (Claude, OpenAI, or Gemini): it turns your live game state into role-aware, matchup-specific advice — not generic tips. Without an API key the app still runs locally and shows your live scoreboard and game state; item advice requires a configured provider.
 
 ---
 
@@ -25,7 +25,8 @@ The coaching engine combines a rule-based heuristic (zero latency, no internet) 
 | Reads your **live** game state | ✅ | ❌ | ✅ |
 | Role-aware advice | ✅ | ❌ | partial |
 | Lane matchup analysis vs. your actual opponent | ✅ | ❌ | ❌ |
-| Runs **offline** (heuristic mode) | ✅ | ❌ | ✅ |
+| Runs **locally** — your game data stays on your PC | ✅ | ❌ | ✅ |
+| Bring your own LLM key (Claude / OpenAI / Gemini) | ✅ | ❌ | ❌ |
 | Works on a second screen / phone | ✅ | — | ❌ |
 | Open source, no account | ✅ | ❌ | ❌ |
 
@@ -41,7 +42,7 @@ cd core && npm install && npm run dev
 cd app && flutter pub get && flutter run
 ```
 
-Open **Settings**, enter your Summoner Name and optionally an LLM API key, then start a game.
+Open **Settings**, enter your Summoner Name and an LLM API key (required for item advice — without one you get live stats only), then start a game.
 
 ---
 
@@ -53,7 +54,7 @@ Open **Settings**, enter your Summoner Name and optionally an LLM API key, then 
 - **Lane matchup analysis** — compares your CS, KDA, level and items against your specific lane opponent in real time.
 - **Concrete counter-play** — one actionable sentence: what to do *right now* against this specific champion.
 - **Counter-item recommendations** — flags Grievous Wounds, Banshee's Veil, QSS, or Randuin's based on the enemy composition across all 170+ champions.
-- **Multi-provider AI** — plug in your own Claude, OpenAI, or Gemini API key, or run heuristic-only with no key required.
+- **Multi-provider AI** — plug in your own Claude, OpenAI, or Gemini API key. Item advice requires a configured provider; without one the app still shows live game state and the scoreboard.
 - **Trigger on events** — recommendations fire on `GAME_STARTED`, `ITEM_PURCHASED`, `PLAYER_DIED`, and on manual request via the in-app FAB.
 
 ---
@@ -70,7 +71,7 @@ Open **Settings**, enter your Summoner Name and optionally an LLM API key, then 
 │              Node.js Core (TypeScript)                   │
 │          ┌─────────────────────────────────┐             │
 │          │  Poller → Parser → EventDetector│             │
-│          │  Heuristic Engine               │             │
+│          │  RecommendationEngine + Cache    │             │
 │          │  StateMinifier                  │             │
 │          │  LLM Provider (Claude/OpenAI/..)│             │
 │          │  WebSocket Server (port 8765)   │             │
@@ -144,11 +145,11 @@ Settings are persisted locally via `shared_preferences`. Once connected the app 
 
 1. **Polling** — The core polls `https://127.0.0.1:2999/liveclientdata/allgamedata` every second.
 2. **Event detection** — `EventDetector` compares consecutive snapshots and emits typed events.
-3. **Heuristic recommendations** — On each trigger event, `buildCompProfile` analyses the enemy team across 170+ categorised champions and recommends counter-items instantly.
+3. **Recommendation engine** — On each trigger event `RecommendationEngine` requests an LLM analysis (a `CacheService` reuses prior analyses keyed on state + risk level to avoid duplicate calls). Without a configured provider this step is skipped — the app shows live game state only.
 4. **State minification** — Before calling the LLM, `StateMinifier` distils the game snapshot to CS, vision score, KDA, position, gold and live status for every player — minimising token cost while keeping all coaching-relevant data.
-5. **Role-aware LLM analysis** — The LLM receives the minified state, the player's role, their lane opponent's stats, and role-specific instructions. It returns a structured JSON with `winCondition`, `immediateAction`, `lateGamePlan`, `laneMatchupAnalysis` and `counterPlay`.
+5. **Role-aware LLM analysis** — The LLM receives the minified state, the player's role, their lane opponent's stats, and role-specific instructions. It returns a structured JSON with `winCondition`, `immediateAction`, `lateGamePlan`, `laneMatchupAnalysis` and `counterPlay`. Returned item ids are validated against Data Dragon and owned items to drop hallucinated or duplicate picks.
 6. **WebSocket broadcast** — Events and recommendations are pushed to all connected Flutter clients as JSON.
-7. **Session token budget** — An optional input-token cap (*Session Token Budget* in Settings; default: unlimited) guards against runaway API spend. Once the cumulative session input-token count reaches the cap, the core emits `LLM_BUDGET_EXCEEDED`, heuristic recommendations continue to fire, and the token-usage progress bar in the Recommendation panel turns red. The budget resets when a new game session starts.
+7. **Session token budget** — An optional input-token cap (*Session Token Budget* in Settings; default: unlimited) guards against runaway API spend. Once the cumulative session input-token count reaches the cap, the core emits `LLM_BUDGET_EXCEEDED` and skips further LLM calls, and the token-usage progress bar in the Recommendation panel turns red. The budget resets when a new game session starts.
 8. **Local-only security** — The core binds to `127.0.0.1` and verifies every WebSocket upgrade with a shared secret auto-generated at `~/.lolcoach/.secret`. The Flutter app reads the same file from disk; connections from other machines or without the correct token are rejected.
 
 ---
@@ -164,8 +165,9 @@ lolclient/
 │   │   ├── parser.ts         # Raw data → ParsedGameState
 │   │   ├── eventDetector.ts  # State-change event detection
 │   │   ├── stateMinifier.ts  # Token optimisation for LLM
-│   │   ├── heuristic.ts      # Rule-based item recommendations
 │   │   ├── llmProvider.ts    # AI factory + prompt builder
+│   │   ├── recommendationEngine.ts # LLM analysis + cache + item validation
+│   │   ├── heuristic.ts      # Legacy rule-based engine (not in runtime path)
 │   │   ├── orchestrator.ts   # Wires events → recommendations → broadcast
 │   │   ├── wsServer.ts       # WebSocket server
 │   │   ├── data/

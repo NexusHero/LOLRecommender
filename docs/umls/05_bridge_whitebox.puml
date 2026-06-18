@@ -5,16 +5,18 @@ skinparam defaultFontName Arial
 skinparam ArrowColor #555555
 skinparam componentBorderColor #888888
 
-package "bridge/src" {
+package "core/src" {
   component "index.ts\n[Composition Root]" as index
   component "orchestrator.ts\n[BridgeOrchestrator]" as orch
   component "poller.ts\n[LiveClientPoller]" as poller
   component "parser.ts\n[parseGameState()]" as parser
   component "eventDetector.ts\n[EventDetector]" as detector
-  component "heuristic.ts\n[buildCompProfile / getHeuristicRec]" as heuristic
+  component "recommendationEngine.ts\n[RecommendationEngine]" as engine
+  component "cacheService.ts\n[CacheService]" as cache
   component "stateMinifier.ts\n[minifyGameState]" as minifier
   component "llmProvider.ts\n[Factory + Interface]" as llmprov
   component "wsServer.ts\n[BridgeWsServer]" as wsserver
+  component "heuristic.ts\n[legacy — not in runtime path]" as heuristic #EEEEEE
 
   package "data/" {
     component "champions.json" as champ
@@ -32,13 +34,15 @@ index --> orch
 orch --> poller
 orch --> parser
 orch --> detector
-orch --> heuristic
-orch --> minifier
-orch --> llmprov
+orch --> engine
 orch --> wsserver
+engine --> cache
+engine --> llmprov
+llmprov --> minifier
 llmprov --> claude
 llmprov --> openai
 llmprov --> gemini
-heuristic --> champ
-heuristic --> items
+heuristic ..> champ
+heuristic ..> items
+note bottom of heuristic : retained with tests only (ADR-001 / S6)
 @enduml

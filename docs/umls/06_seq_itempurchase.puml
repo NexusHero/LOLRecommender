@@ -4,20 +4,26 @@ skinparam defaultFontName Arial
 skinparam sequenceArrowThickness 1.5
 skinparam sequenceParticipantBorderColor #888888
 
+title Item Purchase — State Update (No LLM)
+
 participant "Bridge" as bridge
 participant "Riot API" as riot
+participant "RecommendationEngine" as eng
 participant "Flutter App" as app
 
 bridge -> riot : GET /liveclientdata/allgamedata
 riot --> bridge : 200 JSON
-bridge -> bridge : detect() → ITEM_PURCHASED
+bridge -> bridge : detect() -> ITEM_PURCHASED
 
-note over bridge
-  LLM nur wenn:
-  Gold ≥ 1.000 UND
-  Cooldown abgelaufen
+bridge --> app : ITEM_PURCHASED (gameState)\nUI updates live state
+
+bridge -> eng : process(state, "ITEM_PURCHASED", ...)
+note over eng
+  useLlm gate fires ONLY for
+  GAME_STARTED / PLAYER_DIED / MANUAL.
+  ITEM_PURCHASED (and HIGH_GOLD_REACHED)
+  return early -> no LLM call,
+  no RECOMMENDATION_UPDATE.
 end note
-
-bridge --> app : ITEM_PURCHASED (gameState)
-bridge --> app : RECOMMENDATION (Heuristik)
+eng --> bridge : return (no broadcast)
 @enduml
