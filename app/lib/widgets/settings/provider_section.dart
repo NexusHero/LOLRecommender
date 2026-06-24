@@ -198,12 +198,12 @@ class _KeyValidationBadge extends StatelessWidget {
           Icon(
             Icons.check_circle_outline,
             size: 14,
-            color: colors.gold,
+            color: colors.success,
           ),
           const SizedBox(width: 6),
           Text(
             'API key is valid',
-            style: AppTextStyles.caption.copyWith(color: colors.gold),
+            style: AppTextStyles.caption.copyWith(color: colors.success),
           ),
         ],
       );

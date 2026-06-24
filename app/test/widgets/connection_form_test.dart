@@ -62,7 +62,7 @@ void main() {
         await tester.pump();
 
         expect(find.text('LoL Coach'), findsOneWidget);
-        expect(find.text('CONNECT'), findsOneWidget);
+        expect(find.text('Connect'), findsOneWidget);
       },
     );
 

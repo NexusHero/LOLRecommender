@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/models/recommendation.dart';
 import 'package:lol_coach/models/token_usage.dart';
+import 'package:lol_coach/theme/app_colors.dart';
+import 'package:lol_coach/theme/app_text_styles.dart';
+import 'package:lol_coach/widgets/common/game_card.dart';
 import 'package:lol_coach/widgets/game_top_bar.dart';
 import 'package:lol_coach/widgets/local_player_card.dart';
 import 'package:lol_coach/widgets/recommendation_panel.dart';
@@ -41,15 +44,28 @@ class GameView extends StatelessWidget {
   /// spinner that would spin for the whole match.
   final bool aiEnabled;
 
+  /// The enemy laner sharing the local player's position, surfaced as the
+  /// "vs <champion>" matchup chip on the recommendation hero.
+  String? get _laneOpponent {
+    final pos = gameState.localPlayer.position.toLowerCase();
+    if (pos.isEmpty) return null;
+    for (final e in gameState.enemies) {
+      if (e.position.toLowerCase() == pos && e.championName.isNotEmpty) {
+        return e.championName;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Hierarchy by what matters most while glancing mid-match:
-    //   1. TopBar — time / gold / risk (always pinned context)
+    //   1. Context strip — time / gold / risk (always pinned context)
     //   2. RECOMMENDATION — the app's only unique value, rendered as hero
     //   3. My champion — supporting context, compact
     //   4. Scoreboard — tertiary, duplicates the in-game Tab screen, collapsed
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 28),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -58,38 +74,32 @@ class GameView extends StatelessWidget {
             riskLevel: riskLevel,
             onRiskLevelChanged: onRiskLevelChanged,
           ),
-          const SizedBox(height: 10),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Column(
-              children: [
-                if (recommendation != null)
-                  RecommendationPanel(
-                    recommendation: recommendation!,
-                    triggerEvent: triggerEvent,
-                    isAnalyzing: isAnalyzing,
-                    recommendationTime: recommendationTime,
-                    tokenUsage: tokenUsage,
-                    tokenBudget: tokenBudget,
-                    isBudgetExceeded: isBudgetExceeded,
-                  )
-                else if (aiEnabled)
-                  const _AwaitingAdvice()
-                else
-                  const _BasicModeNotice(),
-                const SizedBox(height: 10),
-                LocalPlayerCard(
-                  player: gameState.localPlayer,
-                  activePlayer: gameState.activePlayer,
-                ),
-                const SizedBox(height: 10),
-                ScoreboardSection(
-                  allies: gameState.allies,
-                  enemies: gameState.enemies,
-                  localPlayer: gameState.localPlayer,
-                ),
-              ],
-            ),
+          const SizedBox(height: 12),
+          if (recommendation != null)
+            RecommendationPanel(
+              recommendation: recommendation!,
+              triggerEvent: triggerEvent,
+              opponentChampion: _laneOpponent,
+              isAnalyzing: isAnalyzing,
+              recommendationTime: recommendationTime,
+              tokenUsage: tokenUsage,
+              tokenBudget: tokenBudget,
+              isBudgetExceeded: isBudgetExceeded,
+            )
+          else if (aiEnabled)
+            const _AwaitingAdvice()
+          else
+            const _BasicModeNotice(),
+          const SizedBox(height: 12),
+          LocalPlayerCard(
+            player: gameState.localPlayer,
+            activePlayer: gameState.activePlayer,
+          ),
+          const SizedBox(height: 12),
+          ScoreboardSection(
+            allies: gameState.allies,
+            enemies: gameState.enemies,
+            localPlayer: gameState.localPlayer,
           ),
         ],
       ),
@@ -104,27 +114,21 @@ class _AwaitingAdvice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.dividerColor),
-      ),
+    final colors = context.colors;
+    return GameCard(
+      accent: colors.magicLine,
       child: Row(
         children: [
-          const SizedBox(
+          SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: CircularProgressIndicator(strokeWidth: 2, color: colors.magic),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
               'Reading the match — first advice lands shortly.',
-              style: theme.textTheme.bodyMedium,
+              style: AppTextStyles.body.copyWith(color: colors.textSecondary),
             ),
           ),
         ],
@@ -141,28 +145,21 @@ class _BasicModeNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: theme.dividerColor),
-      ),
+    final colors = context.colors;
+    return GameCard(
       child: Row(
         children: [
           Icon(
             Icons.insights_outlined,
             size: 18,
-            color: theme.colorScheme.onSurfaceVariant,
+            color: colors.textSecondary,
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Text(
               'Basic rules mode — live game stats only. '
               'Add an AI provider in Settings for item advice.',
-              style: theme.textTheme.bodyMedium,
+              style: AppTextStyles.body.copyWith(color: colors.textSecondary),
             ),
           ),
         ],
