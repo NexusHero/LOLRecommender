@@ -8,6 +8,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ## [Unreleased]
 
+### Changed
+- Redesigned the desktop UI to the **Elevated** glass visual language — violet AI accent, champagne win-condition accent, frosted-glass cards over a gradient canvas, a refreshed type scale, and an in-game **hero card** that leads with the single most important action. The palette is exposed as an `AppColors` `ThemeExtension` (dark + light).
+
 ### Added
 - Role-aware LLM coaching (Claude / OpenAI / Gemini)
 - Heuristic counter-item engine covering 170+ champions

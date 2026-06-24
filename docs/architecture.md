@@ -232,11 +232,12 @@ app/lib/
 ├── widgets/
 │   ├── connection_form.dart      ← Connection settings, provider selection
 │   ├── game_view.dart            ← Main view during an active game
-│   ├── game_top_bar.dart         ← Game mode, time, gold display
+│   ├── game_top_bar.dart         ← Context strip — time, gold-to-spend, KDA
 │   ├── local_player_card.dart    ← Own champion, stats, items
-│   ├── recommendation_panel.dart ← Item suggestions + explanation
+│   ├── recommendation_panel.dart ← AI hero card — action, core item, matchup / counter
 │   ├── scoreboard.dart           ← Team overview (allies / enemies)
-│   └── shared_widgets.dart       ← Reusable UI components
+│   └── common/                   ← Glass primitives — AppBackground (gradient canvas),
+│                                    GameCard, AppBadge, RiskControl, AiSweepingBorder
 │
 ├── models/
 │   ├── game_state.dart
@@ -247,8 +248,17 @@ app/lib/
 │   └── ws_message.dart
 │
 └── theme/
-    └── app_colors.dart     ← Central colour scheme (LoL dark theme)
+    ├── app_colors.dart      ← Elevated glass palette (dark + light) as a ThemeExtension
+    ├── app_text_styles.dart ← Type scale (hero / title / heading / body / caption / micro / eyebrow)
+    └── app_theme.dart       ← ThemeData builder — violet accent, glass surfaces, pill buttons
 ```
+
+The desktop UI follows the **Elevated** visual language: frosted-glass cards over a
+gradient canvas, violet as the AI signature accent, champagne for the win-condition /
+gold economy, and an in-game **hero card** that leads with the single most important
+action. The palette is exposed as an `AppColors` `ThemeExtension` (read via
+`context.colors`), so widgets never hardcode hex values and dark / light resolve the same
+semantic fields.
 
 **`WsService` state machine:**
 
