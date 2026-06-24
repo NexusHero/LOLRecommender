@@ -2,6 +2,10 @@
 
 Thanks for taking the time to contribute!
 
+This project follows a [Code of Conduct](CODE_OF_CONDUCT.md) — by participating you are
+expected to uphold it. Pull requests use the [PR template](.github/pull_request_template.md);
+its checklist mirrors the quality gates below.
+
 ## Before you start
 
 - Check [open issues](https://github.com/NexusHero/LOLRecommender/issues) to avoid duplicate work.
