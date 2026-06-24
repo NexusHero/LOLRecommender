@@ -52,18 +52,10 @@ class _LocalPlayerCardState extends State<LocalPlayerCard> {
                       children: [
                         Text(player.championName, style: AppTextStyles.heading),
                         const SizedBox(width: 8),
-                        AppBadge(
-                          'Lv ${player.level}',
-                          bg: colors.border,
-                          fg: colors.textSecondary,
-                        ),
+                        AppBadge.neutral('Lv ${player.level}'),
                         if (player.position.isNotEmpty) ...[
                           const SizedBox(width: 6),
-                          AppBadge(
-                            player.position.toUpperCase(),
-                            bg: colors.surfaceDark,
-                            fg: colors.textSecondary,
-                          ),
+                          AppBadge.neutral(player.position.toUpperCase()),
                         ],
                       ],
                     ),
@@ -152,7 +144,7 @@ class _LocalPlayerCardState extends State<LocalPlayerCard> {
               onPressed: () => setState(() => _showAllStats = !_showAllStats),
               child: Text(
                 _showAllStats ? 'Less' : 'More stats',
-                style: AppTextStyles.caption.copyWith(color: colors.gold),
+                style: AppTextStyles.caption.copyWith(color: colors.magic),
               ),
             ),
           ),

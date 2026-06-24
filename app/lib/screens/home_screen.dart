@@ -6,6 +6,7 @@ import 'package:lol_coach/services/coach_service.dart';
 import 'package:lol_coach/services/ws_client.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
+import 'package:lol_coach/widgets/common/app_background.dart';
 import 'package:lol_coach/widgets/game_view.dart';
 
 String _providerLabel(String type) => switch (type) {
@@ -29,15 +30,19 @@ class HomeScreen extends ConsumerWidget {
       listenable: ws,
       builder: (context, _) {
         return Scaffold(
+          extendBodyBehindAppBar: true,
           appBar: AppBar(
-            title: Row(
-              children: [
-                const Text('LoL Coach'),
-                const SizedBox(width: 8),
-                _StatusDot(status: ws.status),
-              ],
-            ),
+            titleSpacing: 20,
+            title: const Text('LoL Coach', style: AppTextStyles.heading),
             actions: [
+              if (ws.isConnected)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: _LivePill(
+                    providerType: ws.activeProviderType,
+                    llmFailed: ws.llmFailed,
+                  ),
+                ),
               if (ws.status != ConnectionStatus.disconnected)
                 IconButton(
                   icon: const Icon(Icons.link_off),
@@ -49,17 +54,11 @@ class HomeScreen extends ConsumerWidget {
                 tooltip: 'Settings',
                 onPressed: onOpenSettings,
               ),
+              const SizedBox(width: 4),
             ],
           ),
-          body: Column(
-            children: [
-              if (ws.isConnected)
-                _AiModeBanner(
-                  providerType: ws.activeProviderType,
-                  llmFailed: ws.llmFailed,
-                ),
-              Expanded(child: _buildBody(context, ws)),
-            ],
+          body: AppBackground(
+            child: SafeArea(child: _buildBody(context, ws)),
           ),
           floatingActionButton: ws.gameActive ? _PulsingFab(ws: ws) : null,
         );
@@ -77,10 +76,10 @@ class HomeScreen extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const CircularProgressIndicator(),
+              CircularProgressIndicator(color: context.colors.magic),
               const SizedBox(height: 16),
               Text(
-                'Connecting to core...',
+                'Connecting to core…',
                 style: AppTextStyles.caption.copyWith(
                   color: context.colors.textSecondary,
                 ),
@@ -113,13 +112,13 @@ class HomeScreen extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.link_off, size: 56, color: colors.textDisabled),
-          const SizedBox(height: 16),
-          const Text('Not Connected', style: AppTextStyles.heading),
+          Icon(Icons.link_off, size: 52, color: colors.textDisabled),
+          const SizedBox(height: 18),
+          const Text('Not connected', style: AppTextStyles.title),
           const SizedBox(height: 8),
           Text(
-            'Tap the settings icon to connect.',
-            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+            'Open Settings to connect.',
+            style: AppTextStyles.body.copyWith(color: colors.textSecondary),
           ),
         ],
       ),
@@ -127,41 +126,20 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-// ─── Status dot ──────────────────────────────────────────────────────────────
+// ─── Live pill ───────────────────────────────────────────────────────────────
 
-class _StatusDot extends StatelessWidget {
-  const _StatusDot({required this.status});
-  final ConnectionStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final color = switch (status) {
-      ConnectionStatus.connected => colors.success,
-      ConnectionStatus.connecting => colors.warning,
-      ConnectionStatus.error => colors.errorLight,
-      ConnectionStatus.disconnected => colors.textDisabled,
-    };
-    return Container(
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-// ─── AI mode banner ──────────────────────────────────────────────────────────
-
-class _AiModeBanner extends StatefulWidget {
-  const _AiModeBanner({required this.providerType, required this.llmFailed});
+/// Compact header pill mirroring the design's "<Provider> · live" indicator,
+/// with a breathing violet dot while the AI is coaching.
+class _LivePill extends StatefulWidget {
+  const _LivePill({required this.providerType, required this.llmFailed});
   final String providerType;
   final bool llmFailed;
 
   @override
-  State<_AiModeBanner> createState() => _AiModeBannerState();
+  State<_LivePill> createState() => _LivePillState();
 }
 
-class _AiModeBannerState extends State<_AiModeBanner>
+class _LivePillState extends State<_LivePill>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _pulse;
@@ -171,9 +149,9 @@ class _AiModeBannerState extends State<_AiModeBanner>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.35, end: 1).animate(
+    _pulse = Tween<double>(begin: 0.4, end: 1).animate(
       CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
     );
   }
@@ -189,53 +167,46 @@ class _AiModeBannerState extends State<_AiModeBanner>
     final colors = context.colors;
     final isAi = _isAiProvider(widget.providerType);
     final failed = isAi && widget.llmFailed;
-    final color = failed
-        ? colors.warning
-        : isAi
-            ? colors.magic
-            : colors.textSecondary;
-    final bg = failed
-        ? colors.warning.withValues(alpha: 0.08)
-        : isAi
-            ? colors.magic.withValues(alpha: 0.1)
-            : colors.surfaceDark;
     final label = _providerLabel(widget.providerType);
+    final Color color;
+    final String text;
+    if (failed) {
+      color = colors.warning;
+      text = '$label unavailable';
+    } else if (isAi) {
+      color = colors.magic;
+      text = '$label · live';
+    } else {
+      color = colors.textSecondary;
+      text = 'Basic rules';
+    }
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOut,
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(9, 5, 11, 5),
       decoration: BoxDecoration(
-        color: bg,
-        border: Border(
-          bottom: BorderSide(
-            color: color.withValues(alpha: 0.25),
-          ),
-        ),
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           if (failed)
-            Icon(
-              Icons.warning_amber_rounded,
-              size: 14,
-              color: colors.warning,
-            )
+            Icon(Icons.warning_amber_rounded, size: 13, color: color)
           else
             AnimatedBuilder(
               animation: _pulse,
               builder: (_, __) => Container(
-                width: 8,
-                height: 8,
+                width: 7,
+                height: 7,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: color.withValues(alpha: isAi ? _pulse.value : 0.45),
-                  boxShadow: isAi && !failed
+                  color: color.withValues(alpha: isAi ? _pulse.value : 0.5),
+                  boxShadow: isAi
                       ? [
                           BoxShadow(
                             color: colors.magic.withValues(
-                              alpha: _pulse.value * 0.7,
+                              alpha: _pulse.value * 0.8,
                             ),
                             blurRadius: 8,
                             spreadRadius: 1,
@@ -245,20 +216,12 @@ class _AiModeBannerState extends State<_AiModeBanner>
                 ),
               ),
             ),
-          const SizedBox(width: 10),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: Text(
-              failed
-                  ? '$label unavailable'
-                  : isAi
-                      ? '$label is coaching you'
-                      : 'Basic rules active',
-              key: ValueKey('${widget.providerType}_$failed'),
-              style: AppTextStyles.caption.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
+          const SizedBox(width: 7),
+          Text(
+            text,
+            style: AppTextStyles.micro.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -308,12 +271,12 @@ class _PulsingFabState extends State<_PulsingFab>
     final isAi = _isAiProvider(provider) && !ws.llmFailed;
     // Advice is pushed automatically on key events (level up, item buys,
     // deaths, gold thresholds). This button is just a manual refresh.
-    final label = ws.isAnalyzing ? 'Analysing...' : 'Refresh advice';
+    final label = ws.isAnalyzing ? 'Analysing…' : 'Refresh advice';
 
     final fab = FloatingActionButton.extended(
       onPressed: ws.isAnalyzing ? null : ws.triggerAnalysis,
       tooltip: 'Manually refresh — advice also updates automatically',
-      backgroundColor: isAi ? colors.magic : colors.gold,
+      backgroundColor: isAi ? colors.magicHot : colors.gold,
       foregroundColor: Colors.white,
       elevation: isAi ? 10 : 4,
       icon: ws.isAnalyzing
@@ -349,33 +312,31 @@ class _WaitingView extends StatelessWidget {
     final colors = context.colors;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.symmetric(horizontal: 40),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
               Icons.sports_esports_outlined,
-              size: 56,
+              size: 48,
               color: colors.textDisabled,
             ),
-            const SizedBox(height: 20),
-            const Text('Ready to coach', style: AppTextStyles.heading),
-            const SizedBox(height: 20),
-            _StepRow(
-              icon: Icons.check_circle_outline,
-              color: colors.success,
+            const SizedBox(height: 22),
+            const Text('Ready to coach', style: AppTextStyles.title),
+            const SizedBox(height: 22),
+            const _StepRow(
+              done: true,
               text: 'Core connected',
             ),
-            const SizedBox(height: 12),
-            _StepRow(
-              icon: Icons.radio_button_unchecked,
-              color: colors.textSecondary,
+            const SizedBox(height: 14),
+            const _StepRow(
+              done: false,
               text: 'Start a League of Legends match',
             ),
-            const SizedBox(height: 12),
-            _StepRow(
-              icon: Icons.radio_button_unchecked,
-              color: colors.textSecondary,
+            const SizedBox(height: 14),
+            const _StepRow(
+              done: false,
               text: 'Advice appears automatically as the match unfolds',
             ),
           ],
@@ -386,22 +347,36 @@ class _WaitingView extends StatelessWidget {
 }
 
 class _StepRow extends StatelessWidget {
-  const _StepRow({
-    required this.icon,
-    required this.color,
-    required this.text,
-  });
-  final IconData icon;
-  final Color color;
+  const _StepRow({required this.done, required this.text});
+  final bool done;
   final String text;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.colors;
+    final color = done ? colors.success : colors.textDisabled;
     return Row(
       children: [
-        Icon(icon, size: 18, color: color),
+        Container(
+          width: 18,
+          height: 18,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 1.5),
+          ),
+          child: done
+              ? Icon(Icons.check, size: 11, color: color)
+              : null,
+        ),
         const SizedBox(width: 12),
-        Expanded(child: Text(text, style: AppTextStyles.body)),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.body.copyWith(
+              color: done ? colors.textPrimary : colors.textSecondary,
+            ),
+          ),
+        ),
       ],
     );
   }

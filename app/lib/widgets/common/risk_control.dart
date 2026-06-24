@@ -14,19 +14,19 @@ class RiskControl extends StatelessWidget {
   final ValueChanged<String> onChanged;
 
   static const _levels = [
-    ('safe', 'SAFE'),
-    ('normal', 'NORMAL'),
-    ('risky', 'RISKY'),
+    ('safe', 'Safe'),
+    ('normal', 'Normal'),
+    ('risky', 'Risky'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
     return Container(
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
-        color: colors.surfaceDark,
-        borderRadius: BorderRadius.circular(7),
+        color: colors.surface2,
+        borderRadius: BorderRadius.circular(100),
         border: Border.all(color: colors.border),
       ),
       child: Row(
@@ -44,25 +44,34 @@ class RiskControl extends StatelessWidget {
     final color = switch (level) {
       'safe' => colors.cyan,
       'risky' => colors.warning,
-      _ => colors.textPrimary,
+      _ => colors.magic,
     };
 
     return GestureDetector(
       onTap: () => onChanged(level),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
         decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.15) : null,
-          borderRadius: BorderRadius.circular(5),
+          color: selected ? colors.surfaceMedium : null,
+          borderRadius: BorderRadius.circular(100),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-            color: selected ? color : colors.textSecondary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
+            color: selected ? color : colors.textDisabled,
           ),
         ),
       ),

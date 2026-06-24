@@ -32,10 +32,12 @@ void main() {
           ),
         );
 
-        expect(find.text('RECOMMENDATIONS'), findsOneWidget);
+        // The hero eyebrow + the core item, rendered in the new layout.
+        expect(find.text('DO THIS NOW'), findsOneWidget);
         expect(find.text("Banshee's Veil"), findsOneWidget);
-        expect(find.text('CORE'), findsOneWidget);
+        expect(find.text('Core'), findsOneWidget);
         expect(find.text('Blocks initial burst combo'), findsOneWidget);
+        // With no strategy, the reasoning headlines the card.
         expect(
           find.text('Claude says this is a good item against high AP burst.'),
           findsOneWidget,
@@ -63,7 +65,9 @@ void main() {
           ),
         );
 
-        expect(find.text('No specific counter items needed.'), findsOneWidget);
+        // Heuristic source → quieter "SUGGESTED" eyebrow; with no items the
+        // reasoning headlines the card.
+        expect(find.text('SUGGESTED'), findsOneWidget);
         expect(
           find.text(
             'Enemy comp is balanced. No specific counter items needed.',

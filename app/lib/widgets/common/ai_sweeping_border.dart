@@ -11,7 +11,7 @@ class AiSweepingBorder extends StatefulWidget {
   const AiSweepingBorder({
     required this.child,
     super.key,
-    this.borderRadius = 8.0,
+    this.borderRadius = 18.0,
     this.strokeWidth = 2.0,
     this.color,
     this.sweepFraction = 0.28,

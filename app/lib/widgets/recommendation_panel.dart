@@ -11,33 +11,16 @@ import 'package:lol_coach/widgets/common/badge.dart';
 import 'package:lol_coach/widgets/common/game_card.dart';
 import 'package:lol_coach/widgets/common/item_slot.dart';
 
-/// Human-readable label + icon for the raw game event that triggered the
-/// current recommendation. Returns null for events not worth surfacing
-/// (e.g. plain ticks).
-({String label, IconData icon})? _triggerMeta(String? event) {
-  switch (event) {
-    case 'GAME_STARTED':
-      return (label: 'Game start', icon: Icons.flag_outlined);
-    case 'PLAYER_DIED':
-      return (label: 'After your death', icon: Icons.dangerous_outlined);
-    case 'HIGH_GOLD_REACHED':
-      return (label: 'Gold to spend', icon: Icons.monetization_on_outlined);
-    case 'LEVEL_UP':
-      return (label: 'Level up', icon: Icons.trending_up);
-    case 'ITEM_PURCHASED':
-      return (label: 'Build changed', icon: Icons.shopping_bag_outlined);
-    case 'MANUAL':
-      return (label: 'Manual refresh', icon: Icons.refresh);
-    default:
-      return null;
-  }
-}
-
+/// The in-game hero: the single "do this now" recommendation, rendered as the
+/// app's one striking glass card. Restructured from the old RECOMMENDATIONS +
+/// GAME PLAN panels into one scannable card — eyebrow, big action sentence,
+/// the core item, win-condition + matchup chips, and supporting lines.
 class RecommendationPanel extends StatefulWidget {
   const RecommendationPanel({
     required this.recommendation,
     super.key,
     this.triggerEvent,
+    this.opponentChampion,
     this.isAnalyzing = false,
     this.recommendationTime,
     this.tokenUsage,
@@ -46,6 +29,7 @@ class RecommendationPanel extends StatefulWidget {
   });
   final ItemRecommendation recommendation;
   final String? triggerEvent;
+  final String? opponentChampion;
   final bool isAnalyzing;
   final DateTime? recommendationTime;
   final TokenUsage? tokenUsage;
@@ -86,7 +70,7 @@ class _RecommendationPanelState extends State<RecommendationPanel>
     _syncTicker();
   }
 
-  /// Runs the 1 Hz freshness ticker only while we actually have a timestamp,
+  /// Runs the 5 s freshness ticker only while we actually have a timestamp,
   /// so static usages (and widget tests) never leave a timer pending.
   void _syncTicker() {
     final needed = widget.recommendationTime != null;
@@ -116,93 +100,89 @@ class _RecommendationPanelState extends State<RecommendationPanel>
     return '${diff.inHours}h ago';
   }
 
-  IconData get _providerIcon =>
-      widget.recommendation.isLlm ? Icons.smart_toy_outlined : Icons.tune;
+  /// The one-line action that headlines the card.
+  String get _heroAction {
+    final s = widget.recommendation.strategy;
+    final action = s?.immediateAction.trim();
+    if (action != null && action.isNotEmpty) return action;
+    final summary = s?.summary.trim();
+    if (summary != null && summary.isNotEmpty) return summary;
+    return widget.recommendation.reasoning;
+  }
+
+  /// The headline item — the first core pick, else the first listed item.
+  RecommendedItem? get _heroItem {
+    final items = widget.recommendation.items;
+    if (items.isEmpty) return null;
+    return items.firstWhere(
+      (i) => i.isCore,
+      orElse: () => items.first,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final rec = widget.recommendation;
     final colors = context.colors;
-    final timeAgo = _timeAgo();
-    final providerColor = rec.isLlm ? colors.magic : colors.textSecondary;
-    final trigger = _triggerMeta(widget.triggerEvent);
+    final isLlm = rec.isLlm;
+    final accent = isLlm ? colors.magic : colors.textSecondary;
+    final hero = _heroItem;
+    final strategy = rec.strategy;
+    final rest = rec.items.where((i) => i != hero).toList();
 
     final card = GameCard(
-      borderColor: rec.isLlm ? colors.magic : colors.border,
+      accent: isLlm ? colors.magic : null,
+      glow: isLlm,
+      padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(_providerIcon, size: 18, color: providerColor),
-              const SizedBox(width: 8),
-              Text(
-                'RECOMMENDATIONS',
-                style: AppTextStyles.label.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-              const Spacer(),
-              if (widget.isAnalyzing)
-                _UpdatingChip(color: providerColor)
-              else if (timeAgo.isNotEmpty)
-                Text(
-                  timeAgo,
-                  style: AppTextStyles.caption.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                ),
-            ],
+          _Eyebrow(
+            label: isLlm ? 'DO THIS NOW' : 'SUGGESTED',
+            color: accent,
+            trailing: widget.isAnalyzing ? _UpdatingChip(color: accent) : null,
           ),
-          if (trigger != null) ...[
-            const SizedBox(height: 8),
-            Row(
+          const SizedBox(height: 12),
+          Text(_heroAction, style: AppTextStyles.hero),
+          if (hero != null) ...[
+            const SizedBox(height: 18),
+            _HeroItem(item: hero, accent: accent, isLlm: isLlm),
+          ],
+          if (rest.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...rest.map((i) => _SecondaryItem(item: i)),
+          ],
+          if (strategy != null || widget.opponentChampion != null) ...[
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
-                Icon(trigger.icon, size: 13, color: colors.gold),
-                const SizedBox(width: 5),
-                Text(
-                  trigger.label,
-                  style: AppTextStyles.captionBold.copyWith(color: colors.gold),
-                ),
+                if (strategy != null)
+                  AppBadge.champagne('◆ ${_winLabel(strategy.winCondition)}'),
+                if (widget.opponentChampion != null)
+                  AppBadge.neutral('vs ${widget.opponentChampion}'),
               ],
             ),
           ],
-          const SizedBox(height: 12),
-          Divider(color: colors.border, height: 1),
-          const SizedBox(height: 12),
-          if (rec.items.isEmpty)
-            Text(
-              'No specific counter items needed.',
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textSecondary,
-              ),
-            )
-          else
-            ...rec.items.map((item) => _RecItemTile(item: item)),
-          Divider(color: colors.border, height: 16),
-          Text(
-            rec.reasoning,
-            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+          if (strategy?.laneMatchupAnalysis != null ||
+              strategy?.counterPlay != null) ...[
+            const SizedBox(height: 4),
+            _LinesBlock(strategy: strategy!),
+          ],
+          _Footer(
+            timeAgo: _timeAgo(),
+            usage: widget.tokenUsage,
+            budget: widget.tokenBudget,
+            exceeded: widget.isBudgetExceeded,
           ),
-          if (rec.strategy != null) ...[
-            const SizedBox(height: 12),
-            _StrategyCard(strategy: rec.strategy!),
-          ],
-          if (widget.tokenUsage != null || widget.isBudgetExceeded) ...[
-            const SizedBox(height: 10),
-            _TokenUsageRow(
-              usage: widget.tokenUsage,
-              budget: widget.tokenBudget,
-              exceeded: widget.isBudgetExceeded,
-            ),
-          ],
         ],
       ),
     );
 
     // The flash overlay sits above the card and fades to nothing at rest, so
     // it never alters the steady-state appearance.
-    final flashColor = rec.isLlm ? colors.magic : colors.gold;
+    final flashColor = isLlm ? colors.magic : colors.gold;
     final withFlash = AnimatedBuilder(
       animation: _flash,
       builder: (context, child) {
@@ -215,7 +195,7 @@ class _RecommendationPanelState extends State<RecommendationPanel>
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(18),
                       border: Border.all(
                         color: flashColor.withValues(alpha: v),
                         width: 2.5,
@@ -237,30 +217,44 @@ class _RecommendationPanelState extends State<RecommendationPanel>
       child: card,
     );
 
-    if (!rec.isLlm) return withFlash;
+    if (!isLlm) return withFlash;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        boxShadow: [
-          BoxShadow(
-            color: colors.magic.withValues(alpha: 0.22),
-            blurRadius: 24,
-            offset: const Offset(0, 4),
-          ),
-          BoxShadow(
-            color: colors.magic.withValues(alpha: 0.08),
-            blurRadius: 50,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      child: AiSweepingBorder(
-        strokeWidth: 2.5,
-        sweepFraction: 0.32,
-        duration: const Duration(milliseconds: 1600),
-        child: withFlash,
-      ),
+    return AiSweepingBorder(
+      strokeWidth: 2.5,
+      sweepFraction: 0.32,
+      duration: const Duration(milliseconds: 1600),
+      child: withFlash,
+    );
+  }
+}
+
+String _winLabel(WinCondition w) => switch (w) {
+      WinCondition.early => 'Early-game win',
+      WinCondition.mid => 'Mid-game win',
+      WinCondition.late => 'Late-game win',
+    };
+
+/// Uppercase eyebrow with a short leading rule, optionally trailed by a chip.
+class _Eyebrow extends StatelessWidget {
+  const _Eyebrow({required this.label, required this.color, this.trailing});
+  final String label;
+  final Color color;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 14,
+          height: 1,
+          color: color.withValues(alpha: 0.6),
+        ),
+        const SizedBox(width: 8),
+        Text(label, style: AppTextStyles.eyebrow.copyWith(color: color)),
+        const Spacer(),
+        if (trailing != null) trailing!,
+      ],
     );
   }
 }
@@ -282,262 +276,50 @@ class _UpdatingChip extends StatelessWidget {
           child: CircularProgressIndicator(strokeWidth: 1.6, color: color),
         ),
         const SizedBox(width: 6),
-        Text(
-          'Updating…',
-          style: AppTextStyles.caption.copyWith(color: color),
-        ),
+        Text('Updating…', style: AppTextStyles.micro.copyWith(color: color)),
       ],
     );
   }
 }
 
-class _StrategyCard extends StatelessWidget {
-  const _StrategyCard({required this.strategy});
-  final Strategy strategy;
-
-  String get _conditionLabel => switch (strategy.winCondition) {
-        WinCondition.early => 'EARLY WIN',
-        WinCondition.mid => 'MID WIN',
-        WinCondition.late => 'LATE WIN',
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final conditionColor = switch (strategy.winCondition) {
-      WinCondition.early => colors.success,
-      WinCondition.mid => colors.gold,
-      WinCondition.late => colors.magic,
-    };
-    final conditionSubtle = switch (strategy.winCondition) {
-      WinCondition.early => colors.successSubtle,
-      WinCondition.mid => colors.goldSubtle,
-      WinCondition.late => colors.magicSubtle,
-    };
-
-    return GameCard(
-      borderColor: conditionColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.military_tech_outlined,
-                size: 15,
-                color: colors.gold,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'GAME PLAN',
-                style: AppTextStyles.label.copyWith(
-                  color: colors.textSecondary,
-                ),
-              ),
-              const Spacer(),
-              AppBadge(
-                _conditionLabel,
-                bg: conditionSubtle,
-                fg: conditionColor,
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(strategy.summary, style: AppTextStyles.bodyBold),
-          const SizedBox(height: 8),
-          _StrategyRow(
-            icon: Icons.arrow_forward,
-            iconColor: colors.textSecondary,
-            label: 'NOW',
-            text: strategy.immediateAction,
-          ),
-          const SizedBox(height: 4),
-          _StrategyRow(
-            icon: Icons.flag_outlined,
-            iconColor: conditionColor,
-            label: 'LATE',
-            text: strategy.lateGamePlan,
-          ),
-          if (strategy.laneMatchupAnalysis != null ||
-              strategy.counterPlay != null) ...[
-            Divider(color: colors.border, height: 16),
-            if (strategy.laneMatchupAnalysis != null) ...[
-              _StrategyRow(
-                icon: Icons.compare_arrows,
-                iconColor: colors.textSecondary,
-                label: 'MATCHUP',
-                text: strategy.laneMatchupAnalysis!,
-              ),
-              const SizedBox(height: 4),
-            ],
-            if (strategy.counterPlay != null)
-              _StrategyRow(
-                icon: Icons.gps_fixed,
-                iconColor: colors.warning,
-                label: 'COUNTER',
-                text: strategy.counterPlay!,
-              ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _StrategyRow extends StatelessWidget {
-  const _StrategyRow({
-    required this.icon,
-    required this.iconColor,
-    required this.label,
-    required this.text,
+/// The headline item, rendered in a tinted rounded row.
+class _HeroItem extends StatelessWidget {
+  const _HeroItem({
+    required this.item,
+    required this.accent,
+    required this.isLlm,
   });
-
-  final IconData icon;
-  final Color iconColor;
-  final String label;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 13, color: iconColor),
-        const SizedBox(width: 5),
-        AppBadge(label, bg: colors.surfaceDark, fg: colors.textSecondary),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            text,
-            style: AppTextStyles.caption.copyWith(
-              color: colors.textSecondary,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TokenUsageRow extends StatelessWidget {
-  const _TokenUsageRow({this.usage, this.budget = 0, this.exceeded = false});
-
-  final TokenUsage? usage;
-  final int budget;
-  final bool exceeded;
-
-  String _fmt(int n) {
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
-    return '$n';
-  }
-
-  double? get _budgetFraction {
-    if (budget <= 0 || usage == null) return null;
-    return (usage!.sessionInput / budget).clamp(0.0, 1.0);
-  }
-
-  Color _resolveColor(AppColors colors) {
-    if (exceeded) return colors.error;
-    final f = _budgetFraction;
-    if (f != null && f >= 0.8) return colors.warning;
-    return colors.textSecondary;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.colors;
-    final color = _resolveColor(colors);
-    final fraction = _budgetFraction;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Divider(color: colors.border, height: 1),
-        const SizedBox(height: 6),
-        Row(
-          children: [
-            Icon(Icons.token_outlined, size: 12, color: color),
-            const SizedBox(width: 5),
-            if (exceeded)
-              Text(
-                'Token budget exhausted — using heuristic',
-                style: AppTextStyles.caption.copyWith(color: color),
-              )
-            else if (usage != null)
-              Expanded(
-                child: Text(
-                  'Session: ${_fmt(usage!.sessionInput)} in'
-                  ' / ${_fmt(usage!.sessionOutput)} out'
-                  '${budget > 0 ? ' · ${_fmt(usage!.sessionInput)}'
-                      '/${_fmt(budget)}' : ''}',
-                  style: AppTextStyles.caption.copyWith(color: color),
-                ),
-              ),
-          ],
-        ),
-        if (fraction != null) ...[
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
-              value: fraction,
-              minHeight: 3,
-              backgroundColor: colors.border,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _RecItemTile extends StatelessWidget {
-  const _RecItemTile({required this.item});
   final RecommendedItem item;
+  final Color accent;
+  final bool isLlm;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.colors;
-    final isCore = item.isCore;
-    // Core items are the at-a-glance answer — render them larger and bolder
-    // than situational picks so they read from across the room.
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isLlm ? colors.magicSubtle : colors.surface2,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isLlm ? colors.magicLine : colors.border,
+        ),
+      ),
       child: Row(
         children: [
           ItemSlot(
             itemId: item.id,
             displayName: item.name,
-            size: isCore ? 42 : 34,
-            borderColor: isCore ? colors.gold : colors.borderAccent,
+            size: 52,
+            borderColor: isLlm ? colors.magicLine : colors.border,
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        item.name,
-                        style: isCore
-                            ? const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              )
-                            : AppTextStyles.bodyBold,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    AppBadge(
-                      isCore ? 'CORE' : 'SITUATIONAL',
-                      bg: isCore ? colors.goldSubtle : colors.allySubtle,
-                      fg: isCore ? colors.gold : colors.textSecondary,
-                    ),
-                  ],
-                ),
+                Text(item.name, style: AppTextStyles.heading),
+                const SizedBox(height: 3),
                 Text(
                   item.reason,
                   style: AppTextStyles.caption.copyWith(
@@ -547,6 +329,156 @@ class _RecItemTile extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 10),
+          if (isLlm)
+            AppBadge.violet(item.isCore ? 'Core' : 'Buy')
+          else
+            AppBadge.neutral(item.isCore ? 'Core' : 'Buy'),
+        ],
+      ),
+    );
+  }
+}
+
+/// A compact secondary (situational) pick beneath the hero item.
+class _SecondaryItem extends StatelessWidget {
+  const _SecondaryItem({required this.item});
+  final RecommendedItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(
+        children: [
+          ItemSlot(itemId: item.id, displayName: item.name),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.name, style: AppTextStyles.bodyBold),
+                Text(
+                  item.reason,
+                  style: AppTextStyles.caption.copyWith(
+                    color: colors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          AppBadge.neutral(item.isCore ? 'Core' : 'Situational'),
+        ],
+      ),
+    );
+  }
+}
+
+/// The labelled supporting lines (Matchup / Counter).
+class _LinesBlock extends StatelessWidget {
+  const _LinesBlock({required this.strategy});
+  final Strategy strategy;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final lines = <(String, String)>[
+      if (strategy.laneMatchupAnalysis != null)
+        ('Matchup', strategy.laneMatchupAnalysis!),
+      if (strategy.counterPlay != null) ('Counter', strategy.counterPlay!),
+    ];
+    return Column(
+      children: [
+        for (var i = 0; i < lines.length; i++)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(color: colors.hairlineSoft),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 64,
+                  child: Text(
+                    lines[i].$1.toUpperCase(),
+                    style: AppTextStyles.eyebrow.copyWith(
+                      color: colors.textDisabled,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    lines[i].$2,
+                    style: AppTextStyles.caption.copyWith(
+                      color: colors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Footer strip: session token usage on the left, freshness on the right.
+class _Footer extends StatelessWidget {
+  const _Footer({
+    required this.timeAgo,
+    this.usage,
+    this.budget = 0,
+    this.exceeded = false,
+  });
+
+  final String timeAgo;
+  final TokenUsage? usage;
+  final int budget;
+  final bool exceeded;
+
+  String _fmt(int n) {
+    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}k';
+    return '$n';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.colors;
+    final String? left;
+    if (exceeded) {
+      left = 'Token budget exhausted';
+    } else if (usage != null) {
+      left = '${_fmt(usage!.sessionInput)} in · ${_fmt(usage!.sessionOutput)}'
+          ' out';
+    } else {
+      left = null;
+    }
+    if (left == null && timeAgo.isEmpty) return const SizedBox.shrink();
+
+    final color = exceeded ? colors.error : colors.textDisabled;
+    return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.only(top: 14),
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: colors.hairlineSoft)),
+      ),
+      child: Row(
+        children: [
+          if (left != null)
+            Text(left, style: AppTextStyles.micro.copyWith(color: color)),
+          const Spacer(),
+          if (timeAgo.isNotEmpty)
+            Text(
+              timeAgo,
+              style: AppTextStyles.micro.copyWith(color: colors.textDisabled),
+            ),
         ],
       ),
     );

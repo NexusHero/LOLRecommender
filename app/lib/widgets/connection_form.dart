@@ -25,21 +25,21 @@ class ConnectionForm extends StatelessWidget {
             children: [
               Icon(
                 Icons.shield_outlined,
-                size: 48,
-                color: colors.gold,
+                size: 44,
+                color: colors.magic,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               Text(
                 'LoL Coach',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.display.copyWith(color: colors.gold),
+                style: AppTextStyles.hero.copyWith(color: colors.textPrimary),
               ),
               const SizedBox(height: 8),
               Text(
                 'Real-time item advice during your match.\n'
-                'Always know what to build — powered by AI.',
+                'Always know what to build.',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.caption.copyWith(
+                style: AppTextStyles.body.copyWith(
                   color: colors.textSecondary,
                 ),
               ),
@@ -114,17 +114,7 @@ class ConnectionForm extends StatelessWidget {
 
               ElevatedButton(
                 onPressed: ctrl.isConnecting ? null : ctrl.connect,
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: Text(
-                  ctrl.isConnecting ? 'CONNECTING...' : 'CONNECT',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                    fontSize: 13,
-                  ),
-                ),
+                child: Text(ctrl.isConnecting ? 'Connecting…' : 'Connect'),
               ),
             ],
           ),

@@ -4,6 +4,7 @@ import 'package:lol_coach/models/game_state.dart';
 import 'package:lol_coach/theme/app_colors.dart';
 import 'package:lol_coach/theme/app_text_styles.dart';
 import 'package:lol_coach/widgets/common/champ_avatar.dart';
+import 'package:lol_coach/widgets/common/game_card.dart';
 
 class ScoreboardSection extends StatefulWidget {
   const ScoreboardSection({
@@ -31,30 +32,20 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
     final colors = context.colors;
     final allyKills = _teamKills([widget.localPlayer, ...widget.allies]);
     final enemyKills = _teamKills(widget.enemies);
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surfaceDark,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.border),
-      ),
+    return GameCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
           InkWell(
             onTap: () => setState(() => _expanded = !_expanded),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.people_outline,
-                    size: 16,
-                    color: colors.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
                   Text(
-                    'SCOREBOARD',
-                    style: AppTextStyles.label.copyWith(
+                    'Scoreboard',
+                    style: AppTextStyles.captionBold.copyWith(
                       color: colors.textSecondary,
                     ),
                   ),
@@ -64,33 +55,25 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
                   Text(
                     '$allyKills',
                     style: AppTextStyles.captionBold.copyWith(
-                      color: Color.lerp(
-                        colors.allyBlue,
-                        colors.textPrimary,
-                        0.5,
-                      ),
+                      color: colors.allyBlue,
                     ),
                   ),
                   Text(
-                    ' — ',
+                    ' – ',
                     style: AppTextStyles.caption.copyWith(
-                      color: colors.textSecondary,
+                      color: colors.textDisabled,
                     ),
                   ),
                   Text(
                     '$enemyKills',
                     style: AppTextStyles.captionBold.copyWith(
-                      color: Color.lerp(
-                        colors.enemyRed,
-                        colors.textPrimary,
-                        0.5,
-                      ),
+                      color: colors.enemyRed,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Icon(
                     _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: colors.textSecondary,
+                    color: colors.textDisabled,
                     size: 20,
                   ),
                 ],
@@ -98,21 +81,20 @@ class _ScoreboardSectionState extends State<ScoreboardSection> {
             ),
           ),
           if (_expanded) ...[
-            Divider(color: colors.border, height: 1),
+            Divider(color: colors.hairlineSoft, height: 1),
             TeamBlock(
               label: 'ALLIES',
               players: [widget.localPlayer, ...widget.allies],
               accentColor: colors.allyBlue,
               highlightName: widget.localPlayer.summonerName,
             ),
-            Divider(color: colors.border, height: 1),
             TeamBlock(
               label: 'ENEMIES',
               players: widget.enemies,
               accentColor: colors.enemyRed,
               highlightName: null,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 8),
           ],
         ],
       ),
@@ -135,18 +117,16 @@ class TeamBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-          color: accentColor.withAlpha(50),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 12, 18, 4),
           child: Text(
             label,
-            style: AppTextStyles.label.copyWith(
-              color: Color.lerp(accentColor, colors.textPrimary, 0.5),
+            style: AppTextStyles.eyebrow.copyWith(
+              color: accentColor,
+              letterSpacing: 1.2,
             ),
           ),
         ),
@@ -175,62 +155,37 @@ class PlayerRow extends StatelessWidget {
     final colors = context.colors;
     final s = player.scores;
     return Container(
-      color: isHighlighted
-          ? colors.allySubtle.withAlpha(160)
-          : Colors.transparent,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      color:
+          isHighlighted ? colors.magicSubtle : Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       child: Row(
         children: [
           ChampAvatar(
             name: player.championName,
             isDead: player.isDead,
-            size: 26,
+            size: 24,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Expanded(
             flex: 3,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  player.championName,
-                  style: AppTextStyles.captionBold.copyWith(
-                    color: isHighlighted ? colors.gold : colors.textPrimary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  player.summonerName,
-                  style: AppTextStyles.caption.copyWith(
-                    color: colors.textSecondary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: Text(
+              player.championName,
+              style: AppTextStyles.captionBold.copyWith(
+                color: isHighlighted ? colors.magic : colors.textPrimary,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           Text(
-            'Lv${player.level}',
-            style: AppTextStyles.caption.copyWith(color: colors.textSecondary),
+            '${s.kills}/${s.deaths}/${s.assists}',
+            style: AppTextStyles.micro.copyWith(color: colors.textDisabled),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           SizedBox(
-            width: 64,
+            width: 42,
             child: Text(
-              '${s.kills}/${s.deaths}/${s.assists}',
-              style: AppTextStyles.captionBold.copyWith(
-                color: colors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          SizedBox(
-            width: 38,
-            child: Text(
-              '${s.creepScore}cs',
-              style: AppTextStyles.caption.copyWith(
-                color: colors.textSecondary,
-              ),
+              '${s.creepScore} cs',
+              style: AppTextStyles.micro.copyWith(color: colors.textDisabled),
               textAlign: TextAlign.right,
             ),
           ),

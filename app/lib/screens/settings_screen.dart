@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lol_coach/controllers/settings_controller.dart';
 import 'package:lol_coach/providers.dart';
+import 'package:lol_coach/widgets/common/app_background.dart';
 import 'package:lol_coach/widgets/connection_form.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -50,7 +51,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
             ],
           ),
-          body: ConnectionForm(ctrl: _ctrl),
+          extendBodyBehindAppBar: true,
+          body: AppBackground(
+            child: SafeArea(child: ConnectionForm(ctrl: _ctrl)),
+          ),
         );
       },
     );

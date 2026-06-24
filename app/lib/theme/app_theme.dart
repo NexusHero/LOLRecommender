@@ -4,6 +4,9 @@ import 'package:lol_coach/theme/app_colors.dart';
 /// Builds the app's [ThemeData] for both light and dark from a single
 /// [AppColors] palette, registering that palette as a [ThemeExtension] so
 /// widgets can read it via `context.colors`.
+///
+/// The scaffold is transparent — the gradient canvas is painted by
+/// `AppBackground` so translucent glass surfaces have something to sample.
 class AppTheme {
   const AppTheme._();
 
@@ -18,20 +21,22 @@ class AppTheme {
             ? const ColorScheme.dark()
             : const ColorScheme.light())
         .copyWith(
-      primary: c.gold,
-      secondary: c.gold,
-      surface: c.surfaceDark,
+      primary: c.magic,
+      secondary: c.magic,
+      surface: c.surfaceMedium,
       error: c.error,
+      onPrimary: Colors.white,
       onSurface: c.textPrimary,
       onSurfaceVariant: c.textSecondary,
       outline: c.border,
       // SegmentedButton selected state
-      secondaryContainer: c.goldSubtle,
-      onSecondaryContainer: c.gold,
+      secondaryContainer: c.magicSubtle,
+      onSecondaryContainer: c.magic,
     );
 
     return base.copyWith(
-      scaffoldBackgroundColor: c.bgDark,
+      // Transparent — the canvas is drawn by AppBackground.
+      scaffoldBackgroundColor: Colors.transparent,
       colorScheme: scheme,
       extensions: [c],
       // Base text colour for colourless AppTextStyles.
@@ -40,50 +45,59 @@ class AppTheme {
         displayColor: c.textPrimary,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: c.surfaceMedium,
+        backgroundColor: Colors.transparent,
         foregroundColor: c.textPrimary,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: c.textPrimary,
           fontSize: 16,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
+          letterSpacing: -0.3,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: c.gold,
-          foregroundColor: c.bgDark,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+          backgroundColor: c.magicHot,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.1,
           ),
+          shape: const StadiumBorder(),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: c.surfaceDark,
+        fillColor: c.surface2,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: c.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: c.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: c.gold),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: c.magic, width: 1.5),
         ),
         labelStyle: TextStyle(color: c.textSecondary),
         hintStyle: TextStyle(color: c.textDisabled),
       ),
       dividerTheme: DividerThemeData(color: c.border),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: c.surfaceMedium,
-        selectedIconTheme: IconThemeData(color: c.gold),
+        backgroundColor: Colors.transparent,
+        selectedIconTheme: IconThemeData(color: c.magic),
         unselectedIconTheme: IconThemeData(color: c.textSecondary),
         selectedLabelTextStyle: TextStyle(
-          color: c.gold,
+          color: c.magic,
           fontSize: 11,
           fontWeight: FontWeight.w600,
         ),
@@ -92,7 +106,7 @@ class AppTheme {
           fontSize: 11,
         ),
         useIndicator: true,
-        indicatorColor: c.goldSubtle,
+        indicatorColor: c.magicSubtle,
       ),
     );
   }
