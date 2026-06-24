@@ -22,10 +22,11 @@ package "flutter_app/lib" {
   package "widgets/" {
     component "connection_form.dart\n[Verbindungseinstellungen\nProvider-Auswahl]" as conn_form
     component "game_view.dart\n[Spielansicht]" as game_view
-    component "game_top_bar.dart\n[Spielmodus / Zeit / Gold]" as top_bar
+    component "game_top_bar.dart\n[Kontext-Leiste\nZeit / Gold / KDA]" as top_bar
     component "local_player_card.dart\n[Eigener Champion + Items]" as player_card
-    component "recommendation_panel.dart\n[Item-Vorschläge + Erklärung]" as rec_panel
+    component "recommendation_panel.dart\n[AI Hero-Card\nAktion + Core-Item + Matchup]" as rec_panel
     component "scoreboard.dart\n[Team-Übersicht]" as scoreboard
+    component "common/\n[Glass-Primitive\nAppBackground / GameCard / Badge]" as common
   }
 
   package "models/" {
@@ -33,7 +34,7 @@ package "flutter_app/lib" {
   }
 
   package "theme/" {
-    component "app_colors.dart\nAppTextStyles" as theme
+    component "app_colors.dart\napp_text_styles.dart\napp_theme.dart" as theme
   }
 }
 
@@ -49,6 +50,10 @@ game_view --> top_bar
 game_view --> player_card
 game_view --> rec_panel
 game_view --> scoreboard
+
+rec_panel ..> common : GameCard / Badge
+home_screen ..> common : AppBackground
+common ..> theme : context.colors
 
 ws --> models : deserialize JSON
 ws ..> main_screen : notifyListeners()
